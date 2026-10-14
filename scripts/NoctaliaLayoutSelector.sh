@@ -6,31 +6,33 @@
 # ==============================================================================
 set -euo pipefail
 
-SCRIPTS_DIR="${HOME}/dotfiles/scripts"
-MANAGER="${SCRIPTS_DIR}/noctalia_layout_manager.py"
-SYNC_SCRIPT="${SCRIPTS_DIR}/DynamicThemeSync.sh"
+DOTFILES="${HOME}/dotfiles"
+LAYOUTS_DIR="${DOTFILES}/config/noctalia/layouts"
+COMPOSER="${DOTFILES}/scripts/noctalia_composer.py"
 
-if [ ! -f "$MANAGER" ]; then
-    echo "Erro: Layout manager não encontrado em $MANAGER" >&2
+if [ ! -d "$LAYOUTS_DIR" ]; then
+    echo "Erro: Diretório de layouts não encontrado em $LAYOUTS_DIR" >&2
     exit 1
 fi
 
-# Get list of layouts: filename <tab> clean_name
-mapfile -t raw_list < <("$MANAGER" list)
-
-if [ ${#raw_list[@]} -eq 0 ]; then
-    echo "Nenhum layout disponível encontrado." >&2
-    exit 1
-fi
+current_layout=$("$COMPOSER" get-layout 2>/dev/null || echo "")
 
 declare -A layout_map
 options=()
 
-for line in "${raw_list[@]}"; do
-    fname=$(echo "$line" | cut -f1)
-    cname=$(echo "$line" | cut -f2)
-    layout_map["$cname"]="$fname"
-    options+=("󰕰 $cname")
+for p in "$LAYOUTS_DIR"/*.toml; do
+    fname=$(basename "$p" .toml)
+    clean_name="$fname"
+    if [[ "$clean_name" =~ ^[0-9]+\.\  ]]; then
+        clean_name="${clean_name:3}"
+    fi
+    layout_map["$clean_name"]="$fname"
+
+    if [ "$fname" = "$current_layout" ]; then
+        options+=("👉 $clean_name (Ativo)")
+    else
+        options+=("   $clean_name")
+    fi
 done
 
 # Launch Noctalia dmenu
@@ -42,7 +44,7 @@ if [ -z "$chosen" ]; then
 fi
 
 # Clean selection name
-clean_name=$(echo "$chosen" | sed 's/^[[:space:]]*//; s/^󰕰[[:space:]]*//')
+clean_name=$(echo "$chosen" | sed 's/^[[:space:]]*//; s/^👉[[:space:]]*//; s/[[:space:]]*(Ativo)//')
 selected_file="${layout_map[$clean_name]:-}"
 
 if [ -z "$selected_file" ]; then
@@ -50,24 +52,5 @@ if [ -z "$selected_file" ]; then
     exit 1
 fi
 
-# Apply layout via manager
-if "$MANAGER" apply "$selected_file"; then
-    # Small delay for hot-reload
-    sleep 0.2
-    
-    # Notify and sync
-    if command -v noctalia >/dev/null 2>&1; then
-        noctalia msg notification-show "Layout de Barra Aplicado" "Layout: ${clean_name}" >/dev/null 2>&1 || true
-    fi
-    
-    if [ -f "$SYNC_SCRIPT" ]; then
-        bash "$SYNC_SCRIPT" >/dev/null 2>&1 || true
-    fi
-    
-    echo "Layout ${clean_name} aplicado com sucesso."
-else
-    if command -v noctalia >/dev/null 2>&1; then
-        noctalia msg notification-show "Erro" "Falha ao aplicar o layout ${clean_name}" >/dev/null 2>&1 || true
-    fi
-    exit 1
-fi
+# Apply layout through the unified composer (preserves active style and palette!)
+"$COMPOSER" set-layout "$selected_file"
