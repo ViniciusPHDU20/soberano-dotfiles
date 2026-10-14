@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atalhos do Sistema</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "JetBrains Mono", sans-serif;
+      color: #e2e8f0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .modal-container {
+      width: 100%;
+      max-width: 1080px;
+      height: 90vh;
+      max-height: 780px;
+      background: rgba(14, 17, 26, 0.88);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-top: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(0, 240, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 32px;
+      animation: modalEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes modalEntrance {
+      from {
+        opacity: 0;
+        transform: scale(0.96) translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .header-info h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #00f0ff 0%, #cba6f7 50%, #ff79c6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-info p {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .close-btn {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .close-btn:hover {
+      background: #ef4444;
+      color: #0f172a;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* Search Bar */
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 22px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(22, 27, 40, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 12px 20px 12px 46px;
+      color: #ffffff;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-input::placeholder {
+      color: #64748b;
+    }
+
+    .search-input:focus {
+      border-color: #00f0ff;
+      background: rgba(26, 32, 48, 0.95);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: #00f0ff;
+      pointer-events: none;
+    }
+
+    /* Content Grid */
+    .grid-container {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+      padding-right: 8px;
+    }
+
+    .grid-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .grid-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+    }
+    .grid-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 4px;
+    }
+    .grid-container::-webkit-scrollbar-thumb:hover {
+      background: #00f0ff;
+    }
+
+    /* Category Cards */
+    .category-card {
+      background: rgba(20, 24, 36, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .category-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+
+    .category-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .cat-rice .category-title { color: #cba6f7; }
+    .cat-win .category-title { color: #89b4fa; }
+    .cat-ws .category-title { color: #a6e3a1; }
+    .cat-utils .category-title { color: #fab387; }
+
+    /* Item List */
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 10px;
+      transition: background 0.15s ease;
+    }
+
+    .shortcut-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .shortcut-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-right: 12px;
+    }
+
+    .shortcut-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .shortcut-desc {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* Keycaps */
+    .key-combo {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .kbd {
+      background: linear-gradient(180deg, #2b3248 0%, #1a1e2d 100%);
+      border: 1px solid #4a5578;
+      border-bottom: 2px solid #0e111a;
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #00f0ff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    .plus {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="modal-container" id="modalContainer">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-info">
+        <h1>󰌌 Atalhos do Sistema — JaKooLit + Noctalia</h1>
+        <p>Pressione ESC ou clique em Fechar para sair</p>
+      </div>
+      <button class="close-btn" id="closeButton">✕ Fechar</button>
+    </div>
+
+    <!-- Search Input -->
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" class="search-input" placeholder="Filtrar atalhos (ex: barra, layout, anim, tela cheia, workspace, print)..." autofocus autocomplete="off">
+    </div>
+
+    <!-- Grid Categories -->
+    <div class="grid-container" id="gridContainer">
+      
+      <!-- Category 1: Rice & Themes -->
+      <div class="category-card cat-rice">
+        <div class="category-title">󰏘 Personalização & Rice</div>
+        <div class="items-list">
+          <div class="shortcut-row" data-search="estilos barra temas cyberpunk glass catppuccin nord dracula">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Estilos de Barra</span>
+              <span class="shortcut-desc">Alterna entre os 13 temas e peles visuais</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">B</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="layout barra ilhas dock inferior barra dupla slim tela cheia">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Layouts de Barra</span>
+              <span class="shortcut-desc">Alterna entre 6 formatos físicos e posições</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">CTRL</span><span class="plus">+</span><span class="kbd">B</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="animacoes fisica molas bounce fast smooth snapy zero">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Perfis de Animação</span>
+              <span class="shortcut-desc">Fast, Smooth, Bouncy Spring e Instant Zero</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">A</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="wallpaper papel de parede menu">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Menu de Wallpapers</span>
+              <span class="shortcut-desc">Seletor visual de papéis de parede</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">W</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="wallpaper aleatorio random papel de parede">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Wallpaper Aleatório</span>
+              <span class="shortcut-desc">Sorteia um papel de parede com sincronia</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">W</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="recarregar refresh interface cores templates">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Recarregar Interface</span>
+              <span class="shortcut-desc">Reaplica temas e cores do Kitty e GTK</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">R</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category 2: Window Management -->
+      <div class="category-card cat-win">
+        <div class="category-title">󰖲 Gestão de Janelas</div>
+        <div class="items-list">
+          <div class="shortcut-row" data-search="fechar janela close kill">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Fechar Janela Ativa</span>
+              <span class="shortcut-desc">Fecha a janela atualmente em foco</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">Q</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="flutuante float alternar tile tiling">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Alternar Flutuante</span>
+              <span class="shortcut-desc">Alterna entre modo mosaico e janela flutuante</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">ESPAÇO</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="tela cheia fullscreen total exclusivo">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Tela Cheia Total</span>
+              <span class="shortcut-desc">Modo tela cheia exclusiva sobre toda a tela</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">F</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="tela cheia monocle barra visivel">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Tela Cheia Monocle</span>
+              <span class="shortcut-desc">Expande a janela preservando a barra</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">SHIFT</span><span class="plus">+</span><span class="kbd">F</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="divisao split togglesplit direcao corte">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Alternar Divisão</span>
+              <span class="shortcut-desc">Muda o corte de janelas (horizontal/vertical)</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">J</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="alternar janelas ciclar switch tab">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Ciclar Janelas</span>
+              <span class="shortcut-desc">Troca o foco para a próxima janela</span>
+            </div>
+            <div class="key-combo"><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">TAB</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="alternador visual switcher overlay">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Alternador Visual</span>
+              <span class="shortcut-desc">Menu de janelas com miniaturas</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">TAB</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category 3: Workspaces & Monitors -->
+      <div class="category-card cat-ws">
+        <div class="category-title">󰍹 Workspaces & Monitores</div>
+        <div class="items-list">
+          <div class="shortcut-row" data-search="workspace area de trabalho navegar 1 2 3 4 5 6 7 8 9 10">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Ir para Workspace</span>
+              <span class="shortcut-desc">Foca imediatamente nas áreas de 1 a 10</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">1..0</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="mover janela workspace 1 2 3 4 5 6 7 8 9 10">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Mover p/ Workspace</span>
+              <span class="shortcut-desc">Envia a janela ativa para a área 1 a 10</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">SHIFT</span><span class="plus">+</span><span class="kbd">1..0</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="mover silencioso workspace follow false">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Mover Silencioso</span>
+              <span class="shortcut-desc">Envia a janela sem mudar o seu foco</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">S+A</span><span class="plus">+</span><span class="kbd">1..0</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="monitor focar tela 1 2 3">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Focar Monitor</span>
+              <span class="shortcut-desc">Muda o foco para o monitor 1, 2 ou 3</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">CTRL</span><span class="plus">+</span><span class="kbd">1..3</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="mover janela monitor tela 1 2 3">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Mover p/ Monitor</span>
+              <span class="shortcut-desc">Envia a janela para o monitor escolhido</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">C+S</span><span class="plus">+</span><span class="kbd">1..3</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="scratchpad especial notas">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Scratchpad Especial</span>
+              <span class="shortcut-desc">Alterna exibição do workspace oculto</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">S</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="enviar scratchpad especial">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Enviar p/ Scratchpad</span>
+              <span class="shortcut-desc">Guarda a janela no workspace especial</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">SHIFT</span><span class="plus">+</span><span class="kbd">S</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category 4: Utilities & System -->
+      <div class="category-card cat-utils">
+        <div class="category-title">󰈸 Utilitários & Sistema</div>
+        <div class="items-list">
+          <div class="shortcut-row" data-search="lancador apps launcher rofi dmenu buscar programas">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Lançador de Apps</span>
+              <span class="shortcut-desc">Busca e inicializa aplicativos instalados</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">D</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="atalhos hud guia cheatsheet teclas">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Menu Visual de Teclas</span>
+              <span class="shortcut-desc">Abre este painel HUD de atalhos</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">SHIFT</span><span class="plus">+</span><span class="kbd">K</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="clipboard area transferencia historico copiar colar">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Área de Transferência</span>
+              <span class="shortcut-desc">Histórico completo de textos copiados</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">V</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="visao geral overview expose janelas">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Visão Geral (Overview)</span>
+              <span class="shortcut-desc">Grade de workspaces e janelas ativas</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">A</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="seletor cores color picker cor pixel tela">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Seletor de Cores</span>
+              <span class="shortcut-desc">Copia o código HEX de qualquer pixel</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">P</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="screenshot captura tela regiao grim">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Captura de Região</span>
+              <span class="shortcut-desc">Selecione uma área da tela para salvar</span>
+            </div>
+            <div class="key-combo"><span class="kbd">PRINT</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="screenshot tela inteira full captura">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Captura Tela Inteira</span>
+              <span class="shortcut-desc">Captura todos os monitores conectados</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">PRINT</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="gamer modo fps jogos desativar efeitos">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Modo Gamer</span>
+              <span class="shortcut-desc">Desativa blur e animações para máximo FPS</span>
+            </div>
+            <div class="key-combo"><span class="kbd">SUPER</span><span class="plus">+</span><span class="kbd">G</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="bloquear sessao lock tela hyprlock">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Bloquear Sessão</span>
+              <span class="shortcut-desc">Bloqueia a tela imediatamente</span>
+            </div>
+            <div class="key-combo"><span class="kbd">CTRL</span><span class="plus">+</span><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">L</span></div>
+          </div>
+
+          <div class="shortcut-row" data-search="desligar reiniciar suspender sessao logout">
+            <div class="shortcut-info">
+              <span class="shortcut-name">Menu de Desligamento</span>
+              <span class="shortcut-desc">Suspender, reiniciar ou desligar o PC</span>
+            </div>
+            <div class="key-combo"><span class="kbd">CTRL</span><span class="plus">+</span><span class="kbd">ALT</span><span class="plus">+</span><span class="kbd">DEL</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Live Search Filter
+    const searchInput = document.getElementById('searchInput');
+    const cards = document.querySelectorAll('.category-card');
+    const closeBtn = document.getElementById('closeButton');
+
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+
+      cards.forEach(card => {
+        const rows = card.querySelectorAll('.shortcut-row');
+        let visibleRows = 0;
+
+        rows.forEach(row => {
+          const name = row.querySelector('.shortcut-name').textContent.toLowerCase();
+          const desc = row.querySelector('.shortcut-desc').textContent.toLowerCase();
+          const keys = row.querySelector('.key-combo').textContent.toLowerCase();
+          const searchTags = (row.dataset.search || '').toLowerCase();
+
+          const matches = !q || name.includes(q) || desc.includes(q) || keys.includes(q) || searchTags.includes(q);
+          row.style.display = matches ? 'flex' : 'none';
+          if (matches) visibleRows++;
+        });
+
+        card.style.display = visibleRows > 0 ? 'flex' : 'none';
+      });
+    });
+
+    // Close on Escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        window.closeRequested();
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      window.closeRequested();
+    });
+
+    // Python IPC Bridge hook
+    window.closeRequested = function() {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.closeHandler) {
+        window.webkit.messageHandlers.closeHandler.postMessage('close');
+      } else {
+        window.close();
+      }
+    };
+  </script>
+</body>
+</html>
