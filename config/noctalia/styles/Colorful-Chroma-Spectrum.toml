@@ -4,22 +4,33 @@ ui_scale = 1.20
 [bar.default]
 start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
 center = [ "clock" ]
-end = [ "media", "spacer_1", "group:g1", "tray", "notifications", "network", "volume", "session" ]
+end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
 concave_edge_corners = false
 margin_edge = 8
 margin_ends = 14
-radius_top_left = 14
-radius_top_right = 14
-radius_bottom_left = 14
-radius_bottom_right = 14
+radius_top_left = 22
+radius_top_right = 22
+radius_bottom_left = 22
+radius_bottom_right = 22
 scale = 1.05
-thickness = 34
+thickness = 38
+border = "#f5c2e7"
+border_width = 2.0
+background_opacity = 0.9
 
     [[bar.default.capsule_group]]
-    border = ""
+    border = "#fab387"
     fill = "on_secondary"
-    id = "g1"
+    id = "hw"
     members = [ "temp", "sysmon_2", "sysmon_3" ]
+    opacity = 0.95
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    border = "#a6e3a1"
+    fill = "on_secondary"
+    id = "netvol"
+    members = [ "network", "volume" ]
     opacity = 0.95
     padding = 6.0
 
@@ -90,42 +101,42 @@ wallpaper_scheme = "m3-rainbow"
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
 
 [widget.clock]
-color = "primary"
-format = "{:%H:%M • %a %d}"
+color = "#cba6f7"
+format = "{:%a %d %b  %H:%M}"
 
 [widget.launcher]
-color = "primary"
+color = "#f38ba8"
 
 [widget.media]
 hide_when_no_media = true
 title_scroll = "on_hover"
 
 [widget.network]
-color = "secondary"
+color = "#89dceb"
 show_label = true
 
 [widget.notifications]
-color = "tertiary"
+color = "#f5c2e7"
 
 [widget.session]
-color = "error"
+color = "#f38ba8"
 
 [widget.spacer_1]
 type = "spacer"
 
 [widget.temp]
-color = "tertiary"
+color = "#fab387"
 show_value = true
 
 [widget.sysmon_2]
-color = "primary"
+color = "#89b4fa"
 glyph = "gpu-usage"
 show_value = true
 stat = "gpu_temp"
 type = "sysmon"
 
 [widget.sysmon_3]
-color = "secondary"
+color = "#a6e3a1"
 glyph = "cpu-2"
 show_value = true
 stat = "ram_used"
@@ -136,7 +147,7 @@ capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
-color = "primary"
+color = "#a6e3a1"
 show_label = true
 
 [widget.workspaces]
@@ -144,11 +155,11 @@ active_pill_size = 2.4
 capsule = true
 capsule_fill = "on_primary"
 change_color_on_hover = false
-empty_color = "surface_variant"
-focused_color = "primary"
-inactive_pill_size = 1.0
-occupied_color = "secondary"
-pill_scale = 0.90
+empty_color = "#313244"
+focused_color = "#f38ba8"
+inactive_pill_size = 1.2
+occupied_color = "#89dceb"
+pill_scale = 1.0
 show_icons = true
 show_labels = true
 

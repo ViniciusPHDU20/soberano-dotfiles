@@ -4,24 +4,33 @@ ui_scale = 1.20
 [bar.default]
 start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
 center = [ "clock" ]
-end = [ "media", "spacer_1", "group:g1", "tray", "notifications", "network", "volume", "session" ]
+end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
 concave_edge_corners = false
 margin_edge = 8
-margin_ends = 14
-radius_top_left = 8
-radius_top_right = 8
-radius_bottom_left = 8
-radius_bottom_right = 8
+margin_ends = 16
+radius_top_left = 16
+radius_top_right = 16
+radius_bottom_left = 16
+radius_bottom_right = 16
 scale = 1.05
-thickness = 30
+thickness = 34
 border = "#88c0d0"
-border_width = 1.5
+border_width = 1.8
+background_opacity = 0.92
 
     [[bar.default.capsule_group]]
     border = "#81a1c1"
     fill = "on_secondary"
-    id = "g1"
+    id = "hw"
     members = [ "temp", "sysmon_2", "sysmon_3" ]
+    opacity = 0.95
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    border = "#a3be8c"
+    fill = "on_secondary"
+    id = "netvol"
+    members = [ "network", "volume" ]
     opacity = 0.95
     padding = 6.0
 
@@ -93,7 +102,7 @@ community_palette = "Nord"
 
 [widget.clock]
 color = "#eceff4"
-format = "{:%H:%M • %a}"
+format = "{:%A  •  %H:%M}"
 
 [widget.launcher]
 color = "#88c0d0"
@@ -107,7 +116,7 @@ color = "#81a1c1"
 show_label = true
 
 [widget.notifications]
-color = "#b48ead"
+color = "#88c0d0"
 
 [widget.session]
 color = "#bf616a"
@@ -116,18 +125,18 @@ color = "#bf616a"
 type = "spacer"
 
 [widget.temp]
-color = "#bf616a"
+color = "#ebcb8b"
 show_value = true
 
 [widget.sysmon_2]
-color = "#88c0d0"
+color = "#81a1c1"
 glyph = "gpu-usage"
 show_value = true
 stat = "gpu_temp"
 type = "sysmon"
 
 [widget.sysmon_3]
-color = "#81a1c1"
+color = "#a3be8c"
 glyph = "cpu-2"
 show_value = true
 stat = "ram_used"
@@ -138,21 +147,21 @@ capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
-color = "#8fbcbb"
+color = "#a3be8c"
 show_label = true
 
 [widget.workspaces]
-active_pill_size = 2.4
+active_pill_size = 2.0
 capsule = true
 capsule_fill = "on_primary"
 change_color_on_hover = false
-empty_color = "#2e3440"
+empty_color = "#3b4252"
 focused_color = "#88c0d0"
-inactive_pill_size = 0.85
+inactive_pill_size = 1.2
 occupied_color = "#81a1c1"
-pill_scale = 0.80
+pill_scale = 1.0
 show_icons = true
-show_labels = false
+show_labels = true
 
 [wallpaper]
 directory = "/home/viniciusphdu/dotfiles/wallpapers"

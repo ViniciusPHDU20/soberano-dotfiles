@@ -4,24 +4,34 @@ ui_scale = 1.20
 [bar.default]
 start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
 center = [ "clock" ]
-end = [ "media", "spacer_1", "group:g1", "tray", "notifications", "network", "volume", "session" ]
+end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
 concave_edge_corners = false
 margin_edge = 8
 margin_ends = 14
-radius_top_left = 16
-radius_top_right = 16
-radius_bottom_left = 16
-radius_bottom_right = 16
+radius_top_left = 20
+radius_top_right = 20
+radius_bottom_left = 20
+radius_bottom_right = 20
 scale = 1.05
-thickness = 32
-background_opacity = 0.40
+thickness = 34
+border = "#ffffff"
+border_width = 1.0
+background_opacity = 0.25
 
     [[bar.default.capsule_group]]
-    border = ""
+    border = "#88c0d0"
     fill = "on_secondary"
-    id = "g1"
+    id = "hw"
     members = [ "temp", "sysmon_2", "sysmon_3" ]
-    opacity = 0.50
+    opacity = 0.35
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    border = "#81a1c1"
+    fill = "on_secondary"
+    id = "netvol"
+    members = [ "network", "volume" ]
+    opacity = 0.35
     padding = 6.0
 
 [shell]
@@ -91,42 +101,42 @@ wallpaper_scheme = "m3-fidelity"
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
 
 [widget.clock]
-color = "secondary"
-format = "{:%H:%M • %a}"
+color = "#ffffff"
+format = "{:%H:%M  •  %d %b}"
 
 [widget.launcher]
-color = "secondary"
+color = "#ffffff"
 
 [widget.media]
 hide_when_no_media = true
 title_scroll = "on_hover"
 
 [widget.network]
-color = "secondary"
+color = "#88c0d0"
 show_label = true
 
 [widget.notifications]
-color = "secondary"
+color = "#ffffff"
 
 [widget.session]
-color = "secondary"
+color = "#ff5555"
 
 [widget.spacer_1]
 type = "spacer"
 
 [widget.temp]
-color = "secondary"
+color = "#fab387"
 show_value = true
 
 [widget.sysmon_2]
-color = "secondary"
+color = "#88c0d0"
 glyph = "gpu-usage"
 show_value = true
 stat = "gpu_temp"
 type = "sysmon"
 
 [widget.sysmon_3]
-color = "secondary"
+color = "#a6e3a1"
 glyph = "cpu-2"
 show_value = true
 stat = "ram_used"
@@ -137,21 +147,21 @@ capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
-color = "secondary"
+color = "#ffffff"
 show_label = true
 
 [widget.workspaces]
-active_pill_size = 2.4
+active_pill_size = 2.2
 capsule = true
 capsule_fill = "on_primary"
 change_color_on_hover = false
-empty_color = "surface_variant"
-focused_color = "primary"
-inactive_pill_size = 0.85
-occupied_color = "secondary"
-pill_scale = 0.80
+empty_color = "#334155"
+focused_color = "#ffffff"
+inactive_pill_size = 1.2
+occupied_color = "#88c0d0"
+pill_scale = 1.0
 show_icons = true
-show_labels = false
+show_labels = true
 
 [wallpaper]
 directory = "/home/viniciusphdu/dotfiles/wallpapers"

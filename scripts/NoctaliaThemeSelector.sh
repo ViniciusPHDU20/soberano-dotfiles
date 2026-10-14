@@ -88,6 +88,15 @@ case "$clean_name" in
     "Crystal-Clear-Glass")
         sig_wall="$WALLPAPERS_DIR/Space-Nebula.png"
         ;;
+    "Dracula")
+        sig_wall="$WALLPAPERS_DIR/Purple-Nightmare.jpg"
+        ;;
+    "Rose-Pine")
+        sig_wall="$WALLPAPERS_DIR/Dreamy-Aesthetic-Home-Under-Moonlight.png"
+        ;;
+    "Kanagawa-Wave")
+        sig_wall="$WALLPAPERS_DIR/Fantasy-Japanese-Street.png"
+        ;;
     "Black-&-White-Monochrome")
         sig_wall="$WALLPAPERS_DIR/Night monochrome.jpg"
         ;;

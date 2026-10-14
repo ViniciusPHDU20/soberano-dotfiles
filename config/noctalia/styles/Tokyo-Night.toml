@@ -4,24 +4,33 @@ ui_scale = 1.20
 [bar.default]
 start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
 center = [ "clock" ]
-end = [ "media", "spacer_1", "group:g1", "tray", "notifications", "network", "volume", "session" ]
+end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
 concave_edge_corners = false
 margin_edge = 8
-margin_ends = 14
-radius_top_left = 12
-radius_top_right = 12
-radius_bottom_left = 12
-radius_bottom_right = 12
+margin_ends = 16
+radius_top_left = 18
+radius_top_right = 18
+radius_bottom_left = 18
+radius_bottom_right = 18
 scale = 1.05
-thickness = 32
-border = "#7dcfff"
-border_width = 1.5
+thickness = 36
+border = "#7aa2f7"
+border_width = 2.0
+background_opacity = 0.92
 
     [[bar.default.capsule_group]]
-    border = "#bb9af7"
+    border = "#f7768e"
     fill = "on_secondary"
-    id = "g1"
+    id = "hw"
     members = [ "temp", "sysmon_2", "sysmon_3" ]
+    opacity = 0.95
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    border = "#7dcfff"
+    fill = "on_secondary"
+    id = "netvol"
+    members = [ "network", "volume" ]
     opacity = 0.95
     padding = 6.0
 
@@ -92,11 +101,11 @@ community_palette = "Tokyo-Night"
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
 
 [widget.clock]
-color = "#bb9af7"
-format = "{:%H:%M • %a}"
+color = "#7dcfff"
+format = "{:%H:%M  %a %d}"
 
 [widget.launcher]
-color = "#7dcfff"
+color = "#bb9af7"
 
 [widget.media]
 hide_when_no_media = true
@@ -107,7 +116,7 @@ color = "#7aa2f7"
 show_label = true
 
 [widget.notifications]
-color = "#bb9af7"
+color = "#f7768e"
 
 [widget.session]
 color = "#f7768e"
@@ -116,18 +125,18 @@ color = "#f7768e"
 type = "spacer"
 
 [widget.temp]
-color = "#f7768e"
+color = "#e0af68"
 show_value = true
 
 [widget.sysmon_2]
-color = "#7dcfff"
+color = "#7aa2f7"
 glyph = "gpu-usage"
 show_value = true
 stat = "gpu_temp"
 type = "sysmon"
 
 [widget.sysmon_3]
-color = "#2ac3de"
+color = "#9ece6a"
 glyph = "cpu-2"
 show_value = true
 stat = "ram_used"
@@ -138,7 +147,7 @@ capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
-color = "#7aa2f7"
+color = "#7dcfff"
 show_label = true
 
 [widget.workspaces]
@@ -146,13 +155,13 @@ active_pill_size = 2.4
 capsule = true
 capsule_fill = "on_primary"
 change_color_on_hover = false
-empty_color = "#1f2335"
-focused_color = "#7dcfff"
-inactive_pill_size = 0.85
-occupied_color = "#bb9af7"
-pill_scale = 0.80
+empty_color = "#24283b"
+focused_color = "#bb9af7"
+inactive_pill_size = 1.2
+occupied_color = "#7aa2f7"
+pill_scale = 1.0
 show_icons = true
-show_labels = false
+show_labels = true
 
 [wallpaper]
 directory = "/home/viniciusphdu/dotfiles/wallpapers"

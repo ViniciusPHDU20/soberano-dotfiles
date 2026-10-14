@@ -4,24 +4,33 @@ ui_scale = 1.20
 [bar.default]
 start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
 center = [ "clock" ]
-end = [ "media", "spacer_1", "group:g1", "tray", "notifications", "network", "volume", "session" ]
+end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
 concave_edge_corners = false
 margin_edge = 8
-margin_ends = 14
-radius_top_left = 12
-radius_top_right = 12
-radius_bottom_left = 12
-radius_bottom_right = 12
+margin_ends = 16
+radius_top_left = 16
+radius_top_right = 16
+radius_bottom_left = 16
+radius_bottom_right = 16
 scale = 1.05
-thickness = 32
+thickness = 36
 border = "#a7c080"
-border_width = 1.5
+border_width = 2.0
+background_opacity = 0.92
+
+    [[bar.default.capsule_group]]
+    border = "#dbbc7f"
+    fill = "on_secondary"
+    id = "hw"
+    members = [ "temp", "sysmon_2", "sysmon_3" ]
+    opacity = 0.95
+    padding = 6.0
 
     [[bar.default.capsule_group]]
     border = "#83c092"
     fill = "on_secondary"
-    id = "g1"
-    members = [ "temp", "sysmon_2", "sysmon_3" ]
+    id = "netvol"
+    members = [ "network", "volume" ]
     opacity = 0.95
     padding = 6.0
 
@@ -85,15 +94,15 @@ gpu_poll_seconds = 2
 
 [theme]
 mode = "dark"
-source = "wallpaper"
-wallpaper_scheme = "m3-tonal-spot"
+source = "community"
+community_palette = "Gruvbox"
 
     [theme.templates]
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
 
 [widget.clock]
-color = "#dbbc7f"
-format = "{:%H:%M • %a}"
+color = "#a7c080"
+format = "{:%A, %d de %B  %H:%M}"
 
 [widget.launcher]
 color = "#a7c080"
@@ -107,7 +116,7 @@ color = "#7fbbb3"
 show_label = true
 
 [widget.notifications]
-color = "#d699b6"
+color = "#dbbc7f"
 
 [widget.session]
 color = "#e67e80"
@@ -120,7 +129,7 @@ color = "#e69875"
 show_value = true
 
 [widget.sysmon_2]
-color = "#a7c080"
+color = "#7fbbb3"
 glyph = "gpu-usage"
 show_value = true
 stat = "gpu_temp"
@@ -138,21 +147,21 @@ capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
-color = "#7fbbb3"
+color = "#a7c080"
 show_label = true
 
 [widget.workspaces]
-active_pill_size = 2.4
+active_pill_size = 2.2
 capsule = true
 capsule_fill = "on_primary"
 change_color_on_hover = false
-empty_color = "#2d353b"
+empty_color = "#323c41"
 focused_color = "#a7c080"
-inactive_pill_size = 0.85
-occupied_color = "#83c092"
-pill_scale = 0.85
+inactive_pill_size = 1.2
+occupied_color = "#7fbbb3"
+pill_scale = 1.0
 show_icons = true
-show_labels = false
+show_labels = true
 
 [wallpaper]
 directory = "/home/viniciusphdu/dotfiles/wallpapers"
