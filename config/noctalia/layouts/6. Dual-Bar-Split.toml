@@ -1,0 +1,48 @@
+[bar.top]
+start = [ "workspaces", "spacer_1", "active_window" ]
+center = [ "clock" ]
+end = [ "tray", "notifications" ]
+position = "top"
+concave_edge_corners = false
+margin_edge = 6
+margin_ends = 12
+radius_top_left = 14
+radius_top_right = 14
+radius_bottom_left = 14
+radius_bottom_right = 14
+scale = 1.02
+thickness = 30
+border_width = 1.2
+background_opacity = 0.90
+
+[bar.bottom]
+start = [ "launcher", "media" ]
+end = [ "group:hw", "group:netvol", "session" ]
+position = "bottom"
+concave_edge_corners = false
+margin_edge = 6
+margin_ends = 220
+radius_top_left = 18
+radius_top_right = 18
+radius_bottom_left = 18
+radius_bottom_right = 18
+scale = 1.02
+thickness = 38
+border_width = 1.5
+background_opacity = 0.90
+
+    [[bar.bottom.capsule_group]]
+    border = ""
+    fill = "on_secondary"
+    id = "hw"
+    members = [ "temp", "sysmon_2", "sysmon_3" ]
+    opacity = 0.95
+    padding = 6.0
+
+    [[bar.bottom.capsule_group]]
+    border = ""
+    fill = "on_secondary"
+    id = "netvol"
+    members = [ "network", "volume" ]
+    opacity = 0.95
+    padding = 6.0

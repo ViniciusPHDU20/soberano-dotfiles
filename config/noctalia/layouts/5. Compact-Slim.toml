@@ -1,0 +1,23 @@
+[bar.default]
+start = [ "launcher", "workspaces" ]
+center = [ "clock" ]
+end = [ "group:hw", "volume", "session" ]
+concave_edge_corners = false
+margin_edge = 4
+margin_ends = 8
+radius_top_left = 8
+radius_top_right = 8
+radius_bottom_left = 8
+radius_bottom_right = 8
+scale = 1.0
+thickness = 26
+border_width = 1.0
+background_opacity = 0.92
+
+    [[bar.default.capsule_group]]
+    border = ""
+    fill = "on_secondary"
+    id = "hw"
+    members = [ "temp", "sysmon_2" ]
+    opacity = 0.95
+    padding = 4.0

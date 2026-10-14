@@ -6,32 +6,31 @@ start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
 center = [ "clock" ]
 end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
 concave_edge_corners = false
-margin_edge = 6
-margin_ends = 10
-radius_top_left = 0
-radius_top_right = 0
-radius_bottom_left = 0
-radius_bottom_right = 0
+margin_edge = 8
+margin_ends = 16
+radius_top_left = 18
+radius_top_right = 18
+radius_bottom_left = 18
+radius_bottom_right = 18
 scale = 1.05
-thickness = 38
-border = "#00f0ff"
-border_width = 2.5
-background_opacity = 0.85
+thickness = 36
+border_width = 1.8
+background_opacity = 0.92
 
     [[bar.default.capsule_group]]
-    border = "#ff007f"
+    border = "#ffffff"
     fill = "on_secondary"
     id = "hw"
     members = [ "temp", "sysmon_2", "sysmon_3" ]
-    opacity = 0.9
+    opacity = 0.95
     padding = 6.0
 
     [[bar.default.capsule_group]]
-    border = "#00f0ff"
+    border = "#ffffff"
     fill = "on_secondary"
     id = "netvol"
     members = [ "network", "volume" ]
-    opacity = 0.9
+    opacity = 0.95
     padding = 6.0
 
 [shell]
@@ -94,49 +93,49 @@ gpu_poll_seconds = 2
 
 [theme]
 mode = "dark"
-source = "community"
-community_palette = "Tokyo-Night"
+source = "wallpaper"
+wallpaper_scheme = "m3-fidelity"
 
     [theme.templates]
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
 
 [widget.clock]
-color = "#00f0ff"
-format = "[ %H:%M:%S ]"
+color = "#ffffff"
+format = "{:%H:%M  •  %d %b}"
 
 [widget.launcher]
-color = "#00f0ff"
+color = "#ffffff"
 
 [widget.media]
 hide_when_no_media = true
 title_scroll = "on_hover"
 
 [widget.network]
-color = "#00f0ff"
+color = "#88c0d0"
 show_label = true
 
 [widget.notifications]
-color = "#ff007f"
+color = "#ffffff"
 
 [widget.session]
-color = "#ff007f"
+color = "#ff5555"
 
 [widget.spacer_1]
 type = "spacer"
 
 [widget.temp]
-color = "#ff007f"
+color = "#fab387"
 show_value = true
 
 [widget.sysmon_2]
-color = "#00f0ff"
+color = "#88c0d0"
 glyph = "gpu-usage"
 show_value = true
 stat = "gpu_temp"
 type = "sysmon"
 
 [widget.sysmon_3]
-color = "#ffff00"
+color = "#a6e3a1"
 glyph = "cpu-2"
 show_value = true
 stat = "ram_used"
@@ -147,18 +146,18 @@ capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
-color = "#00f0ff"
+color = "#ffffff"
 show_label = true
 
 [widget.workspaces]
-active_pill_size = 3.4
+active_pill_size = 2.2
 capsule = true
 capsule_fill = "on_primary"
 change_color_on_hover = false
-empty_color = "#15161e"
-focused_color = "#00f0ff"
+empty_color = "#334155"
+focused_color = "#ffffff"
 inactive_pill_size = 1.2
-occupied_color = "#ff007f"
+occupied_color = "#88c0d0"
 pill_scale = 1.0
 show_icons = true
 show_labels = true

@@ -1,0 +1,31 @@
+[bar.default]
+start = [ "launcher", "spacer_1", "workspaces", "spacer_1", "active_window" ]
+center = [ "clock" ]
+end = [ "media", "spacer_1", "group:hw", "group:netvol", "tray", "notifications", "session" ]
+concave_edge_corners = false
+margin_edge = 8
+margin_ends = 16
+radius_top_left = 18
+radius_top_right = 18
+radius_bottom_left = 18
+radius_bottom_right = 18
+scale = 1.05
+thickness = 36
+border_width = 1.8
+background_opacity = 0.92
+
+    [[bar.default.capsule_group]]
+    border = ""
+    fill = "on_secondary"
+    id = "hw"
+    members = [ "temp", "sysmon_2", "sysmon_3" ]
+    opacity = 0.95
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    border = ""
+    fill = "on_secondary"
+    id = "netvol"
+    members = [ "network", "volume" ]
+    opacity = 0.95
+    padding = 6.0
