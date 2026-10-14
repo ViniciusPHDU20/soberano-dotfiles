@@ -14,8 +14,7 @@ radius_bottom_left = 20
 radius_bottom_right = 20
 scale = 1.05
 thickness = 34
-border = "#ffffff"
-border_width = 1.0
+border_width = 0.0
 background_opacity = 0.0
 
 [shell]
