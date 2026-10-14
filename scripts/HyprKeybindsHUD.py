@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
 HyprKeybindsHUD.py - Lightweight Native WebKitGTK Glass HUD for Keybindings.
-Uses WebKit2GTK (Tauri runtime engine) on Wayland.
+Uses WebKit2GTK (Tauri runtime engine) on Wayland with zero protocol errors.
 """
 import sys
 import os
 import signal
-import gi
 
+# Fix infamous WebKitGTK DMA-BUF renderer bug on modern Wayland compositors
+os.environ["WEBKIT_DISABLE_DMABUF_RENDERER"] = "1"
+
+import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gtk, WebKit2, Gdk, GLib
@@ -41,11 +44,9 @@ def cleanup():
 class KeybindsHUDWindow(Gtk.Window):
     def __init__(self):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
-        self.set_wmclass("hypr-keybinds-hud", "hypr-keybinds-hud")
         self.set_title("Atalhos do Sistema")
         self.set_decorated(False)
         self.set_default_size(1080, 780)
-        self.set_position(Gtk.WindowPosition.CENTER)
 
         # Transparent RGBA visual
         screen = self.get_screen()
@@ -98,6 +99,7 @@ class KeybindsHUDWindow(Gtk.Window):
 
 if __name__ == "__main__":
     check_singleton()
+    GLib.set_prgname("hypr-keybinds-hud")
     Gtk.init(sys.argv)
 
     win = KeybindsHUDWindow()
