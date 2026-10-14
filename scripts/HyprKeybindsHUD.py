@@ -12,7 +12,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 # Sync theme with system and Noctalia style
 try:
     import hud_theme_sync
-    hud_theme_sync.generate_css()
+    hud_theme_sync.sync_all()
 except Exception as e:
     pass
 
