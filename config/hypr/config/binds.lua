@@ -159,10 +159,12 @@ hl.bind(mainMod .. " + ALT + R",       hl.dsp.exec_cmd(noctCall .. "templates-ap
 hl.bind(mainMod .. " + A",             hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/OverviewToggle.sh"))
 hl.bind(mainMod .. " + SHIFT + N",     hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center notifications"))
 
--- Keybindings Cheat-Sheet HUD (JaKooLit: Super+H / Super+Shift+?)
-hl.bind(mainMod .. " + H",             hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeybindsHelp.sh"))
-hl.bind(mainMod .. " + question",      hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeybindsHelp.sh"))
-hl.bind(mainMod .. " + SHIFT + slash", hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeybindsHelp.sh"))
+-- Keybindings Cheat-Sheet HUD (JaKooLit: Super+Shift+K / Super+H / Super+Shift+?)
+hl.bind(mainMod .. " + SHIFT + K",     hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeyBinds.sh"))
+hl.bind(mainMod .. " + K",             hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeyBinds.sh"))
+hl.bind(mainMod .. " + H",             hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeyBinds.sh"))
+hl.bind(mainMod .. " + question",      hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeyBinds.sh"))
+hl.bind(mainMod .. " + SHIFT + slash", hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/KeyBinds.sh"))
 
 -------------------------------
 ---- WORKSPACES & MONITORS ----
