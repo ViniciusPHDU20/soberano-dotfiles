@@ -149,5 +149,4 @@ hl.window_rule({
     center = true,
     size = { 960, 680 },
     pin = true,
-    dimaround = true,
 })
