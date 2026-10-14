@@ -9,6 +9,13 @@ import signal
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
+# Sync theme with system and Noctalia style
+try:
+    import hud_theme_sync
+    hud_theme_sync.generate_css()
+except Exception as e:
+    pass
+
 PID_FILE = "/tmp/hypr_keybinds_hud.pid"
 HTML_PATH = os.path.expanduser("~/dotfiles/config/hypr/hud/index.html")
 

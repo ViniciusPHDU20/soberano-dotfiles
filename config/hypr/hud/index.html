@@ -4,7 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atalhos do Sistema</title>
+  <link rel="stylesheet" href="theme.css">
   <style>
+    :root {
+      --bg-app: rgba(15, 19, 29, 0.96);
+      --bg-card: #151924;
+      --bg-input: #181d2a;
+      --bg-kbd: #22293a;
+      --border-app: rgba(0, 240, 255, 0.35);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --border-kbd: #3d4966;
+      --text-fg: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #00f0ff;
+      --accent-contrast: #0b0f19;
+      --cat-rice: #cba6f7;
+      --cat-win: #89b4fa;
+      --cat-ws: #a6e3a1;
+      --cat-utils: #fab387;
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --danger-border: rgba(239, 68, 68, 0.45);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -16,9 +38,9 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0f131d;
+      background: transparent;
       font-family: "MesloLGS Nerd Font", "Noto Sans", sans-serif;
-      color: #e2e8f0;
+      color: var(--text-fg);
       display: flex;
       flex-direction: column;
     }
@@ -30,9 +52,9 @@
       display: flex;
       flex-direction: column;
       padding: 22px 26px;
-      border: 1px solid rgba(0, 240, 255, 0.35);
+      border: 1px solid var(--border-app);
       border-radius: 16px;
-      background: rgba(15, 19, 29, 0.97);
+      background: var(--bg-app);
     }
 
     /* Header */
@@ -42,7 +64,7 @@
       align-items: center;
       margin-bottom: 16px;
       padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid var(--border-card);
       flex-shrink: 0;
     }
 
@@ -50,22 +72,22 @@
       font-size: 20px;
       font-weight: 700;
       letter-spacing: -0.3px;
-      color: #00f0ff;
+      color: var(--accent);
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
     .header-info p {
-      color: #94a3b8;
+      color: var(--text-muted);
       font-size: 12px;
       margin-top: 3px;
     }
 
     .close-btn {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.45);
-      color: #f87171;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
       font-size: 12px;
       font-weight: 700;
       padding: 7px 14px;
@@ -78,8 +100,8 @@
     }
 
     .close-btn:hover {
-      background: #ef4444;
-      color: #0f172a;
+      background: var(--danger);
+      color: var(--accent-contrast);
     }
 
     /* Controls Bar: Search + Category Filters */
@@ -98,11 +120,11 @@
 
     .search-input {
       width: 100%;
-      background: #181d2a;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: var(--bg-input);
+      border: 1px solid var(--border-card);
       border-radius: 10px;
       padding: 10px 16px 10px 40px;
-      color: #ffffff;
+      color: var(--text-fg);
       font-size: 13px;
       outline: none;
       font-family: inherit;
@@ -110,8 +132,7 @@
     }
 
     .search-input:focus {
-      border-color: #00f0ff;
-      background: #1c2233;
+      border-color: var(--accent);
     }
 
     .search-icon {
@@ -120,7 +141,7 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: 14px;
-      color: #00f0ff;
+      color: var(--accent);
       pointer-events: none;
     }
 
@@ -132,9 +153,9 @@
     }
 
     .tab-btn {
-      background: #181d2a;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #94a3b8;
+      background: var(--bg-input);
+      border: 1px solid var(--border-card);
+      color: var(--text-muted);
       font-size: 12px;
       font-weight: 600;
       padding: 8px 12px;
@@ -148,14 +169,14 @@
     }
 
     .tab-btn:hover {
-      color: #ffffff;
-      border-color: rgba(255, 255, 255, 0.25);
+      color: var(--text-fg);
+      border-color: var(--accent);
     }
 
     .tab-btn.active {
-      background: #00f0ff;
-      color: #0b0f19;
-      border-color: #00f0ff;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      border-color: var(--accent);
       font-weight: 700;
     }
 
@@ -177,17 +198,18 @@
       border-radius: 4px;
     }
     .grid-container::-webkit-scrollbar-thumb {
-      background: rgba(0, 240, 255, 0.35);
+      background: var(--accent);
+      opacity: 0.5;
       border-radius: 4px;
     }
     .grid-container::-webkit-scrollbar-thumb:hover {
-      background: #00f0ff;
+      background: var(--accent);
     }
 
     /* Category Cards */
     .category-card {
-      background: #151924;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
       border-radius: 12px;
       padding: 14px;
       display: flex;
@@ -203,13 +225,13 @@
       align-items: center;
       gap: 8px;
       padding-bottom: 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid var(--border-card);
     }
 
-    .cat-rice .category-title { color: #cba6f7; }
-    .cat-win .category-title { color: #89b4fa; }
-    .cat-ws .category-title { color: #a6e3a1; }
-    .cat-utils .category-title { color: #fab387; }
+    .cat-rice .category-title { color: var(--cat-rice); }
+    .cat-win .category-title { color: var(--cat-win); }
+    .cat-ws .category-title { color: var(--cat-ws); }
+    .cat-utils .category-title { color: var(--cat-utils); }
 
     /* Shortcut Rows */
     .items-list {
@@ -242,12 +264,12 @@
     .shortcut-name {
       font-size: 13px;
       font-weight: 600;
-      color: #f1f5f9;
+      color: var(--text-fg);
     }
 
     .shortcut-desc {
       font-size: 11px;
-      color: #94a3b8;
+      color: var(--text-muted);
     }
 
     /* Keycaps */
@@ -259,15 +281,15 @@
     }
 
     .kbd {
-      background: #22293a;
-      border: 1px solid #3d4966;
-      border-bottom: 2px solid #141722;
+      background: var(--bg-kbd);
+      border: 1px solid var(--border-kbd);
+      border-bottom: 2px solid rgba(0, 0, 0, 0.4);
       border-radius: 5px;
       padding: 2px 7px;
       font-family: "MesloLGS Nerd Font", monospace;
       font-size: 11px;
       font-weight: 700;
-      color: #00f0ff;
+      color: var(--accent);
       text-transform: uppercase;
       letter-spacing: 0.2px;
     }

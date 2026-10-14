@@ -52,3 +52,7 @@ fi
 # Signal Kitty terminals to reload colors dynamically without restarting
 pkill -SIGUSR1 kitty 2>/dev/null || true
 
+# Synchronize Keybindings HUD theme palette
+python3 "${HOME}/dotfiles/scripts/hud_theme_sync.py" >/dev/null 2>&1 || true
+
+
