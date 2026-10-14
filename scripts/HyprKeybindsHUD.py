@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 """
-HyprKeybindsHUD.py - Lightweight Native WebKitGTK Glass HUD for Keybindings.
-Uses WebKit2GTK (Tauri runtime engine) on Wayland with zero protocol errors.
+HyprKeybindsHUD.py - Ultra-fast, High-Fidelity HUD for Keybindings.
+Powered by PyQt6 + Chromium on Wayland with zero protocol errors and rock-solid rendering.
 """
 import sys
 import os
 import signal
-
-# Fix infamous WebKitGTK DMA-BUF renderer bug on modern Wayland compositors
-os.environ["WEBKIT_DISABLE_DMABUF_RENDERER"] = "1"
-
-import gi
-gi.require_version("Gtk", "3.0")
-gi.require_version("WebKit2", "4.1")
-from gi.repository import Gtk, WebKit2, Gdk, GLib
+from PyQt6 import QtWidgets, QtCore, QtGui
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 PID_FILE = "/tmp/hypr_keybinds_hud.pid"
 HTML_PATH = os.path.expanduser("~/dotfiles/config/hypr/hud/index.html")
@@ -41,67 +35,70 @@ def cleanup():
         except Exception:
             pass
 
-class KeybindsHUDWindow(Gtk.Window):
+class KeybindsHUDWindow(QtWidgets.QMainWindow):
     def __init__(self):
-        super().__init__(type=Gtk.WindowType.TOPLEVEL)
-        self.set_title("Atalhos do Sistema")
-        self.set_decorated(False)
-        self.set_default_size(1080, 780)
+        super().__init__()
+        self.setWindowTitle("Atalhos do Sistema")
+        self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.resize(1100, 800)
 
-        # Transparent RGBA visual
-        screen = self.get_screen()
-        visual = screen.get_rgba_visual()
-        if visual:
-            self.set_visual(visual)
-        self.set_app_paintable(True)
+        # Center on active monitor
+        screen_geo = QtGui.QGuiApplication.primaryScreen().geometry()
+        x = (screen_geo.width() - 1100) // 2
+        y = (screen_geo.height() - 800) // 2
+        self.move(x, y)
 
-        # WebKit User Content Manager for JS -> Python bridge
-        content_manager = WebKit2.UserContentManager()
-        content_manager.register_script_message_handler("closeHandler")
-        content_manager.connect("script-message-received::closeHandler", self.on_close_requested)
-
-        # WebKit WebView
-        self.webview = WebKit2.WebView.new_with_user_content_manager(content_manager)
-        self.webview.set_background_color(Gdk.RGBA(0, 0, 0, 0))
-
-        # Settings
-        settings = self.webview.get_settings()
-        settings.set_enable_javascript(True)
-        settings.set_enable_developer_extras(False)
-
-        # Load local HTML file
+        # WebEngine View
+        self.view = QWebEngineView(self)
+        self.view.setStyleSheet("background: transparent;")
+        self.view.page().setBackgroundColor(QtGui.QColor(0, 0, 0, 0))
+        
+        # Load index.html
         if os.path.exists(HTML_PATH):
-            self.webview.load_uri(f"file://{HTML_PATH}")
+            self.view.setUrl(QtCore.QUrl.fromLocalFile(HTML_PATH))
         else:
-            self.webview.load_html("<h1>Erro: index.html não encontrado</h1>", "file:///")
+            self.view.setHtml("<h1>Erro: index.html não encontrado</h1>")
 
-        self.add(self.webview)
-        self.connect("destroy", self.on_destroy)
-        self.connect("key-press-event", self.on_key_press)
+        # JS window.close() bridge
+        self.view.page().windowCloseRequested.connect(self.close_window)
 
-    def on_close_requested(self, user_content_manager, message):
-        self.close_window()
+        self.setCentralWidget(self.view)
 
-    def on_key_press(self, widget, event):
-        if event.keyval == Gdk.KEY_Escape:
+    def keyPressEvent(self, event: QtGui.QKeyEvent):
+        if event.key() == QtCore.Qt.Key.Key_Escape:
             self.close_window()
-            return True
-        return False
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def close_window(self):
         cleanup()
-        self.destroy()
-        Gtk.main_quit()
+        QtWidgets.QApplication.quit()
 
-    def on_destroy(self, widget):
+    def closeEvent(self, event):
         cleanup()
-        Gtk.main_quit()
+        event.accept()
 
-if __name__ == "__main__":
+def main():
     check_singleton()
-    GLib.set_prgname("hypr-keybinds-hud")
-    Gtk.init(sys.argv)
+
+    # Pass wayland app-id
+    os.environ["QT_QPA_PLATFORM"] = "wayland"
+    
+    app = QtWidgets.QApplication(sys.argv)
+    app.setApplicationName("hypr-keybinds-hud")
+    app.setDesktopFileName("hypr-keybinds-hud")
 
     win = KeybindsHUDWindow()
-    win.show_all()
-    Gtk.main()
+    win.show()
+
+    signal.signal(signal.SIGINT, lambda *_: win.close_window())
+    signal.signal(signal.SIGTERM, lambda *_: win.close_window())
+
+    ret = app.exec()
+    cleanup()
+    sys.exit(ret)
+
+if __name__ == "__main__":
+    main()
