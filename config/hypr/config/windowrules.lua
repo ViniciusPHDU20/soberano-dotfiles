@@ -141,3 +141,13 @@ hl.layer_rule({
   blur = true,
   blur_popups = true,
 })
+
+-- Keybindings Cheat-Sheet HUD
+hl.window_rule({
+    match = { class = "^(hypr-keybinds-cheat-sheet)$" },
+    float = true,
+    center = true,
+    size = { 960, 680 },
+    pin = true,
+    dimaround = true,
+})
