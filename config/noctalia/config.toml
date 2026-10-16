@@ -162,7 +162,7 @@ directory = "/home/viniciusphdu/dotfiles/wallpapers"
 enabled = [ "raycursive/discord-voice" ]
 
 [plugin_settings."raycursive/discord-voice"]
-discord_binary = "/usr/bin/vesktop"
+discord_binary = "/usr/bin/discord"
 
 [widget."raycursive/discord-voice:bar"]
 show_channel_name = true

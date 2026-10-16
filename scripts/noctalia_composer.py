@@ -208,7 +208,7 @@ def compose_config(style_name, layout_name, cc_style_name=None):
 enabled = [ "raycursive/discord-voice" ]
 
 [plugin_settings."raycursive/discord-voice"]
-discord_binary = "/usr/bin/vesktop"
+discord_binary = "/usr/bin/discord"
 
 [widget."raycursive/discord-voice:bar"]
 show_channel_name = true
@@ -255,7 +255,7 @@ hide_when_disconnected = false
 enabled = [ "raycursive/discord-voice" ]
 
 [plugin_settings."raycursive/discord-voice"]
-discord_binary = "/usr/bin/vesktop"
+discord_binary = "/usr/bin/discord"
 
 [widget."raycursive/discord-voice:bar"]
 show_channel_name = true
