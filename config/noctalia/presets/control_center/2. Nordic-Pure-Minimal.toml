@@ -1,0 +1,42 @@
+[shell]
+corner_radius_scale = 0.4
+card_borders = false
+button_borders = false
+input_borders = false
+popup_borders = false
+popup_shadows = true
+font_family = "Inter"
+
+    [shell.panel]
+    transparency_mode = "glass"
+    control_center_placement = "attached"
+    control_center_position = "auto"
+    open_near_click_control_center = true
+    list_item_background = false
+    borders = false
+    shadow = true
+
+[control_center]
+sidebar = "none"
+width = 560
+show_session_button = false
+show_shortcut_labels = false
+
+    [control_center.calendar]
+    show_events_card = true
+    show_week_numbers = false
+
+    [[control_center.shortcuts]]
+    type = "wifi"
+
+    [[control_center.shortcuts]]
+    type = "bluetooth"
+
+    [[control_center.shortcuts]]
+    type = "nightlight"
+
+    [[control_center.shortcuts]]
+    type = "notification"
+
+    [[control_center.shortcuts]]
+    type = "power_profile"

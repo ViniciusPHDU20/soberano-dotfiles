@@ -39,6 +39,13 @@ clipboard_image_action_command = "swash --stdin --name \"swash-$(date +'%Y-%m-%d
 launch_apps_as_systemd_services = true
 polkit_agent = true
 settings_show_advanced = true
+corner_radius_scale = 0.0
+card_borders = true
+button_borders = true
+input_borders = true
+popup_borders = true
+popup_shadows = true
+font_family = "JetBrainsMono Nerd Font"
 
     [shell.greeter_sync]
     auto_sync = false
@@ -47,6 +54,10 @@ settings_show_advanced = true
     open_near_click_control_center = true
     session_placement = "floating"
     session_position = "center"
+    transparency_mode = "glass"
+    list_item_background = true
+    borders = true
+    shadow = true
 
     [shell.screenshot]
     copy_to_clipboard = false
@@ -89,13 +100,42 @@ settings_show_advanced = true
     shortcut = "5"
     variant = "destructive"
 
+[control_center]
+sidebar = "full"
+width = 820
+show_session_button = true
+show_shortcut_labels = true
+
+    [control_center.calendar]
+    show_events_card = true
+    show_week_numbers = true
+
+    [[control_center.shortcuts]]
+    type = "wifi"
+
+    [[control_center.shortcuts]]
+    type = "bluetooth"
+
+    [[control_center.shortcuts]]
+    type = "power_profile"
+
+    [[control_center.shortcuts]]
+    type = "caffeine"
+
+    [[control_center.shortcuts]]
+    type = "nightlight"
+
+    [[control_center.shortcuts]]
+    type = "notification"
+
 [system.monitor]
 gpu_poll_seconds = 2
 
 [theme]
 mode = "dark"
 source = "community"
-community_palette = "Tokyo-Night"
+community_palette = "Cyberpunk"
+pure_black_dark = true
 
     [theme.templates]
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]

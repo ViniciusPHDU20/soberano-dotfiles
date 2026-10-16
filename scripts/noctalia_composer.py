@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 noctalia_composer.py - Orthogonal Style & Layout Composer for Noctalia Shell.
-Merges Bar Styles (Skins, Palettes, Opacity, Colors) with Bar Layouts (Geometry, Position, Margins).
+Merges Bar Styles (Skins, Palettes, Opacity, Colors) with Bar Layouts (Geometry, Position, Margins)
+and Control Center Profiles (Cyber-Cockpit, Nordic-Minimal, Velvet-Cozy, Floating-Island, Auto-Sync).
 Port of the JaKooLit WaybarStyles + WaybarLayout architecture.
 """
 import sys
@@ -13,6 +14,7 @@ DOTFILES = os.path.expanduser("~/dotfiles")
 CONFIG_DIR = os.path.join(DOTFILES, "config/noctalia")
 STYLES_DIR = os.path.join(CONFIG_DIR, "styles")
 LAYOUTS_DIR = os.path.join(CONFIG_DIR, "layouts")
+CC_PRESETS_DIR = os.path.join(CONFIG_DIR, "presets/control_center")
 TARGET_CONFIG = os.path.join(CONFIG_DIR, "config.toml")
 USER_CONFIG = os.path.expanduser("~/.config/noctalia/config.toml")
 WALLPAPERS_DIR = os.path.join(DOTFILES, "wallpapers")
@@ -21,6 +23,7 @@ SYNC_SCRIPT = os.path.join(DOTFILES, "scripts/DynamicThemeSync.sh")
 STATE_DIR = os.path.expanduser("~/.config/noctalia")
 STYLE_STATE_FILE = os.path.join(STATE_DIR, "active_style.txt")
 LAYOUT_STATE_FILE = os.path.join(STATE_DIR, "active_layout.txt")
+CC_STATE_FILE = os.path.join(STATE_DIR, "active_cc_style.txt")
 
 WALLPAPER_MAP = {
     "Catppuccin-Mocha": "Pastel-Window.png",
@@ -54,7 +57,15 @@ def get_active_layout():
                 return val
     return "1. Top-Floating-Pill"
 
-def set_state(style=None, layout=None):
+def get_active_cc_style():
+    if os.path.isfile(CC_STATE_FILE):
+        with open(CC_STATE_FILE, "r") as f:
+            val = f.read().strip()
+            if val:
+                return val
+    return "6. Auto-Sync-Theme"
+
+def set_state(style=None, layout=None, cc_style=None):
     os.makedirs(STATE_DIR, exist_ok=True)
     if style:
         with open(STYLE_STATE_FILE, "w") as f:
@@ -62,6 +73,9 @@ def set_state(style=None, layout=None):
     if layout:
         with open(LAYOUT_STATE_FILE, "w") as f:
             f.write(layout + "\n")
+    if cc_style:
+        with open(CC_STATE_FILE, "w") as f:
+            f.write(cc_style + "\n")
 
 def parse_style(style_path):
     with open(style_path, "r", encoding="utf-8") as f:
@@ -88,6 +102,7 @@ def parse_style(style_path):
     hw_border = extract_capsule_border("hw", content)
     netvol_border = extract_capsule_border("netvol", content)
 
+    # All non-bar content starts at [shell]
     shell_idx = content.find("[shell]")
     non_bar_content = content[shell_idx:] if shell_idx != -1 else ""
 
@@ -105,7 +120,31 @@ def inject_capsule_border(id_name, new_border, text):
     pattern = r'(\[\[bar\.[^\]]+\.capsule_group\]\][^\[]*?border\s*=\s*")[^"]*("(?=[^\[]*?id\s*=\s*"' + id_name + '"))'
     return re.sub(pattern, r'\g<1>' + new_border + r'\g<2>', text, flags=re.DOTALL)
 
-def compose_config(style_name, layout_name):
+def overlay_control_center(non_bar_content, cc_preset_name):
+    """Overlays an independent Control Center preset on non_bar_content while preserving theme colors and widgets."""
+    if not cc_preset_name or "Auto-Sync" in cc_preset_name:
+        return non_bar_content
+
+    # Find preset file
+    preset_path = os.path.join(CC_PRESETS_DIR, f"{cc_preset_name}.toml")
+    if not os.path.isfile(preset_path):
+        matches = glob_matches = [f for f in os.listdir(CC_PRESETS_DIR) if f.startswith(cc_preset_name)]
+        if matches:
+            preset_path = os.path.join(CC_PRESETS_DIR, matches[0])
+        else:
+            return non_bar_content
+
+    with open(preset_path, "r", encoding="utf-8") as f:
+        preset_content = f.read().strip()
+
+    # In non_bar_content, find where [system.monitor] starts (marks the boundary where theme & widgets begin)
+    sysmon_idx = non_bar_content.find("[system.monitor]")
+    if sysmon_idx != -1:
+        theme_and_widgets = non_bar_content[sysmon_idx:]
+        return preset_content + "\n\n" + theme_and_widgets.strip()
+    return non_bar_content
+
+def compose_config(style_name, layout_name, cc_style_name=None):
     style_path = os.path.join(STYLES_DIR, f"{style_name}.toml")
     layout_path = os.path.join(LAYOUTS_DIR, f"{layout_name}.toml")
 
@@ -113,6 +152,9 @@ def compose_config(style_name, layout_name):
         raise FileNotFoundError(f"Estilo não encontrado: {style_path}")
     if not os.path.isfile(layout_path):
         raise FileNotFoundError(f"Layout não encontrado: {layout_path}")
+
+    if cc_style_name is None:
+        cc_style_name = get_active_cc_style()
 
     s = parse_style(style_path)
     with open(layout_path, "r", encoding="utf-8") as f:
@@ -122,6 +164,9 @@ def compose_config(style_name, layout_name):
     is_islands = "Floating-Islands" in layout_name
 
     eff_opacity = 0.0 if (is_islands or s["is_glass"]) else s["background_opacity"]
+
+    # Overlay CC preset if not Auto-Sync
+    final_non_bar = overlay_control_center(s["non_bar_content"], cc_style_name)
 
     if is_dual:
         lines = ["[accessibility]\nui_scale = 1.20\n\n"]
@@ -157,7 +202,7 @@ def compose_config(style_name, layout_name):
 
         cleaned_layout = bar_part.strip() + ("\n\n" + cg_part.strip() if cg_part.strip() else "")
         lines.append(cleaned_layout.strip() + "\n\n")
-        lines.append(s["non_bar_content"].strip() + "\n")
+        lines.append(final_non_bar.strip() + "\n")
         return "".join(lines)
     else:
         lines = ["[accessibility]\nui_scale = 1.20\n\n"]
@@ -192,11 +237,14 @@ def compose_config(style_name, layout_name):
 
         cleaned_layout = bar_part.strip() + ("\n\n" + cg_part.strip() if cg_part.strip() else "")
         lines.append(cleaned_layout.strip() + "\n\n")
-        lines.append(s["non_bar_content"].strip() + "\n")
+        lines.append(final_non_bar.strip() + "\n")
         return "".join(lines)
 
-def apply_composition(style_name, layout_name, change_wallpaper=True):
-    content = compose_config(style_name, layout_name)
+def apply_composition(style_name, layout_name, cc_style_name=None, change_wallpaper=True):
+    if cc_style_name is None:
+        cc_style_name = get_active_cc_style()
+
+    content = compose_config(style_name, layout_name, cc_style_name=cc_style_name)
     tmp_path = "/tmp/noctalia_composed_validate.toml"
     with open(tmp_path, "w", encoding="utf-8") as f:
         f.write(content)
@@ -212,7 +260,10 @@ def apply_composition(style_name, layout_name, change_wallpaper=True):
         with open(USER_CONFIG, "w", encoding="utf-8") as f:
             f.write(content)
 
-    set_state(style=style_name, layout=layout_name)
+    set_state(style=style_name, layout=layout_name, cc_style=cc_style_name)
+
+    # Force instant Noctalia reload
+    subprocess.run(["noctalia", "msg", "config-reload"], capture_output=True)
 
     if change_wallpaper and style_name in WALLPAPER_MAP:
         wall_file = os.path.join(WALLPAPERS_DIR, WALLPAPER_MAP[style_name])
@@ -228,7 +279,7 @@ def apply_composition(style_name, layout_name, change_wallpaper=True):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: noctalia_composer.py [get-style|get-layout|set-style <nome>|set-layout <nome>|recompose]")
+        print("Uso: noctalia_composer.py [get-style|get-layout|get-cc-style|set-style <nome>|set-layout <nome>|set-cc-style <nome>|recompose]")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -236,10 +287,13 @@ if __name__ == "__main__":
         print(get_active_style())
     elif cmd == "get-layout":
         print(get_active_layout())
+    elif cmd == "get-cc-style":
+        print(get_active_cc_style())
     elif cmd == "set-style" and len(sys.argv) >= 3:
         target_style = sys.argv[2]
         curr_layout = get_active_layout()
-        if apply_composition(target_style, curr_layout, change_wallpaper=True):
+        curr_cc = get_active_cc_style()
+        if apply_composition(target_style, curr_layout, cc_style_name=curr_cc, change_wallpaper=True):
             clean_lay = curr_layout[3:] if curr_layout[0].isdigit() and curr_layout[1:3] == ". " else curr_layout
             subprocess.run(["noctalia", "msg", "notification-show", "Estilo Aplicado", f"Estilo: {target_style} | Layout: {clean_lay}"])
             print(f"Estilo {target_style} aplicado com layout {clean_lay}.")
@@ -248,11 +302,22 @@ if __name__ == "__main__":
     elif cmd == "set-layout" and len(sys.argv) >= 3:
         target_layout = sys.argv[2]
         curr_style = get_active_style()
-        if apply_composition(curr_style, target_layout, change_wallpaper=False):
+        curr_cc = get_active_cc_style()
+        if apply_composition(curr_style, target_layout, cc_style_name=curr_cc, change_wallpaper=False):
             clean_lay = target_layout[3:] if target_layout[0].isdigit() and target_layout[1:3] == ". " else target_layout
             subprocess.run(["noctalia", "msg", "notification-show", "Layout Aplicado", f"Layout: {clean_lay} | Estilo: {curr_style}"])
             print(f"Layout {clean_lay} aplicado com estilo {curr_style}.")
         else:
             sys.exit(1)
+    elif cmd == "set-cc-style" and len(sys.argv) >= 3:
+        target_cc = sys.argv[2]
+        curr_style = get_active_style()
+        curr_layout = get_active_layout()
+        if apply_composition(curr_style, curr_layout, cc_style_name=target_cc, change_wallpaper=False):
+            clean_cc = target_cc[3:] if target_cc[0].isdigit() and target_cc[1:3] == ". " else target_cc
+            subprocess.run(["noctalia", "msg", "notification-show", "Control Center Atualizado", f"Perfil: {clean_cc}"])
+            print(f"Control Center {clean_cc} aplicado com sucesso.")
+        else:
+            sys.exit(1)
     elif cmd == "recompose":
-        apply_composition(get_active_style(), get_active_layout(), change_wallpaper=False)
+        apply_composition(get_active_style(), get_active_layout(), cc_style_name=get_active_cc_style(), change_wallpaper=False)

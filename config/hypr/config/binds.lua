@@ -141,6 +141,7 @@ hl.bind(mainMod .. " + SHIFT + W",     hl.dsp.exec_cmd(noctCall .. "panel-toggle
 hl.bind(mainMod .. " + ALT + W",       hl.dsp.exec_cmd(noctCall .. "wallpaper-random && sleep 0.3 && " .. noctCall .. "templates-apply && ~/dotfiles/scripts/DynamicThemeSync.sh"))
 hl.bind(mainMod .. " + ALT + B",       hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/NoctaliaThemeSelector.sh"))
 hl.bind(mainMod .. " + CONTROL + B",   hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/NoctaliaLayoutSelector.sh"))
+hl.bind(mainMod .. " + ALT + C",       hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/NoctaliaControlCenterSelector.sh"))
 hl.bind(mainMod .. " + ALT + A",       hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/HyprAnimationsSelector.sh"))
 
 -- Game Mode (JaKooLit: Super+Shift+G or Super+G)

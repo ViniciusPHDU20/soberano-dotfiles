@@ -39,6 +39,12 @@ clipboard_image_action_command = "swash --stdin --name \"swash-$(date +'%Y-%m-%d
 launch_apps_as_systemd_services = true
 polkit_agent = true
 settings_show_advanced = true
+corner_radius_scale = 1.3
+card_borders = false
+button_borders = true
+input_borders = true
+popup_borders = false
+popup_shadows = true
 
     [shell.greeter_sync]
     auto_sync = false
@@ -47,6 +53,10 @@ settings_show_advanced = true
     open_near_click_control_center = true
     session_placement = "floating"
     session_position = "center"
+    transparency_mode = "soft"
+    list_item_background = false
+    borders = false
+    shadow = true
 
     [shell.screenshot]
     copy_to_clipboard = false
@@ -89,13 +99,42 @@ settings_show_advanced = true
     shortcut = "5"
     variant = "destructive"
 
+[control_center]
+sidebar = "compact"
+width = 660
+show_session_button = true
+show_shortcut_labels = true
+
+    [control_center.calendar]
+    show_events_card = true
+    show_week_numbers = false
+
+    [[control_center.shortcuts]]
+    type = "wifi"
+
+    [[control_center.shortcuts]]
+    type = "bluetooth"
+
+    [[control_center.shortcuts]]
+    type = "power_profile"
+
+    [[control_center.shortcuts]]
+    type = "caffeine"
+
+    [[control_center.shortcuts]]
+    type = "nightlight"
+
+    [[control_center.shortcuts]]
+    type = "notification"
+
 [system.monitor]
 gpu_poll_seconds = 2
 
 [theme]
 mode = "dark"
 source = "community"
-community_palette = "Rosé Pine"
+community_palette = "Rose Pine Moon"
+pure_black_dark = false
 
     [theme.templates]
     builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
