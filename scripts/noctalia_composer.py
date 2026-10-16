@@ -202,7 +202,19 @@ def compose_config(style_name, layout_name, cc_style_name=None):
 
         cleaned_layout = bar_part.strip() + ("\n\n" + cg_part.strip() if cg_part.strip() else "")
         lines.append(cleaned_layout.strip() + "\n\n")
-        lines.append(final_non_bar.strip() + "\n")
+        lines.append(final_non_bar.strip() + "\n\n")
+
+        discord_block = """[plugins]
+enabled = [ "raycursive/discord-voice" ]
+
+[plugin_settings."raycursive/discord-voice"]
+discord_binary = "/usr/bin/vesktop"
+
+[widget."raycursive/discord-voice:bar"]
+show_channel_name = true
+hide_when_disconnected = false
+"""
+        lines.append(discord_block.strip() + "\n")
         return "".join(lines)
     else:
         lines = ["[accessibility]\nui_scale = 1.20\n\n"]
@@ -228,7 +240,7 @@ def compose_config(style_name, layout_name, cc_style_name=None):
 
         if s["is_glass"]:
             cg_part = ""
-            bar_part = bar_part.replace('"group:hw", "group:netvol"', '"temp", "sysmon_2", "sysmon_3", "network", "volume"')
+            bar_part = bar_part.replace('"group:hw", "group:netvol"', '"temp", "sysmon_2", "sysmon_3", "network", "volume", "raycursive/discord-voice:bar"')
         else:
             if s["hw_border"]:
                 cg_part = inject_capsule_border("hw", s["hw_border"], cg_part)
@@ -237,7 +249,19 @@ def compose_config(style_name, layout_name, cc_style_name=None):
 
         cleaned_layout = bar_part.strip() + ("\n\n" + cg_part.strip() if cg_part.strip() else "")
         lines.append(cleaned_layout.strip() + "\n\n")
-        lines.append(final_non_bar.strip() + "\n")
+        lines.append(final_non_bar.strip() + "\n\n")
+        
+        discord_block = """[plugins]
+enabled = [ "raycursive/discord-voice" ]
+
+[plugin_settings."raycursive/discord-voice"]
+discord_binary = "/usr/bin/vesktop"
+
+[widget."raycursive/discord-voice:bar"]
+show_channel_name = true
+hide_when_disconnected = false
+"""
+        lines.append(discord_block.strip() + "\n")
         return "".join(lines)
 
 def apply_composition(style_name, layout_name, cc_style_name=None, change_wallpaper=True):

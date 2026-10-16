@@ -43,6 +43,6 @@ background_opacity = 0.90
     border = ""
     fill = "on_secondary"
     id = "netvol"
-    members = [ "network", "volume" ]
+    members = [ "network", "volume", "raycursive/discord-voice:bar" ]
     opacity = 0.95
     padding = 6.0
