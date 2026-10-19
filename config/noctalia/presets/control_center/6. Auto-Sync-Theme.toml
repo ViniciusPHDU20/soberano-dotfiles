@@ -1,5 +1,0 @@
-# Auto-Sync mode:
-# When this preset is active, Noctalia automatically inherits the bespoke
-# Control Center geometry, width, sidebar layout, and transparency designed for the active theme!
-[auto_sync]
-enabled = true
