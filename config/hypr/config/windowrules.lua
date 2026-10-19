@@ -130,13 +130,13 @@ hl.window_rule({
     no_focus = true,
 })
 
--- Noctalia layer rule
+-- Wayle layer rule
 hl.layer_rule({
-  name = "noctalia",
+  name = "wayle",
   match = {
-    namespace = "^noctalia-(bar-.+|notification|dock|panel|attached-panel|osd|window-switcher)$",
+    namespace = "^(wayle.*)$",
   },
-  no_anim = true,
+  no_anim = false,
   ignore_alpha = 0.5,
   blur = true,
   blur_popups = true,
