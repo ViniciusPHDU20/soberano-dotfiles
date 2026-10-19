@@ -1,0 +1,409 @@
+#!/usr/bin/env bash
+# ==================================================
+#  KoolDots (2026)
+#  Project URL: https://github.com/LinuxBeginnings
+#  License: GNU GPLv3
+#  SPDX-License-Identifier: GPL-3.0-or-later
+# ==================================================
+# Wallust: derive colors from the current wallpaper and update templates
+# Usage: WallustSwww.sh [absolute_path_to_wallpaper]
+
+set -euo pipefail
+# Wallust v3/v4 compatibility
+wallust_args=()
+wallust_kitty_args=()
+# shellcheck source=/dev/null
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh" ]; then
+  . "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustConfig.sh"
+fi
+have_notify() { command -v notify-send >/dev/null 2>&1; }
+wallust_log="${XDG_CACHE_HOME:-$HOME/.cache}/wallust/wallust-swww.log"
+mkdir -p "$(dirname "$wallust_log")"
+
+theme_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
+global_theme_file="$theme_state_dir/global_theme"
+legacy_global_theme_file="$HOME/.cache/.global_theme"
+
+read_global_theme() {
+  local theme=""
+  if [ -f "$global_theme_file" ]; then
+    theme="$(tr -d '\r\n' < "$global_theme_file" | awk '{$1=$1};1')"
+  elif [ -f "$legacy_global_theme_file" ]; then
+    theme="$(tr -d '\r\n' < "$legacy_global_theme_file" | awk '{$1=$1};1')"
+  fi
+  printf '%s' "$theme"
+}
+capture_current_layout() {
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify current 2>/dev/null | awk 'NF {print; exit}'
+    return 0
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    hyprctl -j activeworkspace 2>/dev/null | jq -r '.tiledLayout // .tiled_layout // empty'
+  else
+    hyprctl getoption general:layout 2>/dev/null | awk 'NR==1 {print $2}'
+  fi
+}
+restore_layout_after_reload() {
+  local layout="$1"
+  [ -n "$layout" ] || return 0
+
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" ]; then
+    "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/ChangeLayout.sh" --no-notify "$layout" >/dev/null 2>&1 || true
+  fi
+}
+reload_hypr_preserve_layout() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+
+  local active_layout
+  active_layout="$(capture_current_layout || true)"
+
+  hyprctl reload config-only >/dev/null 2>&1 || true
+  sleep 0.1
+  restore_layout_after_reload "$active_layout"
+}
+ensure_wallust_waybar_style() {
+  local waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style.css"
+  local colors_file="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
+  local styles_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/style"
+  [ -f "$colors_file" ] || return 0
+  if [ -f "$waybar_style" ]; then
+    return 0
+  fi
+  local candidates=(
+    "Wallust-Chroma-Fusion.css"
+    "Wallust-ML4W-modern.css"
+    "Wallust-Colored.css"
+    "Wallust-Box-type.css"
+    "Wallust-Simple.css"
+  )
+  for candidate in "${candidates[@]}"; do
+    if [ -f "$styles_dir/$candidate" ]; then
+      ln -sf "$styles_dir/$candidate" "$waybar_style"
+      break
+    fi
+  done
+}
+reload_running_cava_colors() {
+  # CAVA supports SIGUSR2 to reload colors without full audio reinitialization.
+  if pgrep -x cava >/dev/null 2>&1; then
+    pkill -USR2 -x cava >/dev/null 2>&1 || true
+  fi
+}
+# Waybar does not watch its stylesheet - it only re-reads style.css when it is
+# reloaded. Wallust has just rewritten the Waybar palette above and the borders
+# are applied in-process by apply_hypr_border_fallback, so without a reload
+# signal the bar alone keeps the previous wallpaper's colors while the borders
+# change. This is most visible for callers that intentionally do not restart
+# Waybar, e.g. WallpaperAutoChange.sh -> RefreshNoWaybar.sh,
+# WallpaperEffects.sh and WallpaperDaemon.sh. Only a running bar is signalled:
+# a missing bar is left to WaybarStartup.sh, which serializes on its own lock.
+# Mirrors the reload idiom already used by Refresh.sh and ThemeChanger.sh.
+reload_running_waybar_colors() {
+  if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WayleSyncConfig.py" ]; then
+    python3 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WayleSyncConfig.py" >/dev/null 2>&1 || true
+  fi
+  return 0
+}
+
+# Inputs and paths
+passed_path="${1:-}"
+if command -v awww >/dev/null 2>&1; then
+  WWW="awww"
+  cache_dir="$HOME/.cache/awww/"
+  cache_dir_fallback="$HOME/.cache/swww/"
+else
+  WWW="swww"
+  cache_dir="$HOME/.cache/swww/"
+  cache_dir_fallback="$HOME/.cache/awww/"
+fi
+rofi_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper"
+wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
+read_cached_wallpaper() {
+  local cache_file="$1"
+  if [[ -f "$cache_file" ]]; then
+    tr -d '\000' <"$cache_file" | awk 'NF && $0 !~ /^filter/ {print; exit}'
+  fi
+}
+
+ensure_wayland_env() {
+  local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  if [ -z "${WAYLAND_DISPLAY:-}" ] || [ ! -S "$runtime_dir/$WAYLAND_DISPLAY" ]; then
+    for socket in "$runtime_dir"/wayland-[0-9]*; do
+      [ -S "$socket" ] || continue
+      case "$(basename "$socket")" in
+        *awww*) continue ;;
+      esac
+      export WAYLAND_DISPLAY="$(basename "$socket")"
+      break
+    done
+  fi
+
+  if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    for sig_dir in "$runtime_dir"/hypr/*/; do
+      [ -S "${sig_dir}.socket.sock" ] || continue
+      export HYPRLAND_INSTANCE_SIGNATURE="$(basename "$sig_dir")"
+      break
+    done
+  fi
+}
+
+read_wallpaper_from_query() {
+  local monitor="$1"
+  [ -n "$monitor" ] || return 0
+  $WWW query 2>/dev/null | awk -v mon="$monitor" '
+    /^Monitor/ {
+      cur=$2
+      gsub(":", "", cur)
+    }
+    /image:/ && cur==mon {
+      sub(/^.*image: /,"")
+      print
+      exit
+    }
+  ' 2>/dev/null || true
+}
+
+# Helper: get focused monitor name (prefer JSON)
+get_focused_monitor() {
+  ensure_wayland_env
+  local mon=""
+  if command -v jq >/dev/null 2>&1; then
+    mon="$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name' 2>/dev/null || true)"
+  fi
+  if [ -z "$mon" ]; then
+    mon="$(hyprctl monitors 2>/dev/null | awk '/^Monitor/{name=$2} /focused: yes/{print name; exit}' 2>/dev/null || true)"
+  fi
+  printf '%s' "$mon"
+}
+
+# Determine wallpaper_path
+wallpaper_path=""
+if [[ -n "$passed_path" && -f "$passed_path" ]]; then
+  wallpaper_path="$passed_path"
+else
+  # Try to read from awww/swww cache for the focused monitor, with a short retry loop
+  current_monitor="$(get_focused_monitor)"
+  cache_file="$cache_dir$current_monitor"
+  alt_cache_file="${cache_dir_fallback}${current_monitor}"
+
+  # Wait briefly for awww/swww to write its cache after an image change
+  for i in {1..10}; do
+    if [[ -f "$cache_file" || -f "$alt_cache_file" ]]; then
+      break
+    fi
+    sleep 0.1
+  done
+  if [[ ! -f "$cache_file" && -f "$alt_cache_file" ]]; then
+    cache_file="$alt_cache_file"
+  fi
+
+  if [[ -f "$cache_file" ]]; then
+    # The first non-filter line is the original wallpaper path
+    wallpaper_path="$(read_cached_wallpaper "$cache_file")"
+  fi
+
+  if [[ -z "$wallpaper_path" && -n "$current_monitor" ]]; then
+    wallpaper_path="$(read_wallpaper_from_query "$current_monitor")"
+  fi
+fi
+
+if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
+  if [[ -L "$rofi_link" ]]; then
+    resolved_link="$(readlink -f "$rofi_link" 2>/dev/null || true)"
+    if [[ -n "$resolved_link" && -f "$resolved_link" ]]; then
+      wallpaper_path="$resolved_link"
+    fi
+  fi
+  if [[ -z "$wallpaper_path" && -f "$wallpaper_current" ]]; then
+    wallpaper_path="$wallpaper_current"
+  fi
+fi
+
+if [[ -z "${wallpaper_path:-}" || ! -f "$wallpaper_path" ]]; then
+  # Nothing to do; avoid failing loudly so callers can continue
+  exit 0
+fi
+
+# Update helpers that depend on the path
+ln -sf "$wallpaper_path" "$rofi_link" || true
+mkdir -p "$(dirname "$wallpaper_current")"
+cp -f "$wallpaper_path" "$wallpaper_current" || true
+
+# Ensure Ghostty directory exists so Wallust can write targets even if not yet created
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty" || true
+wait_for_templates() {
+  shift
+  local files=("$@")
+  for _ in {1..50}; do
+    local ready=true
+    for file in "${files[@]}"; do
+      if [[ ! -s "$file" ]]; then
+        ready=false
+        break
+      fi
+    done
+    $ready && return 0
+    sleep 0.1
+  done
+  return 1
+}
+
+# Run wallust (silent) to regenerate templates defined in ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust.toml
+# -s is used in this repo to keep things quiet and avoid extra prompts
+start_ts=$(date +%s)
+wallust_targets=(
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/waybar/wallust/colors-waybar.css"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-hyprland.conf"
+)
+for target in "${wallust_targets[@]}"; do
+  mkdir -p "$(dirname "$target")"
+done
+
+global_theme="$(read_global_theme)"
+if [ -n "$global_theme" ]; then
+  if ! wallust "${wallust_args[@]}" theme -- "$global_theme" >"$wallust_log" 2>&1; then
+    have_notify && notify-send -u critical -a WallustSwww \
+      "Wallust failed" "See: $wallust_log"
+    exit 1
+  fi
+else
+  if ! wallust "${wallust_args[@]}" run -s "$wallpaper_path" >"$wallust_log" 2>&1; then
+    have_notify && notify-send -u critical -a WallustSwww \
+      "Wallust failed" "See: $wallust_log"
+    exit 1
+  fi
+fi
+if ! wait_for_templates "$start_ts" "${wallust_targets[@]}"; then
+  have_notify && notify-send -u critical -a WallustSwww \
+    "Wallust templates not updated" "See: $wallust_log"
+  exit 1
+fi
+ensure_wallust_waybar_style
+reload_running_cava_colors
+reload_running_waybar_colors
+
+# Normalize Rofi selection colors to a brighter accent and readable foreground
+rofi_colors="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/wallust/colors-rofi.rasi"
+if [ -f "$rofi_colors" ]; then
+  accent_hex=$(sed -n 's/^\s*color13:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
+  [ -z "$accent_hex" ] && accent_hex=$(sed -n 's/^\s*color12:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
+  fg_hex=$(sed -n 's/^\s*foreground:\s*\(#[0-9A-Fa-f]\{6\}\).*/\1/p' "$rofi_colors" | head -n1)
+  if [ -n "$accent_hex" ]; then
+    sed -i -E "s|^(\s*selected-normal-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"
+    sed -i -E "s|^(\s*selected-active-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"
+    sed -i -E "s|^(\s*selected-urgent-background:\s*).*$|\1$accent_hex;|" "$rofi_colors"
+  fi
+  if [ -n "$fg_hex" ]; then
+    sed -i -E "s|^(\s*selected-normal-foreground:\s*).*$|\1$fg_hex;|" "$rofi_colors"
+    sed -i -E "s|^(\s*selected-active-foreground:\s*).*$|\1$fg_hex;|" "$rofi_colors"
+    sed -i -E "s|^(\s*selected-urgent-foreground:\s*).*$|\1$fg_hex;|" "$rofi_colors"
+  fi
+fi
+
+# Run kitty-only wallust config to keep terminal palette separate
+run_wallust_with_config() {
+  local cfg="$1"
+  # Wallust v4: prefer config-file flag via WallustConfig.sh
+  if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
+    wallust "${wallust_kitty_args[@]}" run -s "$wallpaper_path" || true
+    return
+  fi
+  # Wallust v3+: prefer config-file flag when available.
+  # NOTE: Do not use -c here; on wallust 3.x it means colorspace, not config file.
+  if wallust run --help 2>&1 | grep -q -E -- '(^|[[:space:]])-C([,[:space:]]|$)|--config-file'; then
+    wallust run -s -C "$cfg" "$wallpaper_path" || true
+    return
+  fi
+  # Legacy fallback for builds that still honor env-based config override.
+  WALLUST_CONFIG="$cfg" wallust run -s "$wallpaper_path" || true
+}
+# Native Lua socket evaluation: re-evaluates decorations and applies fresh Wallust colors
+# directly within Hyprland's embedded Lua state via hl.config (~9ms, zero compositor stall).
+apply_hypr_border_fallback() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+
+  hyprctl eval '
+    local home = os.getenv("HOME") or ""
+    local ok = pcall(dofile, home .. "/.config/hypr/UserConfigs/user_decorations.lua")
+    if not ok then pcall(dofile, home .. "/.config/hypr/lua/decorations.lua") end
+    local hok, helper = pcall(dofile, home .. "/.config/hypr/lua/user_decorations_helper.lua")
+    if hok and helper and helper.load_wallust_colors then
+      local wallust = helper.load_wallust_colors(home .. "/.config/hypr/wallust/wallust-hyprland.conf")
+      if wallust then
+        local c12 = wallust.color12 or "rgba(8db4ffff)"
+        local c10 = wallust.color10 or "rgba(5f6578ff)"
+        local c15 = wallust.color15 or c12
+        local c0  = wallust.color0  or "rgba(0f111aff)"
+        hl.config({
+          general = { col = { active_border = c12, inactive_border = c10 } },
+          decoration = { shadow = { color = c12, color_inactive = c10 } },
+          group = { col = { border_active = c15 }, groupbar = { col = { active = c0 } } }
+        })
+      end
+    end
+  ' >/dev/null 2>&1 || true
+}
+
+# Apply Hyprland updates immediately using native Lua hl.config socket evaluation (~9ms).
+# Skips full config reload to eliminate compositor IPC stalls and avoid layout resets (#68, #126).
+apply_hypr_border_fallback
+
+# Rainbow Borders owns general:col.active_border whenever a mode is selected,
+# and the call above has just rewritten that option from the Wallust palette.
+# Re-apply the user's mode here - this is the last border write on every
+# wallpaper/theme change, so without it a selected mode is silently reverted.
+rainbow_startup="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RainbowBordersStartup.sh"
+if [ -x "$rainbow_startup" ]; then
+  "$rainbow_startup" >/dev/null 2>&1 || true
+fi
+
+if [ "${HYPR_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ] || [ "${KOOLDOTS_FULL_RELOAD_ON_WALLPAPER:-0}" = "1" ]; then
+  reload_hypr_preserve_layout
+fi
+
+kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty.toml"
+if [ "${#wallust_kitty_args[@]}" -gt 0 ]; then
+  kitty_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallust/wallust-kitty-v4.toml"
+fi
+(
+  if [ -f "$kitty_cfg" ]; then
+    run_wallust_with_config "$kitty_cfg"
+  fi
+
+  # Reload kitty colors when wallpaper-based theme is active.
+  # Use SIGUSR1 directly to avoid extra latency from kitty remote-control calls.
+  kitty_wallust_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes/01-Wallust.conf"
+  if [ -s "$kitty_wallust_theme" ]; then
+    if pidof kitty >/dev/null 2>&1; then
+      for pid in $(pidof kitty); do
+        kill -SIGUSR1 "$pid" 2>/dev/null || true
+      done
+    fi
+  fi
+
+  # Normalize Ghostty palette syntax in case ':' was used by older files
+  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ]; then
+    sed -i -E 's/^(\s*palette\s*=\s*)([0-9]{1,2}):/\1\2=/' "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" 2>/dev/null || true
+  fi
+
+  # Light wait for Ghostty colors file to be present then signal Ghostty to reload (SIGUSR2)
+  for _ in 1 2 3; do
+    [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf" ] && break
+    sleep 0.1
+  done
+  if pidof ghostty >/dev/null; then
+    for pid in $(pidof ghostty); do kill -SIGUSR2 "$pid" 2>/dev/null || true; done
+  fi
+  # Hyprland reload/keyword updates are applied above to avoid delayed color/gap updates.
+) >/dev/null 2>&1 &
+
+# If wlogout is currently set to a wallust-aware theme (silvia, kurenai, or fuji), sync its colors and background
+if [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/.current_theme" && -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiWlogoutWallust.sh" ]]; then
+  cur_theme=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/wlogout/.current_theme" 2>/dev/null || echo "")
+  if [[ "$cur_theme" == "silvia" || "$cur_theme" == "kurenai" || "$cur_theme" == "fuji" ]]; then
+    bash "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiWlogoutWallust.sh" --auto "$wallpaper_path" >/dev/null 2>&1 &
+  fi
+fi
+

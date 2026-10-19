@@ -1,0 +1,29 @@
+# ==============================================================================
+# JaKooLit Hyprland-Dots Layout Port: TOP-Simpliest
+# ==============================================================================
+[bar]
+location = "top"
+inset-edge = 0.25
+inset-ends = 0.45
+padding = 0.35
+padding-ends = 0.55
+module-gap = 0.45
+
+[[bar.layout]]
+monitor = "*"
+show = true
+left = [
+    { module = "custom-hypr-layout", class = "mod-layout" },
+    "hyprland-workspaces",
+    "systray",
+    { module = "media", class = "mod-media" },
+]
+center = [
+    { module = "keybind-mode", class = "mod-submap" },
+    { module = "window-title", class = "mod-window" },
+]
+right = [
+    { module = "idle-inhibit", class = "mod-idle" },
+    { module = "hyprsunset", class = "mod-nightlight" },
+    { name = "notify", modules = [{ module = "notifications", class = "mod-notify" }, { module = "custom-updater", class = "mod-updater" }] },
+]

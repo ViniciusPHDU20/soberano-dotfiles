@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: Dark-Purpl
+# ==============================================================================
+scss = "dark-purpl"
+
+[palette]
+bg = "#151221"
+surface = "#1e1930"
+elevated = "#2c2445"
+fg = "#ede8f5"
+fg-muted = "#a396ba"
+primary = "#b388ff"
+red = "#ff5252"
+yellow = "#ffd740"
+green = "#69f0ae"
+blue = "#82b1ff"
+
+[bar_style]
+theme-provider = "wayle"
+bg = "transparent"
+background-opacity = 0
+border-location = "none"
+border-width = 0
+border-color = "border-accent"
+rounding = "none"
+shadow = "none"
+button-variant = "basic"
+button-opacity = 100
+button-bg-opacity = 90
+button-rounding = "full"
+button-border-location = "all"
+button-border-width = 1
+button-group-border-location = "none"
+button-group-border-width = 0
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 0
+button-group-border-color = "border-accent"
+button-group-rounding = "full"
+workspace-indicator = "background"

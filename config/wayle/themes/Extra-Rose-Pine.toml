@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: Extra-Rose-Pine
+# ==============================================================================
+scss = "extra-rose-pine"
+
+[palette]
+bg = "#191724"
+surface = "#1f1d2e"
+elevated = "#26233a"
+fg = "#e0def4"
+fg-muted = "#908caa"
+primary = "#ebbcba"
+red = "#eb6f92"
+yellow = "#f6c177"
+green = "#9ccfd8"
+blue = "#c4a7e7"
+
+[bar_style]
+theme-provider = "wayle"
+bg = "transparent"
+background-opacity = 0
+border-location = "none"
+border-width = 0
+border-color = "border-accent"
+rounding = "none"
+shadow = "none"
+button-variant = "basic"
+button-opacity = 100
+button-bg-opacity = 90
+button-rounding = "full"
+button-border-location = "all"
+button-border-width = 1
+button-group-border-location = "none"
+button-group-border-width = 0
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 0
+button-group-border-color = "border-accent"
+button-group-rounding = "full"
+workspace-indicator = "background"

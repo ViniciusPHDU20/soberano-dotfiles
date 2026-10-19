@@ -15,11 +15,7 @@ Item {
     readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
     readonly property var toplevels: ToplevelManager.toplevels
     readonly property int workspacesShown: Config.options.overview.rows * Config.options.overview.columns
-    readonly property int workspaceGroup: {
-        const wsId = monitor.activeWorkspace?.id ?? 1;
-        if (wsId < 1) return 0;
-        return Math.floor((wsId - 1) / workspacesShown);
-    }
+    readonly property int workspaceGroup: Math.floor((monitor.activeWorkspace?.id - 1) / workspacesShown)
     property bool monitorIsFocused: (Hyprland.focusedMonitor?.name == monitor.name)
     property var windows: HyprlandData.windowList
     property var windowByAddress: HyprlandData.windowByAddress
@@ -294,8 +290,7 @@ Item {
 
             Rectangle { // Focused workspace indicator
                 id: focusedWorkspaceIndicator
-                visible: (monitor.activeWorkspace?.id ?? 0) > 0
-                property int activeWorkspaceInGroup: Math.max(1, (monitor.activeWorkspace?.id ?? 1) - (root.workspaceGroup * root.workspacesShown))
+                property int activeWorkspaceInGroup: monitor.activeWorkspace?.id - (root.workspaceGroup * root.workspacesShown)
                 property int activeWorkspaceRowIndex: Math.floor((activeWorkspaceInGroup - 1) / Config.options.overview.columns)
                 property int activeWorkspaceColIndex: (activeWorkspaceInGroup - 1) % Config.options.overview.columns
                 x: (root.workspaceImplicitWidth + workspaceSpacing) * activeWorkspaceColIndex

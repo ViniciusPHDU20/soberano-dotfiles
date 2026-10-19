@@ -1,0 +1,56 @@
+# ==============================================================================
+# JaKooLit Hyprland-Dots Layout Port: TOP-Default-old-v1
+# ==============================================================================
+[bar]
+location = "top"
+inset-edge = 0.25
+inset-ends = 0.45
+padding = 0.35
+padding-ends = 0.55
+module-gap = 0.45
+
+[[bar.layout]]
+monitor = "*"
+show = true
+left = [
+    { module = "custom-hypr-layout", class = "mod-layout" },
+    "hyprland-workspaces",
+    "separator",
+    { module = "cpu", class = "mod-cpu" },
+    "separator",
+    { module = "ram", class = "mod-memory" },
+    "separator",
+    { module = "weather", class = "mod-weather" },
+    "cava",
+]
+center = [
+    { module = "keybind-mode", class = "mod-submap" },
+    { module = "dashboard", class = "mod-menu" },
+    "separator",
+    { module = "idle-inhibit", class = "mod-idle" },
+    "separator",
+    { module = "clock", class = "mod-clock" },
+    "separator",
+    { module = "custom-light-dark", class = "mod-theme" },
+    "separator",
+    { module = "custom-lock", class = "mod-lock" },
+]
+right = [
+    { module = "netstat", class = "mod-netstat" },
+    "separator",
+    { name = "notify", modules = [{ module = "notifications", class = "mod-notify" }, { module = "custom-updater", class = "mod-updater" }] },
+    "systray",
+    { module = "media", class = "mod-media" },
+    "separator",
+    { module = "bluetooth", class = "mod-bluetooth" },
+    "separator",
+    { module = "volume", class = "mod-volume" },
+    "separator",
+    { module = "microphone", class = "mod-mic" },
+    "separator",
+    { module = "keyboard-input", class = "mod-keyboard" },
+    "separator",
+    { module = "hyprsunset", class = "mod-nightlight" },
+    "separator",
+    { module = "power", class = "mod-power" },
+]

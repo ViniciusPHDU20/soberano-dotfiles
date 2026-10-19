@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: Retro-Simple-Style
+# ==============================================================================
+scss = "retro-simple-style"
+
+[palette]
+bg = "#181616"
+surface = "#221f1d"
+elevated = "#322c28"
+fg = "#ebdbb2"
+fg-muted = "#a89984"
+primary = "#fabd2f"
+red = "#fb4934"
+yellow = "#fabd2f"
+green = "#b8bb26"
+blue = "#83a598"
+
+[bar_style]
+theme-provider = "wayle"
+bg = "bg-base"
+background-opacity = 92
+border-location = "all"
+border-width = 2
+border-color = "border-accent"
+rounding = "none"
+shadow = "none"
+button-variant = "icon-square"
+button-opacity = 100
+button-bg-opacity = 90
+button-rounding = "none"
+button-border-location = "all"
+button-border-width = 1
+button-group-border-location = "all"
+button-group-border-width = 1
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 85
+button-group-border-color = "border-accent"
+button-group-rounding = "none"
+workspace-indicator = "background"

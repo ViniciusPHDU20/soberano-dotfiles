@@ -1,0 +1,23 @@
+// ==============================================================================
+// JaKooLit Hyprland-Dots Style Port: Wallust-Box-type
+// Authentic GTK4 / Relm4 SCSS for Wayle
+// ==============================================================================
+@import "wallust-colors";
+
+.bar, .workspaces, .workspace, menubutton.bar-button > button.toggle, .bar-container, .bar-group {
+  border-radius: 0px;
+}
+.workspaces {
+  background-color: var(--bg-surface);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  padding: 1px 4px;
+}
+.workspace.active {
+  background-color: var(--accent);
+  min-width: 32px;
+}
+menubutton.bar-button > button.toggle, .bar-container {
+  background-color: var(--bg-surface);
+  box-shadow: inset 0 0 0 1.5px var(--border-strong), 3px 3px 0px rgba(0, 0, 0, 0.65);
+}
+

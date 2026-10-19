@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: ML4W-Glass-3d
+# ==============================================================================
+scss = "ml4w-glass-3d"
+
+[palette]
+bg = "#111622"
+surface = "#192030"
+elevated = "#242e44"
+fg = "#f0f4fc"
+fg-muted = "#9cb0d4"
+primary = "#68b0ff"
+red = "#ff6b8b"
+yellow = "#ffd166"
+green = "#06d6a0"
+blue = "#4cc9f0"
+
+[bar_style]
+theme-provider = "wayle"
+bg = "bg-surface"
+background-opacity = 45
+border-location = "all"
+border-width = 1
+border-color = "border-accent"
+rounding = "lg"
+shadow = "floating"
+button-variant = "basic"
+button-opacity = 100
+button-bg-opacity = 55
+button-rounding = "lg"
+button-border-location = "all"
+button-border-width = 1
+button-group-border-location = "all"
+button-group-border-width = 1
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 55
+button-group-border-color = "border-accent"
+button-group-rounding = "lg"
+workspace-indicator = "background"

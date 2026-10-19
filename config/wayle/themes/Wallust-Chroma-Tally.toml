@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: Wallust-Chroma-Tally
+# ==============================================================================
+scss = "wallust-chroma-tally"
+
+[palette]
+bg = "#0d0e17"
+surface = "#141626"
+elevated = "#1f233b"
+fg = "#e2e8f0"
+fg-muted = "#94a3b8"
+primary = "#00eeff"
+red = "#ff2a85"
+yellow = "#ffe600"
+green = "#00ff9d"
+blue = "#bd00ff"
+
+[bar_style]
+theme-provider = "wallust"
+bg = "bg-base"
+background-opacity = 88
+border-location = "bottom"
+border-width = 2
+border-color = "border-accent"
+rounding = "none"
+shadow = "none"
+button-variant = "basic"
+button-opacity = 100
+button-bg-opacity = 75
+button-rounding = "sm"
+button-border-location = "bottom"
+button-border-width = 3
+button-group-border-location = "none"
+button-group-border-width = 0
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 0
+button-group-border-color = "border-accent"
+button-group-rounding = "full"
+workspace-indicator = "underline"

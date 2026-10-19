@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: Colorful-Oglo-Chicklets
+# ==============================================================================
+scss = "colorful-oglo-chicklets"
+
+[palette]
+bg = "#232a2e"
+surface = "#2d353b"
+elevated = "#343f44"
+fg = "#d3c6aa"
+fg-muted = "#9da9a0"
+primary = "#a7c080"
+red = "#e67e80"
+yellow = "#dbbc7f"
+green = "#a7c080"
+blue = "#7fbbb3"
+
+[bar_style]
+theme-provider = "wayle"
+bg = "bg-base"
+background-opacity = 98
+border-location = "bottom"
+border-width = 5
+border-color = "#1d2327"
+rounding = "none"
+shadow = "none"
+button-variant = "basic"
+button-opacity = 100
+button-bg-opacity = 100
+button-rounding = "sm"
+button-border-location = "bottom"
+button-border-width = 4
+button-group-border-location = "none"
+button-group-border-width = 0
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 0
+button-group-border-color = "border-accent"
+button-group-rounding = "full"
+workspace-indicator = "background"

@@ -1,0 +1,41 @@
+# ==============================================================================
+# JaKooLit Style & Theme Preset: Extra-EverForest
+# ==============================================================================
+scss = "extra-everforest"
+
+[palette]
+bg = "#232a2e"
+surface = "#2d353b"
+elevated = "#343f44"
+fg = "#d3c6aa"
+fg-muted = "#9da9a0"
+primary = "#a7c080"
+red = "#e67e80"
+yellow = "#dbbc7f"
+green = "#a7c080"
+blue = "#7fbbb3"
+
+[bar_style]
+theme-provider = "wayle"
+bg = "transparent"
+background-opacity = 0
+border-location = "none"
+border-width = 0
+border-color = "border-accent"
+rounding = "none"
+shadow = "none"
+button-variant = "basic"
+button-opacity = 100
+button-bg-opacity = 90
+button-rounding = "full"
+button-border-location = "all"
+button-border-width = 1
+button-group-border-location = "none"
+button-group-border-width = 0
+button-group-padding = 0.2
+button-group-module-gap = 0.35
+button-group-background = "bg-surface"
+button-group-opacity = 0
+button-group-border-color = "border-accent"
+button-group-rounding = "full"
+workspace-indicator = "background"

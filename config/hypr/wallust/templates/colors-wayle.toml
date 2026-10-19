@@ -1,0 +1,14 @@
+# /* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */ #
+# wallust template - colors-wayle.toml
+
+[palette]
+bg = "{{background}}"
+surface = "{{color0}}"
+elevated = "{{color8}}"
+fg = "{{foreground}}"
+fg-muted = "{{color7}}"
+primary = "{{color12}}"
+red = "{{color1}}"
+yellow = "{{color3}}"
+green = "{{color2}}"
+blue = "{{color4}}"

@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Soberano Dotfiles Installer
-# Environment: Arch / CachyOS (Zen 5 x86-64-v4) - Hyprland & Noctalia
+# Soberano Dotfiles Installer (JaKooLit Hyprland-Dots v2.3.27.7 + Wayle Port)
+# Environment: Arch / CachyOS (Zen 5 x86-64-v4) - Hyprland Lua & Wayle (Rust)
 # ==============================================================================
 set -e
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="$HOME/.config.bak-$(date +%Y%m%d_%H%M%S)"
 
-echo "==> Iniciando sincronização do Soberano Dotfiles..."
+echo "==> Iniciando sincronização do Soberano Dotfiles (Hyprland-Dots + Wayle)..."
 
-# Criar backup antes de symlinkar
 mkdir -p "$BACKUP_DIR"
 
 link_config() {
@@ -26,18 +25,28 @@ link_config() {
     ln -sfn "$src" "$dest"
 }
 
-# Criar diretórios base
-mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share/wallpapers"
+mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share/wallpapers" "$HOME/Pictures"
 
-# Linkar configurações principais
-link_config "$DOTFILES_DIR/config/hypr" "$HOME/.config/hypr"
-link_config "$DOTFILES_DIR/config/noctalia" "$HOME/.config/noctalia"
-link_config "$DOTFILES_DIR/config/kitty" "$HOME/.config/kitty"
-link_config "$DOTFILES_DIR/config/fish" "$HOME/.config/fish"
-link_config "$DOTFILES_DIR/config/fastfetch" "$HOME/.config/fastfetch"
-link_config "$DOTFILES_DIR/config/quickshell" "$HOME/.config/quickshell"
+# Linkar todo o ecossistema Hyprland-Dots + Wayle
+for dir in hypr wayle kitty fish fastfetch quickshell btop cava ghostty Kvantum nwg-dock-hyprland qt5ct qt6ct swappy waybar-weather wezterm wlogout yazi; do
+    if [ -d "$DOTFILES_DIR/config/$dir" ]; then
+        link_config "$DOTFILES_DIR/config/$dir" "$HOME/.config/$dir"
+    fi
+done
+
+# Linkar Rofi e Wallust apontando para a estrutura interna do Hyprland-Dots
+link_config "$DOTFILES_DIR/config/hypr/rofi" "$HOME/.config/rofi"
+link_config "$DOTFILES_DIR/config/hypr/wallust" "$HOME/.config/wallust"
+
+# Linkar starship.toml se existir
+if [ -f "$DOTFILES_DIR/config/starship/starship.toml" ]; then
+    link_config "$DOTFILES_DIR/config/starship/starship.toml" "$HOME/.config/starship.toml"
+fi
 
 # Linkar wallpapers
 ln -sfn "$DOTFILES_DIR/wallpapers" "$HOME/Pictures/wallpapers" 2>/dev/null || true
 
-echo "==> Concluído com sucesso! O ambiente agora está sincronizado via symlinks."
+# Remover backup vazio caso nada tenha precisado de backup
+rmdir "$BACKUP_DIR" 2>/dev/null || true
+
+echo "==> Concluído com sucesso! Ecossistema Hyprland-Dots + Wayle 100% sincronizado."

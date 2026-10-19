@@ -84,7 +84,7 @@ Scope {
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right || event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
                         const workspacesPerGroup = Config.options.overview.rows * Config.options.overview.columns;
-                        const currentId = Math.max(1, (Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1));
+                        const currentId = Hyprland.focusedMonitor?.activeWorkspace?.id ?? 1;
                         const currentGroup = Math.floor((currentId - 1) / workspacesPerGroup);
                         const minWorkspaceId = currentGroup * workspacesPerGroup + 1;
                         const maxWorkspaceId = minWorkspaceId + workspacesPerGroup - 1;
