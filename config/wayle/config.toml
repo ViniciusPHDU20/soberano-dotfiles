@@ -2,39 +2,40 @@
 tearing-mode = false
 
 [bar]
-scale = 1.0
+scale = 0.95
 location = "top"
 exclusive = true
-inset-edge = 6.0
-inset-ends = 10.0
-padding = 4.0
-padding-ends = 8.0
-module-gap = 6.0
-bg = "bg-base"
-background-opacity = 85
+inset-edge = 0.35
+inset-ends = 0.5
+padding = 0.3
+padding-ends = 0.5
+module-gap = 0.4
+bg = "bg-surface"
+background-opacity = 88
 border-location = "all"
 border-width = 1
 border-color = "border-subtle"
-rounding = "full"
-shadow = true
-button-variant = "basic"
-button-opacity = 90
-button-bg-opacity = 70
-button-icon-size = 1.0
-button-icon-padding = 1.0
-button-label-size = 0.95
-button-label-weight = "medium"
-button-label-padding = 1.5
-button-rounding = "full"
-button-gap = 1.0
-button-group-padding = 2.0
-button-group-module-gap = 4.0
-button-group-background = "bg-surface-elevated"
-button-group-opacity = 65
-button-group-rounding = "full"
+rounding = "lg"
+button-variant = "block-prefix"
+button-opacity = 100
+button-bg-opacity = 90
+button-icon-size = 0.95
+button-icon-padding = 0.85
+button-label-size = 0.92
+button-label-weight = "semibold"
+button-label-padding = 0.85
+button-rounding = "sm"
+button-gap = 0.75
+button-border-location = "all"
+button-border-width = 1
+button-group-padding = 0.15
+button-group-module-gap = 0.25
+button-group-background = "bg-elevated"
+button-group-opacity = 90
+button-group-rounding = "sm"
 button-group-border-location = "none"
 dropdown-shadow = true
-dropdown-opacity = 95
+dropdown-opacity = 96
 dropdown-autohide = true
 
 [[bar.layout]]
@@ -54,7 +55,7 @@ right = [
 
 [styling]
 scale = 1.0
-rounding = "lg"
+rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
 matugen-scheme = "tonal-spot"
@@ -94,14 +95,14 @@ enabled = true
 position = "bottom"
 duration = 2000
 monitor = "primary"
-margin = 100.0
+margin = 120.0
 border = true
 
 [modules.dashboard]
 icon-override = "󰣇"
 border-show = false
 icon-color = "accent"
-icon-bg-color = "bg-surface-elevated"
+icon-bg-color = "bg-elevated"
 dropdown-lock-command = "loginctl lock-session"
 dropdown-logout-command = "hyprctl dispatch exit"
 dropdown-reboot-command = "systemctl reboot"
@@ -117,7 +118,7 @@ urgent-show = true
 
 [modules.window-title]
 format = "{{ title }}"
-label-max-length = 45
+label-max-length = 40
 icon-show = true
 
 [modules.clock]
@@ -127,11 +128,11 @@ dropdown-show-seconds = true
 
 [modules.media]
 format = "{{ title }} - {{ artist }}"
-label-max-length = 35
+label-max-length = 30
 icon-show = true
 
 [modules.cava]
-bars = 14
+bars = 12
 framerate = 60
 style = "bars"
 bar-width = 3
