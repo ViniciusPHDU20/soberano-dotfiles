@@ -1,52 +1,56 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Soberano Dotfiles Installer (JaKooLit Hyprland-Dots v2.3.27.7 + Wayle Port)
-# Environment: Arch / CachyOS (Zen 5 x86-64-v4) - Hyprland Lua & Wayle (Rust)
+# Soberano Dotfiles Installer (CachyOS / Arch Linux)
+# Stack: Hyprland (Native Lua) + Wayle (Rust/GTK4) + Matugen (MD3) + Fuzzel + awww
 # ==============================================================================
-set -e
+set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKUP_DIR="$HOME/.config.bak-$(date +%Y%m%d_%H%M%S)"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 
-echo "==> Iniciando sincronização do Soberano Dotfiles (Hyprland-Dots + Wayle)..."
+echo ":: [Soberano] Instalando dependências base..."
+sudo pacman -S --needed --noconfirm \
+    awww fuzzel cliphist wl-clipboard grim slurp hyprpicker \
+    kitty btop fastfetch fish playerctl brightnessctl
 
-mkdir -p "$BACKUP_DIR"
-
-link_config() {
-    local src="$1"
-    local dest="$2"
-
-    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-        echo "  [Backup] Movendo $dest existente para $BACKUP_DIR/"
-        mv "$dest" "$BACKUP_DIR/"
+if ! command -v matugen >/dev/null 2>&1 || ! command -v wayle >/dev/null 2>&1; then
+    if command -v yay >/dev/null 2>&1; then
+        yay -S --needed --noconfirm wayle-bin matugen-bin
+    elif command -v paru >/dev/null 2>&1; then
+        paru -S --needed --noconfirm wayle-bin matugen-bin
     fi
-
-    echo "  [Symlink] $src -> $dest"
-    ln -sfn "$src" "$dest"
-}
-
-mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share/wallpapers" "$HOME/Pictures"
-
-# Linkar todo o ecossistema Hyprland-Dots + Wayle
-for dir in hypr wayle kitty fish fastfetch quickshell btop cava ghostty Kvantum nwg-dock-hyprland qt5ct qt6ct swappy waybar-weather wezterm wlogout yazi; do
-    if [ -d "$DOTFILES_DIR/config/$dir" ]; then
-        link_config "$DOTFILES_DIR/config/$dir" "$HOME/.config/$dir"
-    fi
-done
-
-# Linkar Rofi e Wallust apontando para a estrutura interna do Hyprland-Dots
-link_config "$DOTFILES_DIR/config/hypr/rofi" "$HOME/.config/rofi"
-link_config "$DOTFILES_DIR/config/hypr/wallust" "$HOME/.config/wallust"
-
-# Linkar starship.toml se existir
-if [ -f "$DOTFILES_DIR/config/starship/starship.toml" ]; then
-    link_config "$DOTFILES_DIR/config/starship/starship.toml" "$HOME/.config/starship.toml"
 fi
 
-# Linkar wallpapers
-ln -sfn "$DOTFILES_DIR/wallpapers" "$HOME/Pictures/wallpapers" 2>/dev/null || true
+mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0"
+chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py 2>/dev/null || true
 
-# Remover backup vazio caso nada tenha precisado de backup
-rmdir "$BACKUP_DIR" 2>/dev/null || true
+CONFIGS=(
+    hypr
+    wayle
+    matugen
+    fuzzel
+    kitty
+    btop
+    fastfetch
+    fish
+    quickshell
+)
 
-echo "==> Concluído com sucesso! Ecossistema Hyprland-Dots + Wayle 100% sincronizado."
+echo ":: [Soberano] Vinculando diretórios em ${CONFIG_DIR}..."
+for dir in "${CONFIGS[@]}"; do
+    target="${CONFIG_DIR}/${dir}"
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+        mv "$target" "${target}.bak.$(date +%s)"
+    fi
+    rm -f "$target"
+    ln -sfnT "${DOTFILES_DIR}/config/${dir}" "$target"
+    echo "   -> ${target} -> ${DOTFILES_DIR}/config/${dir}"
+done
+
+echo ":: [Soberano] Inicializando awww-daemon, Wayle e Matugen..."
+pgrep -x awww-daemon >/dev/null 2>&1 || (awww-daemon >/dev/null 2>&1 & sleep 0.4)
+systemctl --user enable --now wayle.service >/dev/null 2>&1 || true
+"${DOTFILES_DIR}/scripts/WallpaperSelect.sh" --restore || true
+hyprctl reload >/dev/null 2>&1 || true
+
+echo ":: [Soberano] Instalação concluída com sucesso!"

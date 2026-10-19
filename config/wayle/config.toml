@@ -1,134 +1,109 @@
-imports = []
-
 [general]
-font-sans = "Inter"
-font-mono = "JetBrainsMono Nerd Font"
 tearing-mode = false
 
-# ==============================================================================
-# JaKooLit Active Layout: TOP-Default
-# JaKooLit Active Style:  Catppuccin-Mocha
-# ==============================================================================
 [bar]
+scale = 1.0
 location = "top"
-scale = 1.02
-inset-edge = 0.25
-inset-ends = 0.45
-padding = 0.35
-padding-ends = 0.55
-module-gap = 0.45
 exclusive = true
-layer = "top"
-bg = "transparent"
-background-opacity = 0
-border-location = "none"
-border-width = 0
-border-color = "border-accent"
-rounding = "none"
-shadow = "none"
-button-variant = "block-prefix"
-button-opacity = 100
-button-bg-opacity = 95
+inset-edge = 6.0
+inset-ends = 10.0
+padding = 4.0
+padding-ends = 8.0
+module-gap = 6.0
+bg = "bg-base"
+background-opacity = 85
+border-location = "all"
+border-width = 1
+border-color = "border-subtle"
+rounding = "full"
+shadow = true
+button-variant = "basic"
+button-opacity = 90
+button-bg-opacity = 70
 button-icon-size = 1.0
-button-icon-padding = 0.85
-button-label-size = 0.96
-button-label-weight = "bold"
-button-label-padding = 0.85
+button-icon-padding = 1.0
+button-label-size = 0.95
+button-label-weight = "medium"
+button-label-padding = 1.5
 button-rounding = "full"
-button-gap = 0.65
-button-icon-position = "start"
-button-border-location = "all"
-button-border-width = 1
-button-group-border-location = "all"
-button-group-border-width = 1
-button-group-padding = 0.25
-button-group-module-gap = 0.35
-button-group-background = "bg-surface"
-button-group-opacity = 90
-button-group-border-color = "border-accent"
+button-gap = 1.0
+button-group-padding = 2.0
+button-group-module-gap = 4.0
+button-group-background = "bg-surface-elevated"
+button-group-opacity = 65
 button-group-rounding = "full"
+button-group-border-location = "none"
 dropdown-shadow = true
-dropdown-opacity = 96
+dropdown-opacity = 95
 dropdown-autohide = true
-dropdown-freeze-label = true
 
 [[bar.layout]]
 monitor = "*"
 show = true
-left = [
-    { module = "custom-hypr-layout", class = "mod-layout" },
-    "cava",
-    { module = "media", class = "mod-media" },
-    { module = "window-title", class = "mod-window" },
-]
-center = [
-    { module = "keybind-mode", class = "mod-submap" },
-    { name = "app-drawer", modules = [{ module = "dashboard", class = "mod-menu" }, { module = "custom-files", class = "mod-files" }, { module = "custom-tty", class = "mod-tty" }, { module = "custom-browser", class = "mod-browser" }, { module = "custom-settings", class = "mod-settings" }] },
-    { name = "notify", modules = [{ module = "notifications", class = "mod-notify" }, { module = "custom-updater", class = "mod-updater" }] },
-    "separator",
-    "hyprland-workspaces",
-    { module = "clock", class = "mod-clock" },
-    "separator",
-    { module = "weather", class = "mod-weather" },
-    "separator",
-    { module = "idle-inhibit", class = "mod-idle" },
-    { module = "custom-hint", class = "mod-hint" },
-]
+left = ["dashboard", "hyprland-workspaces", "window-title"]
+center = ["clock", "media", "cava"]
 right = [
+    { name = "hardware", modules = ["cpu", "ram", "storage"] },
+    "weather",
+    "volume",
+    "microphone",
+    "network",
     "systray",
-    { module = "netstat", class = "mod-netstat" },
-    "separator",
-    { name = "mobo", modules = [{ module = "cpu", class = "mod-cpu" }, { module = "ram", class = "mod-memory" }, { module = "storage", class = "mod-disk" }] },
-    "separator",
-    { name = "audio", modules = [{ module = "volume", class = "mod-volume" }, { module = "microphone", class = "mod-mic" }] },
-    "separator",
-    { module = "hyprsunset", class = "mod-nightlight" },
-    "separator",
-    { name = "status", modules = [{ module = "keyboard-input", class = "mod-keyboard" }, { module = "custom-lock", class = "mod-lock" }, { module = "power", class = "mod-power" }] },
+    "notifications"
 ]
 
 [styling]
-scale = 1.01
-rounding = "md"
-theme-provider = "wayle"
-theming-monitor = ""
+scale = 1.0
+rounding = "lg"
+theme-provider = "matugen"
+theming-monitor = "DP-1"
 matugen-scheme = "tonal-spot"
 matugen-contrast = 0.0
 matugen-source-color = 0
 matugen-light = false
-wallust-palette = "dark16"
-wallust-saturation = 0
-wallust-check-contrast = true
-wallust-backend = "fastresize"
-wallust-colorspace = "labmixed"
-wallust-apply-globally = true
 
 [styling.palette]
-bg = "#1e1e2e"
-surface = "#181825"
-elevated = "#313244"
-fg = "#cdd6f4"
-fg-muted = "#a6adc8"
-primary = "#cba6f7"
-red = "#f38ba8"
-yellow = "#f9e2af"
-green = "#a6e3a1"
-blue = "#89b4fa"
+bg = "#111318"
+surface = "#1d2026"
+elevated = "#282a31"
+fg = "#e2e2e9"
+fg-muted = "#c4c6d0"
+primary = "#aac7ff"
+red = "#ffb4ab"
+yellow = "#e0c46c"
+green = "#8cd5b0"
+blue = "#aac7ff"
 
-# ==============================================================================
-# Built-in Wayle Modules (Configured for JaKooLit Workflow)
-# ==============================================================================
+[wallpaper]
+engine-enabled = true
+transition-type = "grow"
+transition-duration = 0.7
+transition-fps = 144
+cycling-enabled = false
+cycling-directory = "/home/viniciusphdu/dotfiles/wallpapers"
+cycling-mode = "shuffle"
+cycling-interval-mins = 30
+
+[[wallpaper.monitors]]
+name = "DP-1"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Anime-City-Night.png"
+fit-mode = "fill"
+
+[osd]
+enabled = true
+position = "bottom"
+duration = 2000
+monitor = "primary"
+margin = 100.0
+border = true
+
 [modules.dashboard]
 icon-override = "󰣇"
-border-show = true
-border-color = "accent"
-icon-color = "auto"
-icon-bg-color = "accent"
-left-click = "pkill rofi || true; $HOME/.config/hypr/scripts/RofiFocusedWallpaperLink.sh >/dev/null 2>&1 || true; rofi -show drun -modi drun,filebrowser,run,window -config $HOME/.config/hypr/rofi/config.rasi"
-right-click = "$HOME/.config/hypr/scripts/WaybarLayout.sh"
-middle-click = "$HOME/.config/hypr/scripts/WaybarStyles.sh"
-dropdown-lock-command = "$HOME/.config/hypr/scripts/LockScreen.sh"
-dropdown-logout-command = "$HOME/.config/hypr/scripts/Logout.sh"
+border-show = false
+icon-color = "accent"
+icon-bg-color = "bg-surface-elevated"
+dropdown-lock-command = "loginctl lock-session"
+dropdown-logout-command = "hyprctl dispatch exit"
 dropdown-reboot-command = "systemctl reboot"
 dropdown-poweroff-command = "systemctl poweroff"
 
@@ -136,89 +111,47 @@ dropdown-poweroff-command = "systemctl poweroff"
 min-workspace-count = 5
 monitor-specific = true
 show-special = false
-urgent-show = true
-urgent-mode = "workspace"
-display-mode = "label"
-label-use-name = false
 numbering = "absolute"
-divider = " "
-app-icons-show = false
-app-icons-dedupe = true
-icon-gap = 0.3
-workspace-padding = 0.55
-icon-size = 1.0
-label-size = 1.0
-active-indicator = "background"
-active-color = "accent"
-occupied-color = "fg-default"
-empty-color = "fg-subtle"
-container-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "border-accent"
+display-mode = "label"
+urgent-show = true
 
 [modules.window-title]
 format = "{{ title }}"
-icon-name = "ld-app-window-symbolic"
-border-show = true
-border-color = "blue"
+label-max-length = 45
 icon-show = true
-icon-color = "auto"
-icon-bg-color = "blue"
-label-show = true
-label-color = "fg-default"
-label-max-length = 42
-button-bg-color = "bg-surface-elevated"
-
-[modules.cava]
-bars = 16
-framerate = 60
-stereo = false
-noise-reduction = 0.65
-low-cutoff = 50
-high-cutoff = 17000
-input = "pipe-wire"
-source = "auto"
-style = "bars"
-direction = "normal"
-color = "accent"
-button-bg-color = "bg-surface-elevated"
-bar-width = 5
-bar-gap = 1
-internal-padding = 0.5
-border-show = true
-border-color = "border-accent"
-
-[modules.media]
-icon-type = "spinning-disc"
-format = "{{ title }} - {{ artist }}"
-icon-name = "ld-music-symbolic"
-spinning-disc-icon = "ld-disc-3-symbolic"
-border-show = true
-border-color = "blue"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "blue"
-label-show = true
-label-color = "fg-default"
-label-max-length = 30
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:media"
-right-click = "playerctl next"
-middle-click = "playerctl play-pause"
 
 [modules.clock]
-format = "%a %d %b  %H:%M"
-icon-name = "tb-calendar-time-symbolic"
-border-show = true
-border-color = "border-accent"
+format = "%H:%M  •  %a %d %b"
 icon-show = true
-icon-color = "auto"
-icon-bg-color = "accent"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:calendar"
-right-click = "dropdown:weather"
+dropdown-show-seconds = true
+
+[modules.media]
+format = "{{ title }} - {{ artist }}"
+label-max-length = 35
+icon-show = true
+
+[modules.cava]
+bars = 14
+framerate = 60
+style = "bars"
+bar-width = 3
+bar-gap = 2
+low-cutoff = 50
+high-cutoff = 10000
+color = "accent"
+
+[modules.cpu]
+format = "{{ percent }}%"
+poll-interval-ms = 3000
+
+[modules.ram]
+format = "{{ percent }}%"
+poll-interval-ms = 5000
+
+[modules.storage]
+mount-point = "/"
+format = "{{ percent }}%"
+poll-interval-ms = 30000
 
 [modules.weather]
 provider = "open-meteo"
@@ -227,399 +160,21 @@ units = "metric"
 format = "{{ temp }}{{ temp_unit }}"
 time-format = "24h"
 refresh-interval-seconds = 1800
-icon-name = "ld-sun-symbolic"
-border-show = true
-border-color = "yellow"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "yellow"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:weather"
-
-[modules.cpu]
-poll-interval-ms = 2000
-temp-sensor = "auto"
-format = "{{ percent }}%"
-icon-name = "ld-cpu-symbolic"
-border-show = true
-border-color = "blue"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "blue"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-left-click = "kitty --title btop sh -c 'btop'"
-
-[modules.ram]
-poll-interval-ms = 4000
-format = "{{ percent }}%"
-icon-name = "ld-memory-stick-symbolic"
-border-show = true
-border-color = "green"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "green"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-left-click = "kitty --title btop sh -c 'btop'"
-
-[modules.storage]
-poll-interval-ms = 30000
-mount-point = "/"
-format = "{{ percent }}%"
-icon-name = "ld-hard-drive-symbolic"
-border-show = true
-border-color = "yellow"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "yellow"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
 
 [modules.volume]
-border-show = true
-border-color = "accent"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "accent"
-label-show = true
-label-color = "fg-default"
 format = "{{ percent }}%"
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:audio"
-middle-click = "wayle audio output-mute"
-right-click = "pavucontrol"
-scroll-up = "$HOME/.config/hypr/scripts/Volume.sh --inc"
-scroll-down = "$HOME/.config/hypr/scripts/Volume.sh --dec"
 
 [modules.microphone]
-border-show = true
-border-color = "red"
 icon-show = true
-icon-color = "auto"
-icon-bg-color = "red"
 label-show = false
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:audio"
-middle-click = "wayle audio input-mute"
 
 [modules.network]
-border-show = true
-border-color = "green"
 icon-show = true
-icon-color = "auto"
-icon-bg-color = "green"
-label-show = true
-label-color = "fg-default"
-label-max-length = 14
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:network"
-
-[modules.netstat]
-poll-interval-ms = 2000
-interface = "auto"
-format = "↓{{ down_auto }} ↑{{ up_auto }}"
-icon-name = "ld-activity-symbolic"
-border-show = true
-border-color = "green"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "green"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-
-[modules.bluetooth]
-border-show = true
-border-color = "blue"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "blue"
 label-show = false
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:bluetooth"
-
-[modules.brightness]
-border-show = true
-border-color = "yellow"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "yellow"
-label-show = true
-label-color = "fg-default"
-format = "{{ percent }}%"
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:brightness"
-
-[modules.battery]
-border-show = true
-border-color = "green"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "green"
-label-show = true
-label-color = "fg-default"
-format = "{{ percent }}%"
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:battery"
 
 [modules.notifications]
-border-show = true
-border-color = "yellow"
 icon-show = true
-icon-color = "auto"
-icon-bg-color = "yellow"
 label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-left-click = "dropdown:notification"
-right-click = "wayle notify dnd"
 popup-position = "top-right"
-popup-max-visible = 5
-popup-duration = 5000
-
-[modules.idle-inhibit]
-startup-duration = 60
-format = ""
-border-show = true
-border-color = "green"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "green"
-label-show = false
-button-bg-color = "bg-surface-elevated"
-left-click = "wayle idle toggle --indefinite"
-
-[modules.hyprsunset]
-format = ""
-temperature = 4500
-gamma = 100
-border-show = true
-border-color = "yellow"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "yellow"
-label-show = false
-button-bg-color = "bg-surface-elevated"
-left-click = ":toggle"
-
-[modules.keyboard-input]
-format = "{{ alias }}"
-icon-name = "ld-keyboard-symbolic"
-border-show = true
-border-color = "blue"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "blue"
-label-show = true
-label-color = "fg-default"
-button-bg-color = "bg-surface-elevated"
-left-click = "$HOME/.config/hypr/scripts/KeyboardLayout.sh switch"
-
-[modules.keybind-mode]
-format = "{{ mode }}"
-icon-name = "ld-layers-symbolic"
-auto-hide = true
-border-show = true
-border-color = "red"
-icon-show = true
-icon-color = "auto"
-icon-bg-color = "red"
-label-show = true
-label-color = "red"
-button-bg-color = "bg-surface-elevated"
-
-[modules.systray]
-icon-scale = 1.0
-item-gap = 0.3
-internal-padding = 0.5
-border-show = true
-border-color = "border-accent"
-button-bg-color = "bg-surface-elevated"
-
-[modules.power]
-icon-name = "ld-power-symbolic"
-border-show = true
-border-color = "red"
-icon-color = "auto"
-icon-bg-color = "red"
-left-click = "$HOME/.config/hypr/scripts/Wlogout.sh"
-right-click = "$HOME/.config/hypr/scripts/ChangeBlur.sh"
-middle-click = "$HOME/.config/hypr/scripts/LockScreen.sh"
-
-# ==============================================================================
-# JaKooLit Custom Modules Ported to Wayle
-# ==============================================================================
-[[modules.custom]]
-id = "hypr-layout"
-mode = "poll"
-interval-ms = 3000
-command = "$HOME/.config/hypr/scripts/HyprLayoutModule.sh status"
-format = "{{ text | default('󰙀') }}"
-tooltip-format = "{{ tooltip | default('Layout do Hyprland') }}"
-icon-show = false
-label-show = true
-label-color = "accent"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "accent"
-left-click = "$HOME/.config/hypr/scripts/HyprLayoutModule.sh menu"
-right-click = "$HOME/.config/hypr/scripts/HyprLayoutModule.sh next"
-
-[[modules.custom]]
-id = "hint"
-mode = "poll"
-interval-ms = 3600000
-command = "echo '󰺁 HINT!'"
-format = "{{ output }}"
-tooltip-format = "Esq: Dicas Rápidas | Dir: Buscar Atalhos"
-icon-show = false
-label-show = true
-label-color = "yellow"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "yellow"
-left-click = "$HOME/.config/hypr/scripts/KeyHints.sh"
-right-click = "$HOME/.config/hypr/scripts/KeyBinds.sh"
-
-[[modules.custom]]
-id = "updater"
-mode = "poll"
-interval-ms = 1800000
-command = "c=$(checkupdates 2>/dev/null | wc -l); [ \"$c\" -gt 0 ] && echo \" $c\" || echo \"\""
-format = "{{ output }}"
-hide-if-empty = true
-tooltip-format = "Atualizações pendentes no Arch/CachyOS"
-icon-show = false
-label-show = true
-label-color = "green"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "green"
-left-click = "kitty --title system-update sh -c 'sudo pacman -Syu'"
-
-[[modules.custom]]
-id = "cycle-wall"
-mode = "poll"
-interval-ms = 3600000
-command = "echo ''"
-format = "{{ output }}"
-tooltip-format = "Esq: Selecionar Wallpaper | Meio: Estilos Wayle | Dir: Wallpaper Aleatório"
-icon-show = false
-label-show = true
-label-color = "blue"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "blue"
-left-click = "$HOME/.config/hypr/scripts/WallpaperSelect.sh"
-middle-click = "$HOME/.config/hypr/scripts/WaybarStyles.sh"
-right-click = "$HOME/.config/hypr/scripts/WallpaperRandom.sh"
-
-[[modules.custom]]
-id = "light-dark"
-mode = "poll"
-interval-ms = 3600000
-command = "echo '󰔎'"
-format = "{{ output }}"
-tooltip-format = "Alternar Tema Claro/Escuro ou Estilo Wayle"
-icon-show = false
-label-show = true
-label-color = "yellow"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "yellow"
-left-click = "$HOME/.config/hypr/scripts/WaybarStyles.sh"
-right-click = "$HOME/.config/hypr/scripts/DarkLight.sh"
-
-[[modules.custom]]
-id = "lock"
-mode = "poll"
-interval-ms = 3600000
-command = "echo '󰌾'"
-format = "{{ output }}"
-tooltip-format = "Bloquear Tela (Hyprlock)"
-icon-show = false
-label-show = true
-label-color = "red"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "red"
-left-click = "$HOME/.config/hypr/scripts/LockScreen.sh"
-
-[[modules.custom]]
-id = "settings"
-mode = "poll"
-interval-ms = 3600000
-command = "echo ''"
-format = "{{ output }}"
-tooltip-format = "Esq: KooL Quick Settings | Dir: Wayle Settings"
-icon-show = false
-label-show = true
-label-color = "accent"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "accent"
-left-click = "$HOME/.config/hypr/scripts/Kool_Quick_Settings.sh"
-right-click = "wayle panel settings"
-
-[[modules.custom]]
-id = "files"
-mode = "poll"
-interval-ms = 3600000
-command = "echo ''"
-format = "{{ output }}"
-tooltip-format = "Abrir Gerenciador de Arquivos (Thunar)"
-icon-show = false
-label-show = true
-label-color = "blue"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "blue"
-left-click = "thunar"
-
-[[modules.custom]]
-id = "tty"
-mode = "poll"
-interval-ms = 3600000
-command = "echo ''"
-format = "{{ output }}"
-tooltip-format = "Abrir Terminal (Kitty)"
-icon-show = false
-label-show = true
-label-color = "green"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "green"
-left-click = "kitty"
-
-[[modules.custom]]
-id = "browser"
-mode = "poll"
-interval-ms = 3600000
-command = "echo ''"
-format = "{{ output }}"
-tooltip-format = "Abrir Navegador"
-icon-show = false
-label-show = true
-label-color = "yellow"
-button-bg-color = "bg-surface-elevated"
-border-show = true
-border-color = "yellow"
-left-click = "xdg-open https://"
-
-[osd]
-enabled = true
-position = "bottom"
-duration = 2000
-monitor = "primary"
-margin = 120.0
-border = true
-layer = "overlay"
-
-[wallpaper]
-engine-enabled = false
+popup-duration = 4500
+popup-shadow = true

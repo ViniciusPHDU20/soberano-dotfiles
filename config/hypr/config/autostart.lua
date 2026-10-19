@@ -1,0 +1,12 @@
+-- Soberano Autostart (Wayle + awww + Cliphist + Quickshell Overview)
+
+hl.on("hyprland.start", function ()
+    hl.exec_cmd("dbus-update-activation-environment --systemd --all")
+    hl.exec_cmd("awww-daemon")
+    hl.exec_cmd("wl-paste --type text --watch cliphist store")
+    hl.exec_cmd("wl-paste --type image --watch cliphist store")
+    hl.exec_cmd("systemctl --user start wayle.service || wayle shell")
+    hl.exec_cmd("qs --log-rules qt.qpa.wayland.textinput.warning=false -c overview")
+    hl.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/WallpaperSelect.sh --restore")
+    hl.exec_cmd("xhost +SI:localuser:root")
+end)

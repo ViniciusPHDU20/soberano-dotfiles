@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Soberano Native Wayle Bar Preset Selector
+# Uses 100% native Wayle GTK4 parameters (zero Waybar hacks)
+# Bound to: Super + Ctrl + B
+# ==============================================================================
+set -euo pipefail
+
+WAYLE_CFG="${HOME}/dotfiles/config/wayle/config.toml"
+PRESET_STATE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_wayle_preset.txt"
+
+current_preset=$(cat "$PRESET_STATE" 2>/dev/null || echo "1")
+
+declare -a presets=(
+    "1  — Floating Pill Top (Arredondado Flutuante)"
+    "2  — Block-Prefix Chips (Pílulas com Bloco de Ícone)"
+    "3  — Full-Width Top Bar (Barra Reta de Ponta a Ponta)"
+    "4  — Floating Bottom Dock (Barra Flutuante Inferior)"
+    "5  — Icon-Square Compact (Quadrado Compacto)"
+)
+
+options=()
+for entry in "${presets[@]}"; do
+    key="${entry%% *}"
+    if [[ "$key" == "$current_preset" ]]; then
+        options+=("👉 $entry")
+    else
+        options+=("   $entry")
+    fi
+done
+
+chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle Layout ❯ " -w 52 -l 5 || true)
+[ -z "$chosen" ] && exit 0
+
+clean=$(echo "$chosen" | sed 's/^👉 //; s/^   //')
+id="${clean%% *}"
+
+mkdir -p "$(dirname "$PRESET_STATE")"
+echo "$id" > "$PRESET_STATE"
+
+python3 - "$WAYLE_CFG" "$id" <<'PY'
+import sys, re
+
+cfg_path, preset_id = sys.argv[1], sys.argv[2]
+with open(cfg_path, "r") as f:
+    text = f.read()
+
+presets = {
+    "1": {
+        "location": '"top"',
+        "inset-edge": "6.0",
+        "inset-ends": "10.0",
+        "rounding": '"full"',
+        "button-variant": '"basic"',
+        "button-rounding": '"full"',
+        "background-opacity": "85",
+        "border-location": '"all"',
+    },
+    "2": {
+        "location": '"top"',
+        "inset-edge": "6.0",
+        "inset-ends": "10.0",
+        "rounding": '"lg"',
+        "button-variant": '"block-prefix"',
+        "button-rounding": '"md"',
+        "background-opacity": "85",
+        "border-location": '"all"',
+    },
+    "3": {
+        "location": '"top"',
+        "inset-edge": "0.0",
+        "inset-ends": "0.0",
+        "rounding": '"none"',
+        "button-variant": '"basic"',
+        "button-rounding": '"md"',
+        "background-opacity": "92",
+        "border-location": '"bottom"',
+    },
+    "4": {
+        "location": '"bottom"',
+        "inset-edge": "6.0",
+        "inset-ends": "14.0",
+        "rounding": '"full"',
+        "button-variant": '"basic"',
+        "button-rounding": '"full"',
+        "background-opacity": "88",
+        "border-location": '"all"',
+    },
+    "5": {
+        "location": '"top"',
+        "inset-edge": "5.0",
+        "inset-ends": "8.0",
+        "rounding": '"md"',
+        "button-variant": '"icon-square"',
+        "button-rounding": '"sm"',
+        "background-opacity": "80",
+        "border-location": '"all"',
+    },
+}
+
+p = presets.get(preset_id, presets["1"])
+for k, v in p.items():
+    text = re.sub(rf"(?m)^{re.escape(k)}\s*=\s*.*$", f"{k} = {v}", text, count=1)
+
+with open(cfg_path, "w") as f:
+    f.write(text)
+PY
+
+notify-send -u low -a "Soberano" "󰕮 Wayle Layout" "Preset ${clean} aplicado" 2>/dev/null || true

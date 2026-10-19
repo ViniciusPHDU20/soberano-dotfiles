@@ -1,0 +1,2 @@
+-- Environment Variables (CachyOS + Wayland)
+-- Configure UWSM variables in ~/.config/uwsm/env if using UWSM
