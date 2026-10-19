@@ -61,13 +61,23 @@ local function cycleOccupiedWorkspace(step)
     end
 end
 
--- Cycle through all windows in the active workspace, wrapping back to the first window
-local function cycleWorkspaceWindow(step)
-    local aw = hl.get_active_workspace()
-    if not aw then return end
-    local wins = hl.get_workspace_windows(aw.id)
-    if not wins or #wins < 2 then return end
-    table.sort(wins, function(a, b) return tostring(a.address) < tostring(b.address) end)
+-- Cycle through all open windows (ordered by workspace and address), wrapping back to the first window
+local function cycleAllWindows(step)
+    local all = hl.get_windows()
+    if not all then return end
+    local wins = {}
+    for _, w in ipairs(all) do
+        if w.workspace and w.workspace.id > 0 then
+            table.insert(wins, w)
+        end
+    end
+    if #wins < 2 then return end
+    table.sort(wins, function(a, b)
+        if a.workspace.id ~= b.workspace.id then
+            return a.workspace.id < b.workspace.id
+        end
+        return tostring(a.address) < tostring(b.address)
+    end)
     local active = hl.get_active_window()
     local cur_addr = active and tostring(active.address) or ""
     local idx = 1
@@ -78,11 +88,11 @@ local function cycleWorkspaceWindow(step)
         end
     end
     local next_idx = ((idx - 1 + step) % #wins) + 1
-    hl.dispatch(hl.dsp.focus({ window = "address:" .. tostring(wins[next_idx].address) }))
+    hl.dispatch(hl.dsp.focus({ window = wins[next_idx] }))
 end
 
-hl.bind("ALT + Tab",                 function() cycleWorkspaceWindow(1) end)
-hl.bind("ALT + SHIFT + Tab",         function() cycleWorkspaceWindow(-1) end)
+hl.bind("ALT + Tab",                 function() cycleAllWindows(1) end)
+hl.bind("ALT + SHIFT + Tab",         function() cycleAllWindows(-1) end)
 hl.bind(mainMod .. " + Tab",         function() cycleOccupiedWorkspace(1) end)
 hl.bind(mainMod .. " + SHIFT + Tab", function() cycleOccupiedWorkspace(-1) end)
 
