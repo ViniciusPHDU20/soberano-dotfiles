@@ -133,8 +133,9 @@ hl.bind(mainMod .. " + P",     hl.dsp.exec_cmd("hyprpicker -a -n"))
 hl.bind("Print",               hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
 hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd("grim - | wl-copy"))
 
--- Theming and Wallpaper (JaKooLit: Super+W for wallpaper select, Super+Alt+B for Wayle themes)
-hl.bind(mainMod .. " + ALT + B",       hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/WayleThemeSelector.sh"))
+-- Theming, Layouts and Wallpaper (JaKooLit Ports)
+hl.bind(mainMod .. " + ALT + B",       hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/WayleStyleSelector.sh"))
+hl.bind(mainMod .. " + CONTROL + B",   hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/WayleLayoutSelector.sh"))
 hl.bind(mainMod .. " + ALT + A",       hl.dsp.exec_cmd(os.getenv("HOME") .. "/dotfiles/scripts/HyprAnimationsSelector.sh"))
 
 -- Game Mode (JaKooLit: Super+Shift+G or Super+G)
