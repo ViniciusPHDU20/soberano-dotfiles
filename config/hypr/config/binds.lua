@@ -27,9 +27,64 @@ hl.bind(mainMod .. " + Left",  hl.dsp.focus({ direction = "left" }))
 hl.bind(mainMod .. " + Right", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + Up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + Down",  hl.dsp.focus({ direction = "down" }))
-hl.bind("ALT + Tab",                 hl.dsp.window.cycle_next())
-hl.bind(mainMod .. " + Tab",         hl.dsp.focus({ workspace = "m+1" }))
-hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.focus({ workspace = "m-1" }))
+-- Cycle only through workspaces that have open apps, wrapping back to the first
+local function cycleOccupiedWorkspace(step)
+    local aw = hl.get_active_workspace()
+    local cur = aw and aw.id or 1
+    local occupied = {}
+    for _, w in ipairs(hl.get_workspaces()) do
+        if w.id > 0 then
+            local wins = hl.get_workspace_windows(w.id)
+            if wins and #wins > 0 then
+                table.insert(occupied, w.id)
+            end
+        end
+    end
+    table.sort(occupied)
+    if #occupied == 0 then return end
+    if step > 0 then
+        for _, id in ipairs(occupied) do
+            if id > cur then
+                hl.dispatch(hl.dsp.focus({ workspace = id }))
+                return
+            end
+        end
+        hl.dispatch(hl.dsp.focus({ workspace = occupied[1] }))
+    else
+        for i = #occupied, 1, -1 do
+            if occupied[i] < cur then
+                hl.dispatch(hl.dsp.focus({ workspace = occupied[i] }))
+                return
+            end
+        end
+        hl.dispatch(hl.dsp.focus({ workspace = occupied[#occupied] }))
+    end
+end
+
+-- Cycle through all windows in the active workspace, wrapping back to the first window
+local function cycleWorkspaceWindow(step)
+    local aw = hl.get_active_workspace()
+    if not aw then return end
+    local wins = hl.get_workspace_windows(aw.id)
+    if not wins or #wins < 2 then return end
+    table.sort(wins, function(a, b) return tostring(a.address) < tostring(b.address) end)
+    local active = hl.get_active_window()
+    local cur_addr = active and tostring(active.address) or ""
+    local idx = 1
+    for i, w in ipairs(wins) do
+        if tostring(w.address) == cur_addr then
+            idx = i
+            break
+        end
+    end
+    local next_idx = ((idx - 1 + step) % #wins) + 1
+    hl.dispatch(hl.dsp.focus({ window = "address:" .. tostring(wins[next_idx].address) }))
+end
+
+hl.bind("ALT + Tab",                 function() cycleWorkspaceWindow(1) end)
+hl.bind("ALT + SHIFT + Tab",         function() cycleWorkspaceWindow(-1) end)
+hl.bind(mainMod .. " + Tab",         function() cycleOccupiedWorkspace(1) end)
+hl.bind(mainMod .. " + SHIFT + Tab", function() cycleOccupiedWorkspace(-1) end)
 
 -- Move active window
 hl.bind(mainMod .. " + SHIFT + Up",                   hl.dsp.window.move({ direction = "u" }))

@@ -4,6 +4,6 @@ for w = 1, NUM_WPM do
         workspace  = tostring(w),
         monitor    = PRIMARY_MONITOR,
         default    = (w == 1),
-        persistent = true,
+        persistent = false,
     })
 end
