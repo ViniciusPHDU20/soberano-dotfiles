@@ -2,21 +2,21 @@
 tearing-mode = false
 
 [bar]
-scale = 0.88
+scale = 0.95
 location = "top"
 exclusive = true
-inset-edge = 0.2
-inset-ends = 0.8
-padding = 0.22
-padding-ends = 0.45
-module-gap = 0.35
+inset-edge = 0.35
+inset-ends = 0.5
+padding = 0.3
+padding-ends = 0.5
+module-gap = 0.4
 bg = "bg-surface"
-background-opacity = 92
+background-opacity = 88
 border-location = "all"
 border-width = 1
 border-color = "border-subtle"
-rounding = "full"
-button-variant = "basic"
+rounding = "lg"
+button-variant = "block-prefix"
 button-opacity = 100
 button-bg-opacity = 90
 button-icon-size = 0.95
@@ -24,15 +24,15 @@ button-icon-padding = 0.85
 button-label-size = 0.92
 button-label-weight = "semibold"
 button-label-padding = 0.85
-button-rounding = "full"
+button-rounding = "sm"
 button-gap = 0.75
-button-border-location = "none"
-button-border-width = 0
+button-border-location = "all"
+button-border-width = 1
 button-group-padding = 0.15
 button-group-module-gap = 0.25
 button-group-background = "bg-elevated"
 button-group-opacity = 92
-button-group-rounding = "full"
+button-group-rounding = "sm"
 button-group-border-location = "none"
 dropdown-shadow = true
 dropdown-opacity = 96
@@ -43,9 +43,18 @@ button-group-border-color = "border-accent"
 [[bar.layout]]
 monitor = "*"
 show = true
-left = []
-center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
-right = []
+left = ["dashboard", "hyprland-workspaces", "window-title"]
+center = ["clock", "media", "cava"]
+right = [
+    { name = "hardware", modules = ["custom-cpu", "custom-ram", "custom-storage"] },
+    "weather",
+    "volume",
+    "microphone",
+    "network",
+    "custom-updates",
+    "systray",
+    "notifications"
+]
 [styling]
 scale = 1.0
 rounding = "md"
@@ -221,5 +230,42 @@ icon-name = "system-software-update-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "soberano-update"
+left-click = "bash -c '$HOME/dotfiles/scripts/soberano-update.sh'"
+
+[[modules.custom]]
+id = "cpu"
+command = "bash -c '$HOME/dotfiles/scripts/hardware-hud.sh cpu'"
+interval-ms = 3000
+format = "{{ percent }}%"
+tooltip-format = "{{ tooltip }}"
+icon-name = "ld-cpu-symbolic"
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
+left-click = "kitty --class float_monitor -e btop"
+
+[[modules.custom]]
+id = "ram"
+command = "bash -c '$HOME/dotfiles/scripts/hardware-hud.sh ram'"
+interval-ms = 5000
+format = "{{ percent }}%"
+tooltip-format = "{{ tooltip }}"
+icon-name = "ld-memory-stick-symbolic"
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
+left-click = "kitty --class float_monitor -e btop"
+
+[[modules.custom]]
+id = "storage"
+command = "bash -c '$HOME/dotfiles/scripts/hardware-hud.sh storage'"
+interval-ms = 30000
+format = "{{ percent }}%"
+tooltip-format = "{{ tooltip }}"
+icon-name = "ld-hard-drive-symbolic"
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
+left-click = "kitty --class float_monitor -e btop"
+
 

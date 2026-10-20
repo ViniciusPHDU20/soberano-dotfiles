@@ -65,7 +65,7 @@ show = true
 left = ["dashboard", "hyprland-workspaces", "window-title"]
 center = ["clock", "media", "cava"]
 right = [
-    { name = "hardware", modules = ["cpu", "ram", "storage"] },
+    { name = "hardware", modules = ["custom-cpu", "custom-ram", "custom-storage"] },
     "weather",
     "volume",
     "microphone",
@@ -88,7 +88,7 @@ show = true
 left = ["dashboard", "hyprland-workspaces", "window-title"]
 center = []
 right = [
-    { name = "hardware", modules = ["cpu", "ram", "storage"] },
+    { name = "hardware", modules = ["custom-cpu", "custom-ram", "custom-storage"] },
     "weather",
     "volume",
     "custom-updates",
