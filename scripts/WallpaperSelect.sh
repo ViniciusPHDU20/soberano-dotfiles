@@ -53,35 +53,44 @@ if [[ "${1:-}" == "--restore" ]]; then
     exit 0
 fi
 
-# Interactive Fuzzel selector
-current_img=$(cat "$STATE_FILE" 2>/dev/null || echo "")
-current_base=$(basename "$current_img" 2>/dev/null || echo "")
+if [[ "${1:-}" == "--fuzzel" ]]; then
+    # Fallback interactive Fuzzel selector
+    current_img=$(cat "$STATE_FILE" 2>/dev/null || echo "")
+    current_base=$(basename "$current_img" 2>/dev/null || echo "")
 
-mapfile -t files < <(find "$WALL_DIR" -maxdepth 2 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.webp" \) | sort)
+    mapfile -t files < <(find "$WALL_DIR" -maxdepth 2 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.webp" \) | sort)
 
-options=("󰒝  [Aleatório / Random Wallpaper]")
-declare -A file_map
+    options=("󰒝  [Aleatório / Random Wallpaper]")
+    declare -A file_map
 
-for f in "${files[@]}"; do
-    rel="${f#$WALL_DIR/}"
-    file_map["$rel"]="$f"
-    if [[ "$(basename "$f")" == "$current_base" ]]; then
-        options+=("👉 $rel")
-    else
-        options+=("   $rel")
+    for f in "${files[@]}"; do
+        rel="${f#$WALL_DIR/}"
+        file_map["$rel"]="$f"
+        if [[ "$(basename "$f")" == "$current_base" ]]; then
+            options+=("👉 $rel")
+        else
+            options+=("   $rel")
+        fi
+    done
+
+    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰸉 Wallpaper ❯ " -w 52 -l 14 || true)
+    [ -z "$chosen" ] && exit 0
+
+    if [[ "$chosen" == *"Aleatório"* ]]; then
+        exec "$0" --random
     fi
-done
 
-chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰸉 Wallpaper ❯ " -w 52 -l 14 || true)
-[ -z "$chosen" ] && exit 0
+    clean_rel=$(echo "$chosen" | sed 's/^👉 //; s/^   //')
+    target="${file_map[$clean_rel]:-}"
 
-if [[ "$chosen" == *"Aleatório"* ]]; then
-    exec "$0" --random
+    if [ -n "$target" ] && [ -f "$target" ]; then
+        apply_wallpaper "$target"
+    fi
+    exit 0
 fi
 
-clean_rel=$(echo "$chosen" | sed 's/^👉 //; s/^   //')
-target="${file_map[$clean_rel]:-}"
-
-if [ -n "$target" ] && [ -f "$target" ]; then
-    apply_wallpaper "$target"
+# Launch native Rust Animated Wallpaper Picker (GTK4 Layer-Shell)
+PICKER_BIN="${HOME}/dotfiles/scripts/wallpaper-picker-rs"
+if [ -x "$PICKER_BIN" ]; then
+    exec "$PICKER_BIN"
 fi
