@@ -22,7 +22,7 @@ declare -a presets=(
     "7   — Island Floating Clusters (Ilhas Transparentes • Gaps 10px • Rounding 16px)"
     "8   — Audiophile Soundstage (Foco CAVA & Player Musical • Gaps 10px • Rounding 12px)"
     "9   — Glassmorphism Frost (Vidro Fosco 50% • Gaps 8px • Rounding 10px)"
-    "10  — Stealth Zen Minimalist (Mínimo Extremo • Gaps 2px • Rounding 4px)"
+    "10  — Stealth Zen Minimalist (Workspaces • App Ativo • Relógio • Gaps 2px)"
 )
 
 options=()
@@ -108,7 +108,7 @@ L_ZEN = """[[bar.layout]]
 monitor = "*"
 show = true
 left = []
-center = ["hyprland-workspaces", "clock"]
+center = ["hyprland-workspaces", "window-title", "clock"]
 right = []"""
 
 presets = {
@@ -404,28 +404,29 @@ presets = {
             "border_size": 2,
         },
     },
-    # 10. Stealth Zen Minimalist (Apenas Relógio e Workspaces)
+    # 10. Stealth Zen Minimalist (Workspaces + App em Uso + Relógio)
     "10": {
         "bar": {
             "location": '"top"',
-            "scale": "0.85",
-            "inset-edge": "0.15",
-            "inset-ends": "0.2",
-            "padding": "0.18",
-            "padding-ends": "0.3",
-            "module-gap": "0.25",
+            "scale": "0.88",
+            "inset-edge": "0.2",
+            "inset-ends": "0.8",
+            "padding": "0.22",
+            "padding-ends": "0.45",
+            "module-gap": "0.35",
             "bg": '"bg-surface"',
-            "background-opacity": "90",
-            "rounding": '"sm"',
-            "border-location": '"none"',
-            "border-width": "0",
+            "background-opacity": "92",
+            "rounding": '"full"',
+            "border-location": '"all"',
+            "border-width": "1",
+            "border-color": '"border-subtle"',
             "shadow": '"none"',
             "button-variant": '"basic"',
-            "button-rounding": '"sm"',
+            "button-rounding": '"full"',
             "button-border-location": '"none"',
             "button-border-width": "0",
             "button-group-border-location": '"none"',
-            "button-group-rounding": '"sm"',
+            "button-group-rounding": '"full"',
         },
         "layout": L_ZEN,
         "hypr": {

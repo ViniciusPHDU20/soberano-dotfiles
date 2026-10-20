@@ -2,21 +2,21 @@
 tearing-mode = false
 
 [bar]
-scale = 0.95
+scale = 0.85
 location = "top"
 exclusive = true
-inset-edge = 0.0
-inset-ends = 0.0
-padding = 0.28
-padding-ends = 0.45
-module-gap = 0.4
+inset-edge = 0.15
+inset-ends = 0.2
+padding = 0.18
+padding-ends = 0.3
+module-gap = 0.25
 bg = "bg-surface"
-background-opacity = 95
-border-location = "bottom"
-border-width = 2
+background-opacity = 90
+border-location = "none"
+border-width = 0
 border-color = "border-accent"
-rounding = "none"
-button-variant = "icon-square"
+rounding = "sm"
+button-variant = "basic"
 button-opacity = 100
 button-bg-opacity = 90
 button-icon-size = 0.95
@@ -24,15 +24,15 @@ button-icon-padding = 0.85
 button-label-size = 0.92
 button-label-weight = "semibold"
 button-label-padding = 0.85
-button-rounding = "none"
+button-rounding = "sm"
 button-gap = 0.75
-button-border-location = "all"
-button-border-width = 1
+button-border-location = "none"
+button-border-width = 0
 button-group-padding = 0.15
 button-group-module-gap = 0.25
 button-group-background = "bg-elevated"
 button-group-opacity = 92
-button-group-rounding = "none"
+button-group-rounding = "sm"
 button-group-border-location = "none"
 dropdown-shadow = true
 dropdown-opacity = 96
@@ -43,17 +43,9 @@ button-group-border-color = "border-accent"
 [[bar.layout]]
 monitor = "*"
 show = true
-left = ["dashboard", "hyprland-workspaces", "window-title"]
-center = ["clock", "media", "cava"]
-right = [
-    { name = "hardware", modules = ["cpu", "ram", "storage"] },
-    "weather",
-    "volume",
-    "microphone",
-    "network",
-    "systray",
-    "notifications"
-]
+left = []
+center = ["hyprland-workspaces", "clock"]
+right = []
 [styling]
 scale = 1.0
 rounding = "md"
@@ -116,6 +108,7 @@ show-special = false
 numbering = "absolute"
 display-mode = "label"
 urgent-show = true
+app-icons-show = true
 
 [modules.window-title]
 format = "{{ title }}"
