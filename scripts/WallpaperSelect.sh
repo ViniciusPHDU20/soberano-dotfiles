@@ -34,8 +34,8 @@ apply_wallpaper() {
 
     # 2. Matugen templates (Hyprland borders, Kitty, Fuzzel, Btop, GTK3/4)
     local scheme
-    scheme=$(cat "$SCHEME_FILE" 2>/dev/null || echo "tonal-spot")
-    matugen image "$img" -t "scheme-${scheme}" -m dark --source-color-index 0 >/dev/null 2>&1 || true
+    scheme=$(cat "$SCHEME_FILE" 2>/dev/null || echo "vibrant")
+    matugen image "$img" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true
 
     notify-send -u low -a "Soberano" "󰸉 Wallpaper & Matugen" "$(basename "$img") (${scheme})" 2>/dev/null || true
 }

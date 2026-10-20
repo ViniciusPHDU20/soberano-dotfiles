@@ -9,7 +9,7 @@ WAYLE_CFG="${HOME}/dotfiles/config/wayle/config.toml"
 WALL_STATE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_wallpaper.txt"
 SCHEME_STATE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_matugen_scheme.txt"
 
-current_scheme=$(cat "$SCHEME_STATE" 2>/dev/null || echo "tonal-spot")
+current_scheme=$(cat "$SCHEME_STATE" 2>/dev/null || echo "vibrant")
 
 declare -a schemes=(
     "tonal-spot   — Equilibrado (Material You Default)"
@@ -49,7 +49,7 @@ sed -i "s/^matugen-scheme = .*/matugen-scheme = \"${scheme}\"/" "$WAYLE_CFG"
 img=$(cat "$WALL_STATE" 2>/dev/null || echo "${HOME}/dotfiles/wallpapers/Anime-City-Night.png")
 if [ -f "$img" ]; then
     wayle wallpaper set "$img" --monitor DP-1 >/dev/null 2>&1 || true
-    matugen image "$img" -t "scheme-${scheme}" -m dark --source-color-index 0 >/dev/null 2>&1 || true
+    matugen image "$img" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true
 fi
 
 notify-send -u low -a "Soberano" "󰏘 Esquema Matugen" "Ativado: ${scheme}" 2>/dev/null || true

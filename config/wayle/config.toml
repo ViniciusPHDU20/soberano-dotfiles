@@ -5,18 +5,18 @@ tearing-mode = false
 scale = 0.95
 location = "top"
 exclusive = true
-inset-edge = 0.0
-inset-ends = 0.0
-padding = 0.28
-padding-ends = 0.45
+inset-edge = 0.25
+inset-ends = 0.4
+padding = 0.25
+padding-ends = 0.4
 module-gap = 0.4
 bg = "bg-surface"
-background-opacity = 94
-border-location = "bottom"
+background-opacity = 85
+border-location = "all"
 border-width = 1
 border-color = "border-subtle"
-rounding = "none"
-button-variant = "block-prefix"
+rounding = "md"
+button-variant = "icon-square"
 button-opacity = 100
 button-bg-opacity = 90
 button-icon-size = 0.95
@@ -58,8 +58,8 @@ scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
-matugen-scheme = "rainbow"
-matugen-contrast = 0.0
+matugen-scheme = "vibrant"
+matugen-contrast = -0.45
 matugen-source-color = 0
 matugen-light = false
 
@@ -87,7 +87,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Lady-Dark.dynamic.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Red_Eclipse.png"
 fit-mode = "fill"
 
 [osd]
@@ -101,8 +101,8 @@ border = true
 [modules.dashboard]
 icon-override = "cm-beastie-symbolic"
 border-show = false
-icon-color = "accent"
-icon-bg-color = "bg-elevated"
+icon-color = "auto"
+icon-bg-color = "accent"
 dropdown-lock-command = "loginctl lock-session"
 dropdown-logout-command = "hyprctl dispatch exit"
 dropdown-reboot-command = "systemctl reboot"
@@ -124,12 +124,18 @@ icon-show = true
 [modules.clock]
 format = "%H:%M  •  %a %d %b"
 icon-show = true
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 dropdown-show-seconds = true
 
 [modules.media]
 format = "{{ title }} - {{ artist }}"
 label-max-length = 30
 icon-show = true
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "fg-default"
 
 [modules.cava]
 bars = 12
@@ -144,15 +150,24 @@ color = "accent"
 [modules.cpu]
 format = "{{ percent }}%"
 poll-interval-ms = 3000
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.ram]
 format = "{{ percent }}%"
 poll-interval-ms = 5000
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.storage]
 mount-point = "/"
 format = "{{ percent }}%"
 poll-interval-ms = 30000
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.weather]
 provider = "open-meteo"
@@ -161,21 +176,36 @@ units = "metric"
 format = "{{ temp }}{{ temp_unit }}"
 time-format = "24h"
 refresh-interval-seconds = 1800
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.volume]
 format = "{{ percent }}%"
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.microphone]
 icon-show = true
 label-show = false
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.network]
 icon-show = true
 label-show = false
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 
 [modules.notifications]
 icon-show = true
 label-show = true
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
 popup-position = "top-right"
 popup-duration = 4500
 popup-shadow = true
