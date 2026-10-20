@@ -27,39 +27,37 @@ notify() {
     fi
 }
 
+notify "Soberano Dotfiles" "Verificando atualizações no GitHub..." "low"
+
 # 1. Verify Internet Connectivity
 if ! curl -s --head --request GET https://github.com --max-time 5 >/dev/null 2>&1; then
-    if [ "$IS_TTY" = true ]; then
-        echo ":: Sem conexão com a internet ou GitHub inacessível. Pulando sincronização."
-    fi
+    notify "Soberano Dotfiles" "Sem conexão ou GitHub inacessível no momento." "normal"
     exit 0
 fi
 
 # 2. Check Git Repository
 if [ ! -d "$DOTFILES_DIR/.git" ]; then
-    if [ "$IS_TTY" = true ]; then
-        echo ":: Diretório $DOTFILES_DIR não é um repositório git."
-    fi
+    notify "Soberano Dotfiles" "Erro: Diretório não é um repositório git." "critical"
     exit 1
 fi
 
 cd "$DOTFILES_DIR"
 
 # 3. Fetch Remote Changes
-git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || exit 0
+git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || true
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 LOCAL=$(git rev-parse HEAD 2>/dev/null)
 REMOTE=$(git rev-parse "origin/$BRANCH" 2>/dev/null || true)
 
 if [ -z "$REMOTE" ]; then
+    notify "Soberano Dotfiles" "Não foi possível contactar o branch remoto." "normal"
     exit 0
 fi
 
 if [ "$LOCAL" = "$REMOTE" ]; then
-    if [ "$IS_TTY" = true ]; then
-        echo "✓ Seus dotfiles já estão na versão mais recente ($LOCAL)."
-    fi
+    SHORT_LOCAL=$(git rev-parse --short HEAD 2>/dev/null || echo "ok")
+    notify "Soberano Dotfiles" "✓ Seu sistema já está na versão mais recente (${SHORT_LOCAL})." "normal"
     exit 0
 fi
 

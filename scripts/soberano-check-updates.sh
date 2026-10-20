@@ -25,8 +25,9 @@ REMOTE=$(git rev-parse origin/main 2>/dev/null || true)
 if [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
     # New commit available
     BEHIND=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo "1")
-    echo "󰚰 ${BEHIND}"
+    printf '{"text": "%s", "tooltip": "󰚰 Atualização Disponível\\n• %s alteração(ões) no GitHub\\n• Clique para aplicar agora"}\n' "$BEHIND" "$BEHIND"
 else
     # Up to date
-    echo ""
+    SHORT=$(git rev-parse --short HEAD 2>/dev/null || echo "main")
+    printf '{"text": "", "tooltip": "󰚰 Soberano Dotfiles (%s)\\n• Sistema sincronizado\\n• Clique para verificar o GitHub"}\n' "$SHORT"
 fi

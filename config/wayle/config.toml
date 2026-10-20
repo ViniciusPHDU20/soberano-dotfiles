@@ -226,10 +226,11 @@ border-show = false
 id = "updates"
 command = "bash -c '$HOME/dotfiles/scripts/soberano-check-updates.sh'"
 interval-ms = 300000
-icon-name = "system-software-update-symbolic"
+icon-name = "ld-refresh-cw-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
+tooltip-format = "{{ tooltip }}"
 left-click = "bash -c '$HOME/dotfiles/scripts/soberano-update.sh'"
 
 [[modules.custom]]
@@ -242,7 +243,7 @@ icon-name = "ld-cpu-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "kitty --class float_monitor -e btop"
+left-click = "soberano-hardware-menu toggle cpu"
 
 [[modules.custom]]
 id = "ram"
@@ -254,7 +255,7 @@ icon-name = "ld-memory-stick-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "kitty --class float_monitor -e btop"
+left-click = "soberano-hardware-menu toggle ram"
 
 [[modules.custom]]
 id = "storage"
@@ -266,6 +267,6 @@ icon-name = "ld-hard-drive-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "kitty --class float_monitor -e btop"
+left-click = "soberano-hardware-menu toggle storage"
 
 
