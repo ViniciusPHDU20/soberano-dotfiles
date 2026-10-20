@@ -3,9 +3,8 @@ use gtk4::{
     gdk, glib, Application, ApplicationWindow, Box as GtkBox, Button, EventControllerKey,
     FlowBox, FlowBoxChild, Label, Orientation, ScrolledWindow,
 };
-use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use serde::Deserialize;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -240,12 +239,7 @@ fn setup_css(colors: &SystemColors) {
         }}
 
         .draggable-header {{
-            cursor: grab;
             padding-bottom: 4px;
-        }}
-
-        .draggable-header:active {{
-            cursor: grabbing;
         }}
 
         .header-title {{
@@ -453,89 +447,30 @@ fn build_ui(app: &Application) {
         .default_width(840)
         .default_height(620)
         .resizable(false)
+        .decorated(false)
         .build();
 
-    let mon_w = monitors[0].width;
-    let mon_h = monitors[0].height;
-    let win_w = 820;
-    let win_h = 580;
-    let init_left = (mon_w - win_w) / 2;
-    let init_top = (mon_h - win_h) / 2;
-
-    // Layer-Shell Setup
-    window.init_layer_shell();
-    window.set_layer(Layer::Overlay);
-    window.set_keyboard_mode(KeyboardMode::Exclusive);
-    window.set_anchor(Edge::Top, true);
-    window.set_anchor(Edge::Left, true);
-    window.set_anchor(Edge::Bottom, false);
-    window.set_anchor(Edge::Right, false);
-    window.set_margin(Edge::Left, init_left);
-    window.set_margin(Edge::Top, init_top);
+    // Close on click-outside (window loses focus)
+    window.connect_is_active_notify(|w| {
+        if !w.is_active() {
+            w.close();
+        }
+    });
 
     // Modal Card
     let card = GtkBox::new(Orientation::Vertical, 12);
     card.add_css_class("modal-card");
-    card.set_width_request(win_w);
-    card.set_height_request(win_h);
+    card.set_width_request(820);
+    card.set_height_request(580);
     window.set_child(Some(&card));
 
-    // Header (Draggable)
+    // Header inside native WindowHandle (Hardware GPU-Accelerated Dragging)
+    let handle = gtk4::WindowHandle::new();
+    handle.set_cursor_from_name(Some("grab"));
     let header = GtkBox::new(Orientation::Horizontal, 12);
     header.add_css_class("draggable-header");
-    card.append(&header);
-
-    // Header Drag Controller (Optimized Coalesced Motion - Zero Mouse Lag)
-    let drag = gtk4::GestureDrag::new();
-    let start_pos = Rc::new(Cell::new((init_left, init_top)));
-    let cur_margin = Rc::new(Cell::new((init_left, init_top)));
-    let pending_update = Rc::new(Cell::new(false));
-
-    let start_pos_c1 = start_pos.clone();
-    let cur_margin_c1 = cur_margin.clone();
-    drag.connect_drag_begin(move |_, _, _| {
-        let (cx, cy) = cur_margin_c1.get();
-        start_pos_c1.set((cx, cy));
-    });
-
-    let win_drag2 = window.clone();
-    let start_pos_c2 = start_pos.clone();
-    let cur_margin_c2 = cur_margin.clone();
-    let pending_c = pending_update.clone();
-
-    drag.connect_drag_update(move |_, offset_x, offset_y| {
-        let (sx, sy) = start_pos_c2.get();
-        let nx = sx + offset_x as i32;
-        let ny = sy + offset_y as i32;
-        cur_margin_c2.set((nx, ny));
-
-        if !pending_c.get() {
-            pending_c.set(true);
-            let win_ref = win_drag2.clone();
-            let margin_ref = cur_margin_c2.clone();
-            let pend_ref = pending_c.clone();
-            glib::idle_add_local_once(move || {
-                let (x, y) = margin_ref.get();
-                win_ref.set_margin(Edge::Left, x);
-                win_ref.set_margin(Edge::Top, y);
-                pend_ref.set(false);
-            });
-        }
-    });
-
-    let win_drag3 = window.clone();
-    let start_pos_c3 = start_pos.clone();
-    let cur_margin_c3 = cur_margin.clone();
-    drag.connect_drag_end(move |_, offset_x, offset_y| {
-        let (sx, sy) = start_pos_c3.get();
-        let nx = sx + offset_x as i32;
-        let ny = sy + offset_y as i32;
-        cur_margin_c3.set((nx, ny));
-        win_drag3.set_margin(Edge::Left, nx);
-        win_drag3.set_margin(Edge::Top, ny);
-    });
-
-    header.add_controller(drag);
+    handle.set_child(Some(&header));
+    card.append(&handle);
 
     let header_texts = GtkBox::new(Orientation::Vertical, 3);
     let title = Label::new(Some("󰍹  Soberano Displays & Taxa de Atualização"));

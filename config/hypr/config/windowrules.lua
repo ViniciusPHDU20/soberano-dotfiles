@@ -142,3 +142,12 @@ hl.window_rule({
     size = { 1080, 780 },
     pin = true,
 })
+
+-- Soberano Native Rust Display & Refresh Rate Picker (Super + M)
+hl.window_rule({
+    match = { class = "^(org\\.soberano\\.displaypicker)$" },
+    float = true,
+    center = true,
+    size = { 840, 620 },
+    pin = true,
+})

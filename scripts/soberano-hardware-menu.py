@@ -184,13 +184,14 @@ class HardwareDropdown(Gtk.Window):
         container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         backdrop.add(container)
 
-        # Card Container placed exactly below the top bar
+        # Card Container placed seamlessly right against the top bar
         card_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         card_wrapper.set_halign(Gtk.Align.END)
         card_wrapper.set_valign(Gtk.Align.START)
-        # Margin: 54px from top (right beneath 50px bar surface) and 160px from right
-        card_wrapper.set_margin_top(54)
-        card_wrapper.set_margin_end(160)
+        # In layer coordinates (layer starts at y=50 below the exclusive bar):
+        # 0px margin places it directly attached to the bar bottom edge (y=50)
+        card_wrapper.set_margin_top(0)
+        card_wrapper.set_margin_end(220)
         container.pack_start(card_wrapper, False, False, 0)
 
         # Actual Popover Card (catches its own clicks so clicks inside do not close)
