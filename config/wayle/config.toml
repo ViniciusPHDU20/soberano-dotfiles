@@ -5,17 +5,17 @@ tearing-mode = false
 scale = 0.95
 location = "top"
 exclusive = true
-inset-edge = 0.35
-inset-ends = 0.5
-padding = 0.3
-padding-ends = 0.5
+inset-edge = 0.0
+inset-ends = 0.0
+padding = 0.28
+padding-ends = 0.45
 module-gap = 0.4
 bg = "bg-surface"
-background-opacity = 88
-border-location = "all"
+background-opacity = 94
+border-location = "bottom"
 border-width = 1
 border-color = "border-subtle"
-rounding = "lg"
+rounding = "none"
 button-variant = "block-prefix"
 button-opacity = 100
 button-bg-opacity = 90
@@ -58,7 +58,7 @@ scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
-matugen-scheme = "tonal-spot"
+matugen-scheme = "rainbow"
 matugen-contrast = 0.0
 matugen-source-color = 0
 matugen-light = false
@@ -87,7 +87,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Anime-City-Night.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Lady-Dark.dynamic.png"
 fit-mode = "fill"
 
 [osd]
@@ -99,7 +99,7 @@ margin = 120.0
 border = true
 
 [modules.dashboard]
-icon-override = "󰣇"
+icon-override = ""
 border-show = false
 icon-color = "accent"
 icon-bg-color = "bg-elevated"
