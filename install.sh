@@ -77,23 +77,27 @@ HAS_AMD_GPU=false
 HAS_INTEL_GPU=false
 IS_LAPTOP=false
 IS_VM=false
+
+NVIDIA_NAME=""
+AMD_NAME=""
+INTEL_NAME=""
 GPU_DESC=""
 
 if command -v lspci >/dev/null 2>&1; then
     PCI_DISPLAYS=$(lspci 2>/dev/null | grep -iE "(vga|3d|display)" || true)
-    if echo "$PCI_DISPLAYS" | grep -qi "nvidia"; then
+    if echo "$PCI_DISPLAYS" | grep -qi "\bnvidia\b"; then
         HAS_NVIDIA=true
-        NVIDIA_NAME=$(echo "$PCI_DISPLAYS" | grep -i "nvidia" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
+        NVIDIA_NAME=$(echo "$PCI_DISPLAYS" | grep -i "\bnvidia\b" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
         GPU_DESC+="NVIDIA ($NVIDIA_NAME) "
     fi
-    if echo "$PCI_DISPLAYS" | grep -qiE "(amd|radeon|ati)"; then
+    if echo "$PCI_DISPLAYS" | grep -qiE "\b(amd|radeon|amdgpu)\b|advanced micro devices"; then
         HAS_AMD_GPU=true
-        AMD_NAME=$(echo "$PCI_DISPLAYS" | grep -iE "(amd|radeon|ati)" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
+        AMD_NAME=$(echo "$PCI_DISPLAYS" | grep -iE "\b(amd|radeon|amdgpu)\b|advanced micro devices" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
         GPU_DESC+="AMD ($AMD_NAME) "
     fi
-    if echo "$PCI_DISPLAYS" | grep -qi "intel"; then
+    if echo "$PCI_DISPLAYS" | grep -qi "\bintel\b"; then
         HAS_INTEL_GPU=true
-        INTEL_NAME=$(echo "$PCI_DISPLAYS" | grep -i "intel" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
+        INTEL_NAME=$(echo "$PCI_DISPLAYS" | grep -i "\bintel\b" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
         GPU_DESC+="Intel ($INTEL_NAME) "
     fi
     if echo "$PCI_DISPLAYS" | grep -qiE "(vmware|virtualbox|qemu|virtio|bochs)"; then
@@ -163,6 +167,13 @@ trap 'rm -f "$TMP_DIALOGRC"' EXIT
 # 3. Interactive Dialog Interface (Gentoo-Style)
 if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     # Screen 1: Welcome & Hardware Diagnosis
+    GPU_LINES=""
+    [ -n "$NVIDIA_NAME" ] && GPU_LINES+="\n\Zb\Z7GPU Dedicada:\Zn   $NVIDIA_NAME"
+    [ -n "$AMD_NAME" ] && GPU_LINES+="\n\Zb\Z7GPU Integrada:\Zn  $AMD_NAME"
+    [ -n "$INTEL_NAME" ] && GPU_LINES+="\n\Zb\Z7GPU Integrada:\Zn  $INTEL_NAME"
+    [ "$IS_VM" = true ] && GPU_LINES+="\n\Zb\Z7Aceleração:\Zn     Ambiente Virtualizado (VM)"
+    [ -z "$GPU_LINES" ] && GPU_LINES+="\n\Zb\Z7Placa de Vídeo:\Zn Vídeo Padrão Genérico"
+
     dialog --colors \
         --backtitle "$BACKTITLE" \
         --title "\Zb\Z3 Diagnóstico de Hardware Detectado \ZB\Zn" \
@@ -170,13 +181,12 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
 "\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn
 
 \Zb\Z7Processador:\Zn     $CPU_MODEL ($CPU_CORES núcleos)
-\Zb\Z7Memória RAM:\Zn     $RAM_GB
-\Zb\Z7Placa de Vídeo:\Zn  $GPU_DESC
+\Zb\Z7Memória RAM:\Zn     $RAM_GB$GPU_LINES
 \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook / Laptop (Touchpad detectado)" || echo "Desktop / Gabinete")
 \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (Máquina Virtual)" || echo "Não (Bare-metal Nativo)")
 
 Pressione \Zb\Z2<OK>\ZB\Zn para entrar no assistente de instalação." \
-        16 74
+        18 78
 
     # Screen 2: GPU Drivers Selection
     GPU_RADIO=(
