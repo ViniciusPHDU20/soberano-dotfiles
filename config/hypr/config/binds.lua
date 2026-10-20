@@ -149,6 +149,12 @@ hl.bind("XF86Calculator",              hl.dsp.exec_cmd(launchPrefix .. CALCULATO
 hl.bind("CONTROL + SHIFT + Escape",    hl.dsp.exec_cmd(launchPrefix .. TERMINAL .. " -e btop"))
 hl.bind(mainMod .. " + Z",             hl.dsp.exec_cmd("wayle panel settings"))
 
+-- GLSL Screen Shaders Post-Processing
+local shaderScript = os.getenv("HOME") .. "/.config/hypr/scripts/shader-manager.sh"
+hl.bind(mainMod .. " + ALT + S",        hl.dsp.exec_cmd(shaderScript .. " menu"))
+hl.bind(mainMod .. " + ALT + N",        hl.dsp.exec_cmd(shaderScript .. " toggle-night"))
+hl.bind(mainMod .. " + ALT + V",        hl.dsp.exec_cmd(shaderScript .. " toggle-vibrance"))
+
 -- Session & Lock
 hl.bind(mainMod .. " + L",             hl.dsp.exec_cmd("loginctl lock-session"))
 hl.bind("CONTROL + ALT + L",           hl.dsp.exec_cmd("loginctl lock-session"))
