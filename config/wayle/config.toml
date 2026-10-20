@@ -242,7 +242,7 @@ icon-name = "ld-cpu-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "soberano-hardware-menu"
+left-click = "bash -c 'python3 $HOME/dotfiles/scripts/soberano-hardware-menu.py'"
 
 [[modules.custom]]
 id = "ram"
@@ -253,7 +253,7 @@ icon-name = "ld-memory-stick-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "soberano-hardware-menu"
+left-click = "bash -c 'python3 $HOME/dotfiles/scripts/soberano-hardware-menu.py'"
 
 [[modules.custom]]
 id = "storage"
@@ -264,6 +264,6 @@ icon-name = "ld-hard-drive-symbolic"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-left-click = "soberano-hardware-menu"
+left-click = "bash -c 'python3 $HOME/dotfiles/scripts/soberano-hardware-menu.py'"
 
 

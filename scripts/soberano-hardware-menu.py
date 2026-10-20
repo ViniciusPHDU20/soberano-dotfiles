@@ -146,8 +146,6 @@ class HardwareDropdown(Gtk.Window):
             font-size: 11px;
             font-weight: 800;
             color: {accent};
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             margin-top: 6px;
         }}
         .proc-row {{
@@ -179,20 +177,17 @@ class HardwareDropdown(Gtk.Window):
             background: alpha({accent}, 0.25);
             color: #ffffff;
         }}
-        .draggable-header {{
-            cursor: grab;
-        }}
-        .draggable-header:active {{
-            cursor: grabbing;
-        }}
         """
-        provider = Gtk.CssProvider()
-        provider.load_from_data(css.encode("utf-8"))
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
+        try:
+            provider = Gtk.CssProvider()
+            provider.load_from_data(css.encode("utf-8"))
+            Gtk.StyleContext.add_provider_for_screen(
+                Gdk.Screen.get_default(),
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+        except Exception as e:
+            print("CSS loading notice:", e)
 
     def build_ui(self):
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -205,7 +200,7 @@ class HardwareDropdown(Gtk.Window):
         header_ev.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON1_MOTION_MASK)
         header_ev.connect("button-press-event", self.on_header_drag_begin)
         header_ev.connect("motion-notify-event", self.on_header_drag_motion)
-        header_ev.get_style_context().add_class("draggable-header")
+        header_ev.connect("realize", lambda w: w.get_window().set_cursor(Gdk.Cursor.new_from_name(Gdk.Display.get_default(), "grab")) if w.get_window() else None)
 
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         header_ev.add(header)
@@ -233,7 +228,7 @@ class HardwareDropdown(Gtk.Window):
 
         self.cpu_sub = Gtk.Label(label="-- GHz • -- °C")
         self.cpu_sub.get_style_context().add_class("metric-sub")
-        self.cpu_sub.set_margin_left(8)
+        self.cpu_sub.set_margin_start(8)
         cpu_top.pack_start(self.cpu_sub, False, False, 0)
 
         self.cpu_pct = Gtk.Label(label="0%")
@@ -255,7 +250,7 @@ class HardwareDropdown(Gtk.Window):
 
         self.ram_sub = Gtk.Label(label="-- / -- GiB")
         self.ram_sub.get_style_context().add_class("metric-sub")
-        self.ram_sub.set_margin_left(8)
+        self.ram_sub.set_margin_start(8)
         ram_top.pack_start(self.ram_sub, False, False, 0)
 
         self.ram_pct = Gtk.Label(label="0%")
@@ -277,7 +272,7 @@ class HardwareDropdown(Gtk.Window):
 
         self.disk_sub = Gtk.Label(label="-- livre")
         self.disk_sub.get_style_context().add_class("metric-sub")
-        self.disk_sub.set_margin_left(8)
+        self.disk_sub.set_margin_start(8)
         disk_top.pack_start(self.disk_sub, False, False, 0)
 
         self.disk_pct = Gtk.Label(label="0%")
