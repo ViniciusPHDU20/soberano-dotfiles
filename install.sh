@@ -114,22 +114,68 @@ INSTALL_SHADERS=true
 ENABLE_TOUCHPAD="$IS_LAPTOP"
 CHOSEN_PRESET="10"
 
+# Setup High-Contrast Dark Theme for Dialog (Eliminates low-contrast purple/lavender)
+TMP_DIALOGRC=$(mktemp)
+cat << 'EOF' > "$TMP_DIALOGRC"
+use_shadow = OFF
+use_colors = ON
+screen_color = (WHITE,BLACK,OFF)
+shadow_color = (BLACK,BLACK,OFF)
+dialog_color = (WHITE,BLACK,OFF)
+title_color = (YELLOW,BLACK,ON)
+border_color = (WHITE,BLACK,ON)
+button_active_color = (BLACK,GREEN,ON)
+button_inactive_color = (WHITE,BLACK,OFF)
+button_key_active_color = (BLACK,GREEN,ON)
+button_key_inactive_color = (YELLOW,BLACK,OFF)
+button_label_active_color = (BLACK,GREEN,ON)
+button_label_inactive_color = (WHITE,BLACK,OFF)
+inputbox_color = (WHITE,BLACK,OFF)
+inputbox_border_color = (WHITE,BLACK,ON)
+searchbox_color = (WHITE,BLACK,OFF)
+searchbox_title_color = (YELLOW,BLACK,ON)
+searchbox_border_color = (WHITE,BLACK,ON)
+position_indicator_color = (YELLOW,BLACK,ON)
+menubox_color = (WHITE,BLACK,OFF)
+menubox_border_color = (WHITE,BLACK,ON)
+item_color = (WHITE,BLACK,OFF)
+item_selected_color = (BLACK,GREEN,ON)
+tag_color = (YELLOW,BLACK,ON)
+tag_selected_color = (BLACK,GREEN,ON)
+tag_key_color = (YELLOW,BLACK,OFF)
+tag_key_selected_color = (BLACK,GREEN,ON)
+check_color = (WHITE,BLACK,OFF)
+check_selected_color = (BLACK,GREEN,ON)
+uarrow_color = (GREEN,BLACK,ON)
+darrow_color = (GREEN,BLACK,ON)
+itemhelp_color = (WHITE,BLACK,OFF)
+form_active_text_color = (BLACK,GREEN,ON)
+form_text_color = (WHITE,BLACK,OFF)
+form_item_readonly_color = (WHITE,BLACK,OFF)
+gauge_color = (WHITE,BLACK,ON)
+border2_color = (WHITE,BLACK,ON)
+searchbox_border2_color = (WHITE,BLACK,ON)
+menubox_border2_color = (WHITE,BLACK,ON)
+EOF
+export DIALOGRC="$TMP_DIALOGRC"
+trap 'rm -f "$TMP_DIALOGRC"' EXIT
+
 # 3. Interactive Dialog Interface (Gentoo-Style)
 if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     # Screen 1: Welcome & Hardware Diagnosis
     dialog --colors \
         --backtitle "$BACKTITLE" \
-        --title "\Zb\Z6 Diagnóstico de Hardware Detectado \ZB\Zn" \
+        --title "\Zb\Z3 Diagnóstico de Hardware Detectado \ZB\Zn" \
         --msgbox \
 "\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn
 
-\ZbProcessador:\Zn  $CPU_MODEL ($CPU_CORES núcleos)
-\ZbMemória RAM:\Zn  $RAM_GB
-\ZbPlaca de Vídeo:\Zn $GPU_DESC
-\ZbTipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook / Laptop (Touchpad detectado)" || echo "Desktop / Gabinete")
-\ZbVirtualização:\Zn  $([ "$IS_VM" = true ] && echo "Sim (Máquina Virtual)" || echo "Não (Bare-metal Nativo)")
+\Zb\Z7Processador:\Zn     $CPU_MODEL ($CPU_CORES núcleos)
+\Zb\Z7Memória RAM:\Zn     $RAM_GB
+\Zb\Z7Placa de Vídeo:\Zn  $GPU_DESC
+\Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook / Laptop (Touchpad detectado)" || echo "Desktop / Gabinete")
+\Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (Máquina Virtual)" || echo "Não (Bare-metal Nativo)")
 
-Pressione \Zb<OK>\ZB para entrar no assistente de instalação." \
+Pressione \Zb\Z2<OK>\ZB\Zn para entrar no assistente de instalação." \
         16 74
 
     # Screen 2: GPU Drivers Selection
@@ -144,7 +190,7 @@ Pressione \Zb<OK>\ZB para entrar no assistente de instalação." \
 
     CHOSEN_GPU=$(dialog --colors \
         --backtitle "$BACKTITLE" \
-        --title "\Zb\Z6 Seleção de Drivers de Vídeo \ZB\Zn" \
+        --title "\Zb\Z3 Seleção de Drivers de Vídeo \ZB\Zn" \
         --radiolist \
 "Selecione o perfil de aceleração gráfica para sua placa de vídeo:\n(Já pré-selecionado de acordo com seu hardware)" \
         18 76 6 \
@@ -154,7 +200,7 @@ Pressione \Zb<OK>\ZB para entrar no assistente de instalação." \
     # Screen 3: Optional Components Checklist
     COMPONENTS=$(dialog --colors \
         --backtitle "$BACKTITLE" \
-        --title "\Zb\Z6 Componentes e Módulos do Sistema \ZB\Zn" \
+        --title "\Zb\Z3 Componentes e Módulos do Sistema \ZB\Zn" \
         --checklist \
 "Escolha os pacotes e recursos que deseja instalar no seu sistema:\nUse [Espaço] para marcar/desmarcar e [Enter] para confirmar." \
         18 76 6 \
@@ -185,7 +231,7 @@ Pressione \Zb<OK>\ZB para entrar no assistente de instalação." \
 
     CHOSEN_PRESET=$(dialog --colors \
         --backtitle "$BACKTITLE" \
-        --title "\Zb\Z6 Layout Inicial da Barra Wayle \ZB\Zn" \
+        --title "\Zb\Z3 Layout Inicial da Barra Wayle \ZB\Zn" \
         --radiolist \
 "Escolha o layout e geometria visual da barra para iniciar seu desktop:\n(Você poderá trocar a qualquer momento usando Super + Ctrl + B)" \
         18 78 10 \
