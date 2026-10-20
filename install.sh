@@ -31,22 +31,39 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 
+# Check dry-run / test mode
+DRY_RUN=false
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run|--test|-t)
+            DRY_RUN=true
+            ;;
+    esac
+done
+
 # Check interactive mode
 INTERACTIVE=true
 if [ ! -t 0 ] || [ "${1:-}" = "--auto" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--non-interactive" ]; then
     INTERACTIVE=false
 fi
 
-# Ensure sudo credentials
-info "Verificando privilégios sudo..."
-sudo -v
-# Keep sudo alive
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+if [ "$DRY_RUN" = true ]; then
+    BACKTITLE="Soberano Edition — Modo de Simulação / Teste (Dry-Run)"
+    info "${C_YELLOW}MODO DE SIMULAÇÃO ATIVO (--dry-run): Nenhum pacote ou arquivo será alterado.${C_RESET}"
+else
+    # Ensure sudo credentials
+    info "Verificando privilégios sudo..."
+    sudo -v
+    # Keep sudo alive
+    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+fi
 
-# Ensure dialog & pciutils are available before UI
-if ! command -v dialog >/dev/null 2>&1 || ! command -v lspci >/dev/null 2>&1; then
-    info "Instalando pré-requisitos para a interface (dialog, pciutils)..."
-    sudo pacman -S --needed --noconfirm dialog pciutils >/dev/null 2>&1 || true
+# Ensure dialog & pciutils are available before UI (if sudo available and not dry-run)
+if [ "$DRY_RUN" = false ]; then
+    if ! command -v dialog >/dev/null 2>&1 || ! command -v lspci >/dev/null 2>&1; then
+        info "Instalando pré-requisitos para a interface (dialog, pciutils)..."
+        sudo pacman -S --needed --noconfirm dialog pciutils >/dev/null 2>&1 || true
+    fi
 fi
 
 # 2. Hardware Detection Engine
@@ -176,23 +193,69 @@ Pressione \Zb<OK>\ZB para entrar no assistente de instalação." \
         3>&1 1>&2 2>&3) || CHOSEN_PRESET="10"
 
     # Screen 5: Final Confirmation
-    dialog --colors \
-        --backtitle "$BACKTITLE" \
-        --title "\Zb\Z2 Confirmar Instalação \ZB\Zn" \
-        --yesno \
-"Deseja iniciar a instalação com as seguintes opções?
+    CONFIRM_MSG="Deseja iniciar a instalação com as seguintes opções?
 
  • \ZbPerfil GPU:\Zn        $CHOSEN_GPU
  • \ZbPreset Wayle:\Zn      Preset $CHOSEN_PRESET
  • \ZbStack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")
  • \ZbShaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")
- • \ZbGestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")
+ • \ZbGestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")"
 
-Seus arquivos de configuração antigos terão backup automático antes da substituição." \
-        15 72 || {
+    if [ "$DRY_RUN" = true ]; then
+        CONFIRM_MSG+="\n\n\Zb\Z3[MODO DE TESTE / DRY-RUN ATIVO]\ZB\Zn\nNenhum pacote será instalado e nenhuma alteração será feita no sistema."
+    else
+        CONFIRM_MSG+="\n\nSeus arquivos de configuração antigos terão backup automático antes da substituição."
+    fi
+
+    dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z2 Confirmar Instalação \ZB\Zn" \
+        --yesno \
+"$CONFIRM_MSG" \
+        16 72 || {
             dialog --clear; clear; echo "Instalação cancelada pelo usuário."; exit 0;
         }
     dialog --clear
+fi
+
+# Dry-run early exit (Safety lock: never modifies anything)
+if [ "$DRY_RUN" = true ]; then
+    if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
+        dialog --colors \
+            --backtitle "$BACKTITLE" \
+            --title "\Zb\Z2 Relatório de Simulação (Dry-Run Concluído) \ZB\Zn" \
+            --msgbox \
+"\Zb\Z2Simulação concluída com sucesso!\ZB\Zn
+
+Aqui está o que o instalador realizaria na máquina real:
+
+ • \ZbPerfil de GPU:\Zn       $CHOSEN_GPU ($GPU_DESC)
+ • \ZbStack de Drivers:\Zn    $([ "$CHOSEN_GPU" = "NVIDIA_HYBRID" -o "$CHOSEN_GPU" = "NVIDIA_ONLY" ] && echo "nvidia-utils, lib32-nvidia-utils, egl-wayland" || echo "mesa, vulkan")
+ • \ZbStack Gráfica:\Zn       Hyprland (Lua) + Wayle + Matugen + Pipewire + Fontes
+ • \ZbLayout da Barra:\Zn     Preset $CHOSEN_PRESET
+ • \ZbStack Gamer:\Zn         $([ "$INSTALL_GAMING" = true ] && echo "Steam, Gamemode, Mangohud, Wine" || echo "Ignorado")
+ • \ZbShaders Hyprland:\Zn    $([ "$INSTALL_SHADERS" = true ] && echo "Ativados (Super + Alt + S)" || echo "Ignorado")
+ • \ZbVinculação Dotfiles:\Zn 9 diretórios em ~/.config (com backup preventivo)
+
+\Zb\Z2Status do Sistema:\ZB\Zn 100% Intacto (Zero pacotes instalados, zero arquivos alterados).
+
+Para aplicar a instalação real quando desejar, basta rodar:
+   \Zb./install.sh\ZB" \
+            20 76
+        dialog --clear
+        clear
+    else
+        printf "\n"
+        success "================================================================"
+        success "   RELATÓRIO DE SIMULAÇÃO (DRY-RUN CONCLUÍDO)"
+        success "================================================================"
+        printf " • Perfil de GPU:     %s\n" "$CHOSEN_GPU"
+        printf " • Preset Wayle:      Preset %s\n" "$CHOSEN_PRESET"
+        printf " • Stack Gamer:       %s\n" "$([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")"
+        printf " • Shaders GLSL:      %s\n" "$([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")"
+        printf " • Status:            100%% Intacto (Modo de teste)\n\n"
+    fi
+    exit 0
 fi
 
 clear 2>/dev/null || true
