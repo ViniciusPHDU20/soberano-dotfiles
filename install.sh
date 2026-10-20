@@ -91,6 +91,33 @@ CPU_MODEL=$(echo "$RAW_CPU" | sed -E "s/ [0-9]+-Core Processor//; s/ Processor//
 CPU_CORES=$(nproc --all 2>/dev/null || echo 4)
 RAM_GB=$(grep MemTotal /proc/meminfo | awk '{printf "%.1f GB", $2/1024/1024}' 2>/dev/null || echo "4.0 GB")
 
+# Microarchitecture & CFLAGS Prober (Inspired by Sovereign Gentoo Install)
+CPU_ARCH="native"
+if command -v gcc >/dev/null 2>&1; then
+    DETECTED_ARCH=$(gcc -Q --help=target -march=native 2>/dev/null | grep -m1 "\-march=" | awk '{print $2}' | tr -d '[:space:]' || true)
+    if [ -n "$DETECTED_ARCH" ]; then
+        CPU_ARCH="$DETECTED_ARCH"
+    fi
+fi
+
+PROC_FLAGS=$(grep -m1 'flags' /proc/cpuinfo | cut -d: -f2 2>/dev/null || true)
+CPU_SIMD=""
+for f in avx512f avx2 avx fma aes sha_ni; do
+    if echo "$PROC_FLAGS" | grep -qw "$f"; then
+        case "$f" in
+            sha_ni) CPU_SIMD+="SHA " ;;
+            *)      CPU_SIMD+="$(echo "$f" | tr '[:lower:]' '[:upper:]') " ;;
+        esac
+    fi
+done
+CPU_SIMD=$(echo "$CPU_SIMD" | xargs | sed 's/ /, /g')
+[ -z "$CPU_SIMD" ] && CPU_SIMD="SSE4.2/Genérico"
+
+OPTIMIZED_CFLAGS="-march=native -O3 -pipe -fno-plt"
+OPTIMIZED_MAKEFLAGS="-j${CPU_CORES}"
+OPTIMIZED_RUSTFLAGS="-C target-cpu=native"
+INSTALL_OPTIMIZE=true
+
 HAS_NVIDIA=false
 HAS_AMD_GPU=false
 HAS_INTEL_GPU=false
@@ -202,29 +229,32 @@ trap 'rm -f "$TMP_DIALOGRC"' EXIT
 if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     # Screen 1: Welcome & Hardware Diagnosis
     DIAG_MSG="\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn\n\n"
-    DIAG_MSG+=" • \Zb\Z7Processador:\Zn     $CPU_MODEL (${CPU_CORES}t)\n"
-    DIAG_MSG+=" • \Zb\Z7Memória RAM:\Zn     $RAM_GB\n"
+    DIAG_MSG+=" • \Zb\Z7Processador:\Zn        $CPU_MODEL (${CPU_CORES}t)\n"
+    DIAG_MSG+=" • \Zb\Z7Memória RAM:\Zn        $RAM_GB\n"
+    DIAG_MSG+=" • \Zb\Z7Microarquitetura:\Zn   $CPU_ARCH (SIMD: $CPU_SIMD)\n"
+    DIAG_MSG+=" • \Zb\Z7Flags de Build:\Zn     CFLAGS=\"$OPTIMIZED_CFLAGS\"\n"
+    DIAG_MSG+=" • \Zb\Z7Jobs Paralelos:\Zn    MAKEFLAGS=\"$OPTIMIZED_MAKEFLAGS\" (${CPU_CORES} threads)\n"
     if [ -n "$NVIDIA_NAME" ]; then
-        DIAG_MSG+=" • \Zb\Z7GPU Dedicada:\Zn   $NVIDIA_NAME\n"
+        DIAG_MSG+=" • \Zb\Z7GPU Dedicada:\Zn      $NVIDIA_NAME\n"
     fi
     if [ -n "$AMD_NAME" ]; then
-        DIAG_MSG+=" • \Zb\Z7GPU Integrada:\Zn  $AMD_NAME\n"
+        DIAG_MSG+=" • \Zb\Z7GPU Integrada:\Zn     $AMD_NAME\n"
     fi
     if [ -n "$INTEL_NAME" ]; then
-        DIAG_MSG+=" • \Zb\Z7GPU Integrada:\Zn  $INTEL_NAME\n"
+        DIAG_MSG+=" • \Zb\Z7GPU Integrada:\Zn     $INTEL_NAME\n"
     fi
     if [ "$IS_VM" = true ]; then
-        DIAG_MSG+=" • \Zb\Z7Aceleração:\Zn     Ambiente Virtual (VM)\n"
+        DIAG_MSG+=" • \Zb\Z7Aceleração:\Zn        Ambiente Virtual (VM)\n"
     fi
-    DIAG_MSG+=" • \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook (Touchpad)" || echo "Desktop")\n"
-    DIAG_MSG+=" • \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (VM)" || echo "Não (Físico)")\n\n"
-    DIAG_MSG+="$(center_dialog_line 'Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador.' 70)"
+    DIAG_MSG+=" • \Zb\Z7Tipo de Máquina:\Zn    $([ "$IS_LAPTOP" = true ] && echo "Notebook (Touchpad)" || echo "Desktop")\n"
+    DIAG_MSG+=" • \Zb\Z7Virtualização:\Zn      $([ "$IS_VM" = true ] && echo "Sim (VM)" || echo "Não (Físico)")\n\n"
+    DIAG_MSG+="$(center_dialog_line 'Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador.' 72)"
 
     dialog --colors --cr-wrap \
         --backtitle "$BACKTITLE" \
-        --title "\Zb\Z3 Diagnóstico de Hardware Detectado \ZB\Zn" \
+        --title "\Zb\Z3 Diagnóstico de Hardware & Compilação \ZB\Zn" \
         --msgbox "$(printf "%b" "$DIAG_MSG")" \
-        16 74
+        19 76
 
     # Screen 2: GPU Drivers Selection
     GPU_RADIO=(
@@ -251,17 +281,19 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --title "\Zb\Z3 Componentes e Módulos do Sistema \ZB\Zn" \
         --checklist \
 "Escolha os pacotes e recursos que deseja instalar no seu sistema:\nUse [Espaço] para marcar/desmarcar e [Enter] para confirmar." \
-        16 74 6 \
+        17 76 7 \
         "CORE"     "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
         "AUDIO"    "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
         "FONTS"    "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
         "TOOLS"    "Kitty + Btop + Fastfetch + Fish + Grim/Slurp" "on" \
+        "OPTIMIZE" "Otimizar Makepkg com CFLAGS nativos (-march=native -j$CPU_CORES)" "on" \
         "SHADERS"  "Shaders GLSL para Hyprland (Super + Alt + S)" "$([ "$INSTALL_SHADERS" = true ] && echo "on" || echo "off")" \
         "GAMING"   "Stack Gamer (Steam, Gamemode, MangoHud, Wine)" "$([ "$INSTALL_GAMING" = true ] && echo "on" || echo "off")" \
         3>&1 1>&2 2>&3) || true
 
     if echo "$COMPONENTS" | grep -qw "GAMING"; then INSTALL_GAMING=true; fi
     if echo "$COMPONENTS" | grep -qw "SHADERS"; then INSTALL_SHADERS=true; else INSTALL_SHADERS=false; fi
+    if echo "$COMPONENTS" | grep -qw "OPTIMIZE"; then INSTALL_OPTIMIZE=true; else INSTALL_OPTIMIZE=false; fi
 
     # Screen 4: Initial Wayle Bar Layout Selection
     PRESET_CHOICES=(
@@ -290,6 +322,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     CONFIRM_MSG="Deseja iniciar a instalação com as seguintes opções?\n\n"
     CONFIRM_MSG+=" • \Zb\Z7Perfil GPU:\Zn        $CHOSEN_GPU\n"
     CONFIRM_MSG+=" • \Zb\Z7Preset Wayle:\Zn      Preset $CHOSEN_PRESET\n"
+    CONFIRM_MSG+=" • \Zb\Z7Otimização Makepkg:\Zn $([ "$INSTALL_OPTIMIZE" = true ] && echo "CFLAGS/MAKEFLAGS Nativos ($CPU_ARCH • -j$CPU_CORES)" || echo "Padrão Arch Linux")\n"
     CONFIRM_MSG+=" • \Zb\Z7Stack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")\n"
     CONFIRM_MSG+=" • \Zb\Z7Shaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")\n"
     CONFIRM_MSG+=" • \Zb\Z7Gestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")\n\n"
@@ -304,7 +337,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --backtitle "$BACKTITLE" \
         --title "\Zb\Z2 Confirmar Instalação \ZB\Zn" \
         --yesno "$(printf "%b" "$CONFIRM_MSG")" \
-        16 74 || {
+        17 76 || {
             dialog --clear; clear; echo "Instalação cancelada pelo usuário."; exit 0;
         }
     dialog --clear
@@ -317,6 +350,7 @@ if [ "$DRY_RUN" = true ]; then
         REPORT_MSG+="Aqui está o que o instalador realizaria na máquina real:\n\n"
         REPORT_MSG+=" • \Zb\Z7Perfil de GPU:\Zn       $CHOSEN_GPU\n"
         REPORT_MSG+=" • \Zb\Z7Stack de Drivers:\Zn    $([ "$CHOSEN_GPU" = "NVIDIA_HYBRID" -o "$CHOSEN_GPU" = "NVIDIA_ONLY" ] && echo "nvidia-utils, egl-wayland" || echo "mesa, vulkan")\n"
+        REPORT_MSG+=" • \Zb\Z7Otimização Makepkg:\Zn $([ "$INSTALL_OPTIMIZE" = true ] && echo "makepkg.conf calibrado para $CPU_ARCH ($CPU_SIMD) com -j$CPU_CORES" || echo "Ignorado")\n"
         REPORT_MSG+=" • \Zb\Z7Stack Gráfica:\Zn       Hyprland + Wayle + Matugen + Pipewire + Fontes\n"
         REPORT_MSG+=" • \Zb\Z7Layout da Barra:\Zn     Preset $CHOSEN_PRESET\n"
         REPORT_MSG+=" • \Zb\Z7Stack Gamer:\Zn         $([ "$INSTALL_GAMING" = true ] && echo "Steam, Gamemode, Mangohud, Wine" || echo "Ignorado")\n"
@@ -330,7 +364,7 @@ if [ "$DRY_RUN" = true ]; then
             --backtitle "$BACKTITLE" \
             --title "\Zb\Z2 Relatório de Simulação (Dry-Run Concluído) \ZB\Zn" \
             --msgbox "$(printf "%b" "$REPORT_MSG")" \
-            20 76
+            21 76
         dialog --clear
         clear
     else
@@ -339,6 +373,7 @@ if [ "$DRY_RUN" = true ]; then
         success "   RELATÓRIO DE SIMULAÇÃO (DRY-RUN CONCLUÍDO)"
         success "================================================================"
         printf " • Perfil de GPU:     %s\n" "$CHOSEN_GPU"
+        printf " • Flags Makepkg:     %s\n" "$([ "$INSTALL_OPTIMIZE" = true ] && echo "$OPTIMIZED_CFLAGS ($CPU_ARCH) -j$CPU_CORES" || echo "Padrão")"
         printf " • Preset Wayle:      Preset %s\n" "$CHOSEN_PRESET"
         printf " • Stack Gamer:       %s\n" "$([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")"
         printf " • Shaders GLSL:      %s\n" "$([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")"
@@ -361,6 +396,26 @@ BASE_PKGS=(
     pciutils
 )
 sudo pacman -S --needed --noconfirm "${BASE_PKGS[@]}"
+
+# 4.1 Native Compilation Optimization (makepkg)
+if [ "$INSTALL_OPTIMIZE" = true ]; then
+    info "Configurando flags nativas de compilação em /etc/makepkg.conf.d..."
+    sudo mkdir -p /etc/makepkg.conf.d 2>/dev/null || true
+    cat << EOF | sudo tee /etc/makepkg.conf.d/10-soberano-native.conf >/dev/null
+# ==============================================================================
+# Soberano Edition — Otimização Nativa de Compilação
+# Microarquitetura Detectada: $CPU_ARCH ($CPU_SIMD)
+# ==============================================================================
+CFLAGS="-march=native -O3 -pipe -fno-plt -fexceptions -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security -fstack-clash-protection -fcf-protection"
+CXXFLAGS="\$CFLAGS -Wp,-D_GLIBCXX_ASSERTIONS"
+MAKEFLAGS="-j$CPU_CORES"
+RUSTFLAGS="-C target-cpu=native"
+EOF
+    # User local fallback configuration (~/.config/pacman/makepkg.conf)
+    mkdir -p "$HOME/.config/pacman" 2>/dev/null || true
+    cp -f /etc/makepkg.conf.d/10-soberano-native.conf "$HOME/.config/pacman/makepkg.conf" 2>/dev/null || true
+    success "Flags nativas ativadas: CFLAGS='$OPTIMIZED_CFLAGS' MAKEFLAGS='$OPTIMIZED_MAKEFLAGS'"
+fi
 
 # 5. AUR Helper Bootstrap (yay)
 info "[2/6] Verificando AUR Helper (yay/paru)..."
