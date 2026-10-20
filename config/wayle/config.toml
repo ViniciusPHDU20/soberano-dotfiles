@@ -2,20 +2,20 @@
 tearing-mode = false
 
 [bar]
-scale = 0.85
+scale = 0.88
 location = "top"
 exclusive = true
-inset-edge = 0.15
-inset-ends = 0.2
-padding = 0.18
-padding-ends = 0.3
-module-gap = 0.25
+inset-edge = 0.2
+inset-ends = 0.8
+padding = 0.22
+padding-ends = 0.45
+module-gap = 0.35
 bg = "bg-surface"
-background-opacity = 90
-border-location = "none"
-border-width = 0
-border-color = "border-accent"
-rounding = "sm"
+background-opacity = 92
+border-location = "all"
+border-width = 1
+border-color = "border-subtle"
+rounding = "full"
 button-variant = "basic"
 button-opacity = 100
 button-bg-opacity = 90
@@ -24,7 +24,7 @@ button-icon-padding = 0.85
 button-label-size = 0.92
 button-label-weight = "semibold"
 button-label-padding = 0.85
-button-rounding = "sm"
+button-rounding = "full"
 button-gap = 0.75
 button-border-location = "none"
 button-border-width = 0
@@ -32,7 +32,7 @@ button-group-padding = 0.15
 button-group-module-gap = 0.25
 button-group-background = "bg-elevated"
 button-group-opacity = 92
-button-group-rounding = "sm"
+button-group-rounding = "full"
 button-group-border-location = "none"
 dropdown-shadow = true
 dropdown-opacity = 96
@@ -44,7 +44,7 @@ button-group-border-color = "border-accent"
 monitor = "*"
 show = true
 left = []
-center = ["hyprland-workspaces", "clock"]
+center = ["hyprland-workspaces", "window-title", "systray", "clock"]
 right = []
 [styling]
 scale = 1.0
@@ -203,3 +203,10 @@ label-color = "accent"
 popup-position = "top-right"
 popup-duration = 4500
 popup-shadow = true
+
+[modules.systray]
+icon-scale = 0.9
+item-gap = 0.25
+internal-padding = 0.3
+border-show = false
+

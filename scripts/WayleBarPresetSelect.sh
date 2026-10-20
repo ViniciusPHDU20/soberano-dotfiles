@@ -22,7 +22,7 @@ declare -a presets=(
     "7   — Island Floating Clusters (Ilhas Transparentes • Gaps 10px • Rounding 16px)"
     "8   — Audiophile Soundstage (Foco CAVA & Player Musical • Gaps 10px • Rounding 12px)"
     "9   — Glassmorphism Frost (Vidro Fosco 50% • Gaps 8px • Rounding 10px)"
-    "10  — Stealth Zen Minimalist (Workspaces • App Ativo • Relógio • Gaps 2px)"
+    "10  — Stealth Zen Minimalist (Workspaces • App Ativo • Bandeja • Relógio • Gaps 2px)"
 )
 
 options=()
@@ -35,7 +35,11 @@ for entry in "${presets[@]}"; do
     fi
 done
 
-chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 76 -l 10 || true)
+if [[ $# -ge 1 && -n "$1" ]]; then
+    chosen="$1"
+else
+    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 76 -l 10 || true)
+fi
 [ -z "$chosen" ] && exit 0
 
 clean=$(echo "$chosen" | sed 's/^👉 //; s/^   //')
@@ -108,7 +112,7 @@ L_ZEN = """[[bar.layout]]
 monitor = "*"
 show = true
 left = []
-center = ["hyprland-workspaces", "window-title", "clock"]
+center = ["hyprland-workspaces", "window-title", "systray", "clock"]
 right = []"""
 
 presets = {
