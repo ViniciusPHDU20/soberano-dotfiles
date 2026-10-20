@@ -6,6 +6,12 @@
 # ==============================================================================
 set -euo pipefail
 
+# Prioritize native Rust Display Picker (GTK4 Layer-Shell)
+PICKER_BIN="${HOME}/dotfiles/scripts/display-picker-rs"
+if [ "${1:-}" != "--fuzzel" ] && [ -x "$PICKER_BIN" ]; then
+    exec "$PICKER_BIN"
+fi
+
 MONITORS_LUA="${HOME}/dotfiles/config/hypr/config/monitors.lua"
 
 # 1. Fetch connected monitors from Hyprland

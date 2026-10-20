@@ -320,7 +320,11 @@ class HardwareDropdown(Gtk.Window):
 
     def on_displays_clicked(self, widget):
         Gtk.main_quit()
-        subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/MonitorSelect.sh")])
+        picker = os.path.expanduser("~/dotfiles/scripts/display-picker-rs")
+        if os.path.exists(picker):
+            subprocess.Popen([picker])
+        else:
+            subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/MonitorSelect.sh")])
 
     def on_tab_toggled(self, button, name):
         if button.get_active():
