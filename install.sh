@@ -68,7 +68,8 @@ fi
 
 # 2. Hardware Detection Engine
 info "Analisando hardware da máquina..."
-CPU_MODEL=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs 2>/dev/null || echo "Processador Desconhecido")
+RAW_CPU=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs 2>/dev/null || echo "Processador Desconhecido")
+CPU_MODEL=$(echo "$RAW_CPU" | sed -E "s/ [0-9]+-Core Processor//; s/ Processor//; s/ CPU//; s/@.*//" | xargs)
 CPU_CORES=$(nproc --all 2>/dev/null || echo 4)
 RAM_GB=$(grep MemTotal /proc/meminfo | awk '{printf "%.1f GB", $2/1024/1024}' 2>/dev/null || echo "4.0 GB")
 
@@ -186,8 +187,8 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     [ -n "$NVIDIA_NAME" ] && GPU_LINES+="\n • \Zb\Z7GPU Dedicada:\Zn   $NVIDIA_NAME"
     [ -n "$AMD_NAME" ] && GPU_LINES+="\n • \Zb\Z7GPU Integrada:\Zn  $AMD_NAME"
     [ -n "$INTEL_NAME" ] && GPU_LINES+="\n • \Zb\Z7GPU Integrada:\Zn  $INTEL_NAME"
-    [ "$IS_VM" = true ] && GPU_LINES+="\n • \Zb\Z7Aceleração:\Zn     Ambiente Virtualizado (VM)"
-    [ -z "$GPU_LINES" ] && GPU_LINES+="\n • \Zb\Z7Placa de Vídeo:\Zn Vídeo Padrão Genérico"
+    [ "$IS_VM" = true ] && GPU_LINES+="\n • \Zb\Z7Aceleração:\Zn     Ambiente Virtual (VM)"
+    [ -z "$GPU_LINES" ] && GPU_LINES+="\n • \Zb\Z7Vídeo:\Zn          Padrão Genérico"
 
     dialog --colors \
         --backtitle "$BACKTITLE" \
@@ -195,30 +196,30 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --msgbox \
 "\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn
 
- • \Zb\Z7Processador:\Zn     $CPU_MODEL ($CPU_CORES núcleos)
+ • \Zb\Z7Processador:\Zn     $CPU_MODEL (${CPU_CORES}t)
  • \Zb\Z7Memória RAM:\Zn     $RAM_GB$GPU_LINES
- • \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook / Laptop (Touchpad)" || echo "Desktop")
- • \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (Máquina Virtual)" || echo "Não (Bare-metal)")
+ • \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook (Touchpad)" || echo "Desktop")
+ • \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (VM)" || echo "Não (Físico)")
 
-Pressione \Zb\Z2<OK>\ZB\Zn para entrar no assistente de instalação." \
-        18 80
+Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador." \
+        16 74
 
     # Screen 2: GPU Drivers Selection
     GPU_RADIO=(
-        "NVIDIA_HYBRID" "Híbrido NVIDIA + AMD/Intel (Optimus / iGPU + dGPU)" "$([ "$HAS_NVIDIA" = true ] && [ "$HAS_AMD_GPU" = true -o "$HAS_INTEL_GPU" = true ] && echo "on" || echo "off")"
+        "NVIDIA_HYBRID" "Híbrido NVIDIA + AMD/Intel (iGPU + dGPU)" "$([ "$HAS_NVIDIA" = true ] && [ "$HAS_AMD_GPU" = true -o "$HAS_INTEL_GPU" = true ] && echo "on" || echo "off")"
         "NVIDIA_ONLY"   "Apenas NVIDIA proprietário (nvidia-utils + dkms)" "$([ "$HAS_NVIDIA" = true ] && [ "$HAS_AMD_GPU" = false -a "$HAS_INTEL_GPU" = false ] && echo "on" || echo "off")"
         "AMD_ONLY"      "Apenas AMD (Mesa + Vulkan-Radeon + VA-API)" "$([ "$HAS_NVIDIA" = false ] && [ "$HAS_AMD_GPU" = true ] && echo "on" || echo "off")"
         "INTEL_ONLY"    "Apenas Intel (Mesa + Vulkan-Intel + Media Driver)" "$([ "$HAS_NVIDIA" = false ] && [ "$HAS_INTEL_GPU" = true ] && echo "on" || echo "off")"
         "VM"            "Ambiente Virtualizado (VMware / QEMU / VirGL)" "$([ "$IS_VM" = true ] && echo "on" || echo "off")"
-        "GENERIC"       "Drivers Genéricos Mesa / Modos de Compatibilidade" "off"
+        "GENERIC"       "Drivers Genéricos Mesa / Compatibilidade" "off"
     )
 
     CHOSEN_GPU=$(dialog --colors \
         --backtitle "$BACKTITLE" \
         --title "\Zb\Z3 Seleção de Drivers de Vídeo \ZB\Zn" \
         --radiolist \
-"Selecione o perfil de aceleração gráfica para sua placa de vídeo:\n(Já pré-selecionado de acordo com seu hardware)" \
-        18 76 6 \
+"Selecione o perfil de aceleração gráfica para sua placa de vídeo:\n(Pré-selecionado de acordo com seu hardware)" \
+        16 74 6 \
         "${GPU_RADIO[@]}" \
         3>&1 1>&2 2>&3) || CHOSEN_GPU="AUTO"
 
@@ -228,7 +229,7 @@ Pressione \Zb\Z2<OK>\ZB\Zn para entrar no assistente de instalação." \
         --title "\Zb\Z3 Componentes e Módulos do Sistema \ZB\Zn" \
         --checklist \
 "Escolha os pacotes e recursos que deseja instalar no seu sistema:\nUse [Espaço] para marcar/desmarcar e [Enter] para confirmar." \
-        18 76 6 \
+        16 74 6 \
         "CORE"     "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
         "AUDIO"    "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
         "FONTS"    "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
@@ -242,14 +243,14 @@ Pressione \Zb\Z2<OK>\ZB\Zn para entrar no assistente de instalação." \
 
     # Screen 4: Initial Wayle Bar Layout Selection
     PRESET_CHOICES=(
-        "10" "Stealth Zen Minimalist (Workspaces + App + Bandeja + Relógio)" "on"
+        "10" "Stealth Zen (Workspaces + App + Bandeja + Relógio)" "on"
         "1"  "Floating Pill Top (Pílula Flutuante Suave • Gaps 10/8)" "off"
         "2"  "Block-Prefix Chips (Padrão Wayle Nativo • Gaps 8/8)" "off"
         "3"  "Full-Width Top Blade (Lâmina Cyberpunk • Gaps 2px)" "off"
-        "4"  "Floating macOS Dock (Dock Inferior Flutuante • Rounding 14px)" "off"
-        "5"  "Split Dual-Wings HUD (Asas nos Cantos • Centro 100% Livre)" "off"
-        "6"  "Dynamic Island Capsule (Cápsula Central • Rounding 14px)" "off"
-        "7"  "Island Floating Clusters (Ilhas Transparentes • Gaps 10px)" "off"
+        "4"  "Floating macOS Dock (Dock Inferior Flutuante)" "off"
+        "5"  "Split Dual-Wings HUD (Asas nos Cantos • Centro Livre)" "off"
+        "6"  "Dynamic Island Capsule (Cápsula Central • Round 14px)" "off"
+        "7"  "Island Floating Clusters (Ilhas Transparentes)" "off"
         "8"  "Audiophile Soundstage (Foco CAVA & Player Musical)" "off"
         "9"  "Glassmorphism Frost (Vidro Fosco Translúcido 50%)" "off"
     )
@@ -259,7 +260,7 @@ Pressione \Zb\Z2<OK>\ZB\Zn para entrar no assistente de instalação." \
         --title "\Zb\Z3 Layout Inicial da Barra Wayle \ZB\Zn" \
         --radiolist \
 "Escolha o layout e geometria visual da barra para iniciar seu desktop:\n(Você poderá trocar a qualquer momento usando Super + Ctrl + B)" \
-        18 78 10 \
+        18 74 10 \
         "${PRESET_CHOICES[@]}" \
         3>&1 1>&2 2>&3) || CHOSEN_PRESET="10"
 
