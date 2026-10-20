@@ -192,6 +192,7 @@ hl.bind(mainMod .. " + SHIFT + W",   hl.dsp.exec_cmd(scriptsDir .. "/WallpaperSe
 hl.bind(mainMod .. " + ALT + W",     hl.dsp.exec_cmd(scriptsDir .. "/WallpaperSelect.sh --random"))
 hl.bind(mainMod .. " + ALT + B",     hl.dsp.exec_cmd(scriptsDir .. "/MatugenSchemeSelect.sh"))
 hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd(scriptsDir .. "/WayleBarPresetSelect.sh"))
+hl.bind(mainMod .. " + SHIFT + T",   hl.dsp.exec_cmd(scriptsDir .. "/soberano-theme.sh"))
 hl.bind(mainMod .. " + ALT + A",     hl.dsp.exec_cmd(scriptsDir .. "/HyprAnimationsSelector.sh"))
 
 -- Game Mode (Ryzen 9 9950X + RTX 3060 Ti Low-Latency Mode)

@@ -20,6 +20,10 @@ O Soberano Dotfiles foi desenvolvido com um motor de temas responsivo integrado 
 | :---: | :---: |
 | <img src="assets/screenshots/soberano-catppuccin-mocha.jpg" width="100%"> | <img src="assets/screenshots/soberano-japanese-minimalist.jpg" width="100%"> |
 
+> [!TIP]
+> **Todos os temas acima vêm 100% integrados e prontos para uso no repositório!**
+> Você pode alternar entre eles a qualquer momento pressionando **`Super + Shift + T`** ou rodando **`soberano-theme`** no terminal. O script aplica instantaneamente o papel de parede oficial em `wallpapers/Themes/`, a geometria da barra do Wayle, o algoritmo de cores do Matugen e os shaders GLSL correspondentes.
+
 ---
 
 ## Destaques da Arquitetura
@@ -102,6 +106,7 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 | `Super + Espaço` / `Super + D` | Lançador de Aplicativos (Fuzzel) |
 | `Super + W` | Galeria de Wallpapers GTK4 (Cinema Studio) |
 | `Super + Alt + W` | Wallpaper Aleatório com Transição + Matugen |
+| `Super + Shift + T` | Seletor de Temas Oficiais (Nordic, Cyberpunk, Catppuccin, Zen) |
 | `Super + Ctrl + B` | Seletor de Presets da Barra Wayle (10 layouts) |
 | `Super + Alt + B` | Seletor de Esquemas de Cores Material You |
 | `Super + Alt + S` | Alternar Shaders GLSL de Tela (Cyberpunk, CRT, etc.) |

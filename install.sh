@@ -632,6 +632,7 @@ info "Vinculando diretórios em ${CONFIG_DIR}..."
 mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0" "$HOME/.local/bin" "$CONFIG_DIR/systemd/user"
 chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-update.sh" "$HOME/.local/bin/soberano-update"
+ln -sfn "$DOTFILES_DIR/scripts/soberano-theme.sh" "$HOME/.local/bin/soberano-theme"
 cp -f "$DOTFILES_DIR"/config/systemd/user/soberano-autoupdate.* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
 
 CONFIGS=(
