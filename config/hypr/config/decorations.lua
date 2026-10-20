@@ -1,15 +1,21 @@
--- Decorations & Dynamic Matugen Borders
+-- Decorations & Dynamic Matugen Borders & Gaps
 pcall(require, "config.colors_dynamic")
+pcall(require, "config.gaps_dynamic")
 
 local active1  = DYNAMIC_ACTIVE_1 or CACHYLGREEN
 local active2  = DYNAMIC_ACTIVE_2 or CACHYDGREEN
 local inactive = DYNAMIC_INACTIVE or CACHYGRAY
 
+local d_gaps_in  = DYNAMIC_GAPS_IN or 3
+local d_gaps_out = DYNAMIC_GAPS_OUT or 8
+local d_rounding = DYNAMIC_ROUNDING or 10
+local d_border   = DYNAMIC_BORDER_SIZE or 2
+
 hl.config({
     general = {
-        gaps_in = 3,
-        gaps_out = 8,
-        border_size = 2,
+        gaps_in = d_gaps_in,
+        gaps_out = d_gaps_out,
+        border_size = d_border,
         extend_border_grab_area = 10,
         resize_on_border = true,
         col = {
@@ -38,7 +44,7 @@ hl.config({
     },
     decoration = {
         dim_special = 0.3,
-        rounding = 10,
+        rounding = d_rounding,
         active_opacity = 0.95,
         inactive_opacity = 0.88,
         fullscreen_opacity = 1.0,

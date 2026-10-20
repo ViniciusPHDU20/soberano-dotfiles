@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Soberano Native Wayle Bar Preset Selector
-# Uses 100% native Wayle GTK4 parameters (rem spacing units)
+# Soberano Native Wayle Bar Preset Selector & Dynamic Hyprland Gaps Engine
+# Synchronizes bar geometry with Hyprland window gaps, borders, and rounding
 # Bound to: Super + Ctrl + B
 # ==============================================================================
 set -euo pipefail
@@ -13,16 +13,16 @@ PRESET_STATE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_wayle_preset.txt"
 current_preset=$(cat "$PRESET_STATE" 2>/dev/null || echo "2")
 
 declare -a presets=(
-    "1   — Floating Pill Top (Pílula Flutuante Suave)"
-    "2   — Block-Prefix Chips (Padrão Nativo Wayle)"
-    "3   — Full-Width Top Blade (Lâmina Reta de Ponta a Ponta)"
-    "4   — Floating macOS Dock (Dock Flutuante Inferior Centralizado)"
-    "5   — Split Dual-Wings HUD (Asas nos Cantos • Centro 100% Livre)"
-    "6   — Dynamic Island Capsule (Cápsula Flutuante Central)"
-    "7   — Island Floating Clusters (Ilhas 100% Transparentes)"
-    "8   — Audiophile Soundstage (Foco CAVA & Player Musical)"
-    "9   — Glassmorphism Frost (Vidro Fosco Translúcido 50%)"
-    "10  — Stealth Zen Minimalist (Apenas Relógio e Workspaces)"
+    "1   — Floating Pill Top (Pílula Flutuante Suave • Gaps 10/8 • Rounding 12px)"
+    "2   — Block-Prefix Chips (Padrão Nativo Wayle • Gaps 8/8 • Rounding 10px)"
+    "3   — Full-Width Top Blade (Lâmina Cyberpunk • Gaps 2px • Rounding 0px)"
+    "4   — Floating macOS Dock (Dock Inferior Flutuante • Gaps Bottom 14px • Rounding 14px)"
+    "5   — Split Dual-Wings HUD (Asas nos Cantos • Centro 100% Livre • Gaps 12px)"
+    "6   — Dynamic Island Capsule (Cápsula Central • Gaps Top 14px • Rounding 14px)"
+    "7   — Island Floating Clusters (Ilhas Transparentes • Gaps 10px • Rounding 16px)"
+    "8   — Audiophile Soundstage (Foco CAVA & Player Musical • Gaps 10px • Rounding 12px)"
+    "9   — Glassmorphism Frost (Vidro Fosco 50% • Gaps 8px • Rounding 10px)"
+    "10  — Stealth Zen Minimalist (Mínimo Extremo • Gaps 2px • Rounding 4px)"
 )
 
 options=()
@@ -35,7 +35,7 @@ for entry in "${presets[@]}"; do
     fi
 done
 
-chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle Layout ❯ " -w 66 -l 10 || true)
+chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 76 -l 10 || true)
 [ -z "$chosen" ] && exit 0
 
 clean=$(echo "$chosen" | sed 's/^👉 //; s/^   //')
@@ -48,7 +48,7 @@ echo "$id" > "$PRESET_STATE"
 echo "" > "$WAYLE_RUNTIME"
 
 python3 - "$WAYLE_CFG" "$id" <<'PY'
-import sys, re
+import sys, re, os, subprocess
 
 cfg_path, preset_id = sys.argv[1], sys.argv[2]
 with open(cfg_path, "r") as f:
@@ -137,6 +137,12 @@ presets = {
             "button-group-rounding": '"sm"',
         },
         "layout": L_STANDARD,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 10, right = 8, bottom = 8, left = 8 }",
+            "rounding": 12,
+            "border_size": 2,
+        },
     },
     # 2. Block-Prefix Chips (Padrão Wayle)
     "2": {
@@ -163,8 +169,14 @@ presets = {
             "button-group-rounding": '"sm"',
         },
         "layout": L_STANDARD,
+        "hypr": {
+            "gaps_in": 3,
+            "gaps_out": "{ top = 8, right = 8, bottom = 8, left = 8 }",
+            "rounding": 10,
+            "border_size": 2,
+        },
     },
-    # 3. Full-Width Top Blade
+    # 3. Full-Width Top Blade (Cyberpunk)
     "3": {
         "bar": {
             "location": '"top"',
@@ -189,6 +201,12 @@ presets = {
             "button-group-rounding": '"none"',
         },
         "layout": L_STANDARD,
+        "hypr": {
+            "gaps_in": 2,
+            "gaps_out": "{ top = 2, right = 4, bottom = 4, left = 4 }",
+            "rounding": 0,
+            "border_size": 1,
+        },
     },
     # 4. Floating macOS Dock (Dock Inferior)
     "4": {
@@ -215,6 +233,12 @@ presets = {
             "button-group-rounding": '"full"',
         },
         "layout": L_DOCK,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 4, right = 8, bottom = 14, left = 8 }",
+            "rounding": 14,
+            "border_size": 2,
+        },
     },
     # 5. Split Dual-Wings HUD (Asas nos Cantos • Centro 100% Livre)
     "5": {
@@ -243,6 +267,12 @@ presets = {
             "button-group-rounding": '"lg"',
         },
         "layout": L_WINGS,
+        "hypr": {
+            "gaps_in": 5,
+            "gaps_out": "{ top = 12, right = 10, bottom = 10, left = 10 }",
+            "rounding": 12,
+            "border_size": 2,
+        },
     },
     # 6. Dynamic Island Capsule (Cápsula Flutuante Central)
     "6": {
@@ -269,6 +299,12 @@ presets = {
             "button-group-rounding": '"full"',
         },
         "layout": L_ISLAND,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 14, right = 8, bottom = 8, left = 8 }",
+            "rounding": 14,
+            "border_size": 2,
+        },
     },
     # 7. Island Floating Clusters (Ilhas 100% Transparentes)
     "7": {
@@ -297,6 +333,12 @@ presets = {
             "button-group-rounding": '"full"',
         },
         "layout": L_STANDARD,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 10, right = 10, bottom = 10, left = 10 }",
+            "rounding": 16,
+            "border_size": 2,
+        },
     },
     # 8. Audiophile Soundstage (Foco CAVA & Player Musical)
     "8": {
@@ -323,6 +365,12 @@ presets = {
             "button-group-rounding": '"lg"',
         },
         "layout": L_AUDIOPHILE,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 10, right = 8, bottom = 8, left = 8 }",
+            "rounding": 12,
+            "border_size": 2,
+        },
     },
     # 9. Glassmorphism Frost (Vidro Fosco Translúcido 50%)
     "9": {
@@ -349,38 +397,50 @@ presets = {
             "button-group-rounding": '"md"',
         },
         "layout": L_STANDARD,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 8, right = 8, bottom = 8, left = 8 }",
+            "rounding": 10,
+            "border_size": 2,
+        },
     },
     # 10. Stealth Zen Minimalist (Apenas Relógio e Workspaces)
     "10": {
         "bar": {
             "location": '"top"',
             "scale": "0.85",
-            "inset-edge": "0.4",
-            "inset-ends": "3.5",
+            "inset-edge": "0.15",
+            "inset-ends": "0.2",
             "padding": "0.18",
-            "padding-ends": "0.4",
-            "module-gap": "0.3",
+            "padding-ends": "0.3",
+            "module-gap": "0.25",
             "bg": '"bg-surface"',
-            "background-opacity": "92",
-            "rounding": '"full"',
-            "border-location": '"all"',
-            "border-width": "1",
-            "border-color": '"border-subtle"',
+            "background-opacity": "90",
+            "rounding": '"sm"',
+            "border-location": '"none"',
+            "border-width": "0",
             "shadow": '"none"',
             "button-variant": '"basic"',
-            "button-rounding": '"full"',
+            "button-rounding": '"sm"',
             "button-border-location": '"none"',
             "button-border-width": "0",
             "button-group-border-location": '"none"',
-            "button-group-rounding": '"full"',
+            "button-group-rounding": '"sm"',
         },
         "layout": L_ZEN,
+        "hypr": {
+            "gaps_in": 1,
+            "gaps_out": "{ top = 2, right = 2, bottom = 2, left = 2 }",
+            "rounding": 4,
+            "border_size": 1,
+        },
     },
 }
 
 p = presets.get(preset_id, presets["2"])
 p_bar = p["bar"]
 p_layout = p["layout"]
+p_hypr = p["hypr"]
 
 lines = cfg_text.splitlines()
 in_bar = False
@@ -418,9 +478,28 @@ new_cfg = re.sub(pattern, p_layout.strip(), new_cfg)
 
 with open(cfg_path, "w") as f:
     f.write(new_cfg + "\n")
+
+# Dynamic Hyprland Gaps & Rounding sync
+gaps_lua_path = os.path.expanduser("~/dotfiles/config/hypr/config/gaps_dynamic.lua")
+gaps_content = f"""-- Dynamic Hyprland Gaps (Auto-adapted to Wayle Preset {preset_id})
+DYNAMIC_GAPS_IN = {p_hypr['gaps_in']}
+DYNAMIC_GAPS_OUT = {p_hypr['gaps_out']}
+DYNAMIC_ROUNDING = {p_hypr['rounding']}
+DYNAMIC_BORDER_SIZE = {p_hypr['border_size']}
+"""
+with open(gaps_lua_path, "w") as f:
+    f.write(gaps_content)
+
+# Live apply to Hyprland compositor
+gin = p_hypr['gaps_in']
+gout = p_hypr['gaps_out']
+bsz = p_hypr['border_size']
+rnd = p_hypr['rounding']
+eval_str = f"hl.config({{ general = {{ gaps_in = {gin}, gaps_out = {gout}, border_size = {bsz} }}, decoration = {{ rounding = {rnd} }} }})"
+subprocess.run(["hyprctl", "eval", eval_str], capture_output=True)
 PY
 
 # Instant reload of Wayle service (takes ~150ms)
 systemctl --user restart wayle.service >/dev/null 2>&1 || true
 
-notify-send -u low -a "Soberano" "󰕮 Wayle Layout" "Preset ${clean} aplicado" 2>/dev/null || true
+notify-send -u low -a "Soberano" "󰕮 Wayle & Hyprland" "Layout ${clean} sincronizado" 2>/dev/null || true
