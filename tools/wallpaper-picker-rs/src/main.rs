@@ -1,8 +1,8 @@
 use gtk4::prelude::*;
 use gtk4::{
     gdk, gdk::Texture, gdk_pixbuf::Pixbuf, glib, Application, ApplicationWindow, Box as GtkBox,
-    Button, EventControllerKey, FlowBox, FlowBoxChild, GestureClick, Image, Label, Orientation,
-    ScrolledWindow, SearchEntry,
+    Button, ContentFit, EventControllerKey, FlowBox, FlowBoxChild, GestureClick, Label, Orientation,
+    Picture, ScrolledWindow, SearchEntry,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
@@ -13,10 +13,10 @@ use std::rc::Rc;
 use walkdir::WalkDir;
 
 const APP_ID: &str = "org.soberano.wallpaperpicker";
-const THUMB_W: i32 = 240;
-const THUMB_H: i32 = 135;
-const HERO_W: i32 = 380;
-const HERO_H: i32 = 214;
+const THUMB_W: i32 = 246;
+const THUMB_H: i32 = 138;
+const HERO_W: i32 = 440;
+const HERO_H: i32 = 248;
 
 #[derive(Clone, Debug)]
 struct WallpaperItem {
@@ -232,16 +232,18 @@ fn load_css() {
         .hero-stage {{
             background-color: alpha(@card_bg_color, 0.65);
             border: 1px solid alpha(@accent_color, 0.20);
-            border-radius: 24px;
-            padding: 20px;
-            min-width: 400px;
-            max-width: 400px;
+            border-radius: 26px;
+            padding: 22px;
+            min-width: 480px;
+            max-width: 480px;
         }}
 
         .hero-image-frame {{
-            border-radius: 18px;
-            border: 2px solid alpha(@accent_color, 0.40);
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 25px alpha(@accent_color, 0.25);
+            border-radius: 20px;
+            border: 2px solid alpha(@accent_color, 0.45);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.70), 0 0 30px alpha(@accent_color, 0.30);
+            min-width: 440px;
+            min-height: 248px;
         }}
 
         .hero-title {{
@@ -514,28 +516,30 @@ fn build_ui(app: &Application) {
     root_box.set_halign(gtk4::Align::Center);
 
     // Studio Deck Main Container
-    let studio_deck = GtkBox::new(Orientation::Horizontal, 18);
+    let studio_deck = GtkBox::new(Orientation::Horizontal, 20);
     studio_deck.add_css_class("studio-deck");
-    studio_deck.set_size_request(1320, 780);
+    studio_deck.set_size_request(1380, 800);
 
     // -------------------------------------------------------------------------
     // LEFT STAGE: The Curator Showcase (Hero View)
     // -------------------------------------------------------------------------
-    let hero_stage = GtkBox::new(Orientation::Vertical, 14);
+    let hero_stage = GtkBox::new(Orientation::Vertical, 16);
     hero_stage.add_css_class("hero-stage");
 
-    // Large Hero Image
-    let hero_image = Image::new();
-    hero_image.add_css_class("hero-image-frame");
-    hero_image.set_size_request(HERO_W, HERO_H);
+    // Large Hero Picture (uses Picture with ContentFit::Cover so it expands properly!)
+    let hero_picture = Picture::new();
+    hero_picture.set_content_fit(ContentFit::Cover);
+    hero_picture.set_can_shrink(true);
+    hero_picture.set_size_request(HERO_W, HERO_H);
+    hero_picture.add_css_class("hero-image-frame");
 
-    let update_hero_image = |img_widget: &Image, path: &Path| {
-        if let Ok(pixbuf) = Pixbuf::from_file_at_scale(path, HERO_W, HERO_H, true) {
+    let update_hero_image = |pic_widget: &Picture, path: &Path| {
+        if let Ok(pixbuf) = Pixbuf::from_file_at_scale(path, HERO_W * 2, HERO_H * 2, true) {
             let texture = Texture::for_pixbuf(&pixbuf);
-            img_widget.set_paintable(Some(&texture));
+            pic_widget.set_paintable(Some(&texture));
         }
     };
-    update_hero_image(&hero_image, &selected_item.borrow().path);
+    update_hero_image(&hero_picture, &selected_item.borrow().path);
 
     // Metadata Row
     let meta_row = GtkBox::new(Orientation::Horizontal, 8);
@@ -605,7 +609,7 @@ fn build_ui(app: &Application) {
     actions_box.append(&random_btn);
     actions_box.append(&hint_label);
 
-    hero_stage.append(&hero_image);
+    hero_stage.append(&hero_picture);
     hero_stage.append(&meta_row);
     hero_stage.append(&hero_title);
     hero_stage.append(&actions_box);
@@ -665,7 +669,7 @@ fn build_ui(app: &Application) {
     let card_registry = Rc::new(RefCell::new(Vec::<CardMeta>::new()));
 
     // Closure to update hero stage when card selected
-    let hero_img_rc = hero_image.clone();
+    let hero_img_rc = hero_picture.clone();
     let hero_title_rc = hero_title.clone();
     let cat_badge_rc = category_badge.clone();
     let status_pill_rc = status_pill.clone();
@@ -717,10 +721,12 @@ fn build_ui(app: &Application) {
 
         if let Ok(pixbuf) = Pixbuf::from_file(&item.thumbnail_path) {
             let texture = Texture::for_pixbuf(&pixbuf);
-            let img = Image::from_paintable(Some(&texture));
-            img.add_css_class("card-thumb-image");
-            img.set_pixel_size(THUMB_W);
-            card_item.append(&img);
+            let pic = Picture::for_paintable(&texture);
+            pic.set_content_fit(ContentFit::Cover);
+            pic.set_can_shrink(true);
+            pic.set_size_request(THUMB_W, THUMB_H);
+            pic.add_css_class("card-thumb-image");
+            card_item.append(&pic);
         }
 
         let label_row = GtkBox::new(Orientation::Horizontal, 6);
