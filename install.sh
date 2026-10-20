@@ -183,25 +183,29 @@ trap 'rm -f "$TMP_DIALOGRC"' EXIT
 # 3. Interactive Dialog Interface (Gentoo-Style)
 if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     # Screen 1: Welcome & Hardware Diagnosis
-    GPU_LINES=""
-    [ -n "$NVIDIA_NAME" ] && GPU_LINES+="\n • \Zb\Z7GPU Dedicada:\Zn   $NVIDIA_NAME"
-    [ -n "$AMD_NAME" ] && GPU_LINES+="\n • \Zb\Z7GPU Integrada:\Zn  $AMD_NAME"
-    [ -n "$INTEL_NAME" ] && GPU_LINES+="\n • \Zb\Z7GPU Integrada:\Zn  $INTEL_NAME"
-    [ "$IS_VM" = true ] && GPU_LINES+="\n • \Zb\Z7Aceleração:\Zn     Ambiente Virtual (VM)"
-    [ -z "$GPU_LINES" ] && GPU_LINES+="\n • \Zb\Z7Vídeo:\Zn          Padrão Genérico"
+    DIAG_MSG="\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn\n\n"
+    DIAG_MSG+=" • \Zb\Z7Processador:\Zn     $CPU_MODEL (${CPU_CORES}t)\n"
+    DIAG_MSG+=" • \Zb\Z7Memória RAM:\Zn     $RAM_GB\n"
+    if [ -n "$NVIDIA_NAME" ]; then
+        DIAG_MSG+=" • \Zb\Z7GPU Dedicada:\Zn   $NVIDIA_NAME\n"
+    fi
+    if [ -n "$AMD_NAME" ]; then
+        DIAG_MSG+=" • \Zb\Z7GPU Integrada:\Zn  $AMD_NAME\n"
+    fi
+    if [ -n "$INTEL_NAME" ]; then
+        DIAG_MSG+=" • \Zb\Z7GPU Integrada:\Zn  $INTEL_NAME\n"
+    fi
+    if [ "$IS_VM" = true ]; then
+        DIAG_MSG+=" • \Zb\Z7Aceleração:\Zn     Ambiente Virtual (VM)\n"
+    fi
+    DIAG_MSG+=" • \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook (Touchpad)" || echo "Desktop")\n"
+    DIAG_MSG+=" • \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (VM)" || echo "Não (Físico)")\n\n"
+    DIAG_MSG+="Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador."
 
-    dialog --colors \
+    dialog --colors --cr-wrap \
         --backtitle "$BACKTITLE" \
         --title "\Zb\Z3 Diagnóstico de Hardware Detectado \ZB\Zn" \
-        --msgbox \
-"\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn
-
- • \Zb\Z7Processador:\Zn     $CPU_MODEL (${CPU_CORES}t)
- • \Zb\Z7Memória RAM:\Zn     $RAM_GB$GPU_LINES
- • \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook (Touchpad)" || echo "Desktop")
- • \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (VM)" || echo "Não (Físico)")
-
-Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador." \
+        --msgbox "$(printf "%b" "$DIAG_MSG")" \
         16 74
 
     # Screen 2: GPU Drivers Selection
@@ -265,26 +269,24 @@ Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador." \
         3>&1 1>&2 2>&3) || CHOSEN_PRESET="10"
 
     # Screen 5: Final Confirmation
-    CONFIRM_MSG="Deseja iniciar a instalação com as seguintes opções?
-
- • \ZbPerfil GPU:\Zn        $CHOSEN_GPU
- • \ZbPreset Wayle:\Zn      Preset $CHOSEN_PRESET
- • \ZbStack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")
- • \ZbShaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")
- • \ZbGestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")"
+    CONFIRM_MSG="Deseja iniciar a instalação com as seguintes opções?\n\n"
+    CONFIRM_MSG+=" • \Zb\Z7Perfil GPU:\Zn        $CHOSEN_GPU\n"
+    CONFIRM_MSG+=" • \Zb\Z7Preset Wayle:\Zn      Preset $CHOSEN_PRESET\n"
+    CONFIRM_MSG+=" • \Zb\Z7Stack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")\n"
+    CONFIRM_MSG+=" • \Zb\Z7Shaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")\n"
+    CONFIRM_MSG+=" • \Zb\Z7Gestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")\n\n"
 
     if [ "$DRY_RUN" = true ]; then
-        CONFIRM_MSG+="\n\n\Zb\Z3[MODO DE TESTE / DRY-RUN ATIVO]\ZB\Zn\nNenhum pacote será instalado e nenhuma alteração será feita no sistema."
+        CONFIRM_MSG+="\Zb\Z3[MODO DE TESTE / DRY-RUN ATIVO]\ZB\Zn\nNenhum pacote será instalado e nenhuma alteração será feita."
     else
-        CONFIRM_MSG+="\n\nSeus arquivos de configuração antigos terão backup automático antes da substituição."
+        CONFIRM_MSG+="Seus arquivos antigos terão backup automático antes da substituição."
     fi
 
-    dialog --colors \
+    dialog --colors --cr-wrap \
         --backtitle "$BACKTITLE" \
         --title "\Zb\Z2 Confirmar Instalação \ZB\Zn" \
-        --yesno \
-"$CONFIRM_MSG" \
-        16 72 || {
+        --yesno "$(printf "%b" "$CONFIRM_MSG")" \
+        16 74 || {
             dialog --clear; clear; echo "Instalação cancelada pelo usuário."; exit 0;
         }
     dialog --clear
@@ -293,26 +295,23 @@ fi
 # Dry-run early exit (Safety lock: never modifies anything)
 if [ "$DRY_RUN" = true ]; then
     if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
-        dialog --colors \
+        REPORT_MSG="\Zb\Z2Simulação concluída com sucesso!\ZB\Zn\n\n"
+        REPORT_MSG+="Aqui está o que o instalador realizaria na máquina real:\n\n"
+        REPORT_MSG+=" • \Zb\Z7Perfil de GPU:\Zn       $CHOSEN_GPU\n"
+        REPORT_MSG+=" • \Zb\Z7Stack de Drivers:\Zn    $([ "$CHOSEN_GPU" = "NVIDIA_HYBRID" -o "$CHOSEN_GPU" = "NVIDIA_ONLY" ] && echo "nvidia-utils, egl-wayland" || echo "mesa, vulkan")\n"
+        REPORT_MSG+=" • \Zb\Z7Stack Gráfica:\Zn       Hyprland + Wayle + Matugen + Pipewire + Fontes\n"
+        REPORT_MSG+=" • \Zb\Z7Layout da Barra:\Zn     Preset $CHOSEN_PRESET\n"
+        REPORT_MSG+=" • \Zb\Z7Stack Gamer:\Zn         $([ "$INSTALL_GAMING" = true ] && echo "Steam, Gamemode, Mangohud, Wine" || echo "Ignorado")\n"
+        REPORT_MSG+=" • \Zb\Z7Shaders Hyprland:\Zn    $([ "$INSTALL_SHADERS" = true ] && echo "Ativados (Super + Alt + S)" || echo "Ignorado")\n"
+        REPORT_MSG+=" • \Zb\Z7Vinculação Dotfiles:\Zn 9 diretórios em ~/.config (com backup preventivo)\n\n"
+        REPORT_MSG+="\Zb\Z2Status do Sistema:\ZB\Zn 100% Intacto (Zero alterações realizadas).\n\n"
+        REPORT_MSG+="Para aplicar a instalação real quando desejar, basta rodar:\n"
+        REPORT_MSG+="   \Zb./install.sh\ZB"
+
+        dialog --colors --cr-wrap \
             --backtitle "$BACKTITLE" \
             --title "\Zb\Z2 Relatório de Simulação (Dry-Run Concluído) \ZB\Zn" \
-            --msgbox \
-"\Zb\Z2Simulação concluída com sucesso!\ZB\Zn
-
-Aqui está o que o instalador realizaria na máquina real:
-
- • \ZbPerfil de GPU:\Zn       $CHOSEN_GPU ($GPU_DESC)
- • \ZbStack de Drivers:\Zn    $([ "$CHOSEN_GPU" = "NVIDIA_HYBRID" -o "$CHOSEN_GPU" = "NVIDIA_ONLY" ] && echo "nvidia-utils, lib32-nvidia-utils, egl-wayland" || echo "mesa, vulkan")
- • \ZbStack Gráfica:\Zn       Hyprland (Lua) + Wayle + Matugen + Pipewire + Fontes
- • \ZbLayout da Barra:\Zn     Preset $CHOSEN_PRESET
- • \ZbStack Gamer:\Zn         $([ "$INSTALL_GAMING" = true ] && echo "Steam, Gamemode, Mangohud, Wine" || echo "Ignorado")
- • \ZbShaders Hyprland:\Zn    $([ "$INSTALL_SHADERS" = true ] && echo "Ativados (Super + Alt + S)" || echo "Ignorado")
- • \ZbVinculação Dotfiles:\Zn 9 diretórios em ~/.config (com backup preventivo)
-
-\Zb\Z2Status do Sistema:\ZB\Zn 100% Intacto (Zero pacotes instalados, zero arquivos alterados).
-
-Para aplicar a instalação real quando desejar, basta rodar:
-   \Zb./install.sh\ZB" \
+            --msgbox "$(printf "%b" "$REPORT_MSG")" \
             20 76
         dialog --clear
         clear
