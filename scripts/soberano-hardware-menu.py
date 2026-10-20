@@ -52,8 +52,7 @@ class HardwareDropdown(Gtk.Window):
         GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 160)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
 
-        # Dismiss on focus lost or Escape
-        self.connect("focus-out-event", self.on_focus_out)
+        # Keyboard shortcuts and cleanup (closes on Escape or click toggle)
         self.connect("key-press-event", self.on_key_press)
         self.connect("destroy", self.on_destroy)
 
@@ -194,17 +193,9 @@ class HardwareDropdown(Gtk.Window):
         outer.get_style_context().add_class("popover-card")
         self.add(outer)
 
-        # Header (Draggable)
-        header_ev = Gtk.EventBox()
-        header_ev.set_visible_window(False)
-        header_ev.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON1_MOTION_MASK)
-        header_ev.connect("button-press-event", self.on_header_drag_begin)
-        header_ev.connect("motion-notify-event", self.on_header_drag_motion)
-        header_ev.connect("realize", lambda w: w.get_window().set_cursor(Gdk.Cursor.new_from_name(Gdk.Display.get_default(), "grab")) if w.get_window() else None)
-
+        # Header Bar (Fixed / Native Dropdown Style)
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        header_ev.add(header)
-        outer.pack_start(header_ev, False, False, 0)
+        outer.pack_start(header, False, False, 0)
 
         title = Gtk.Label(label="󰍛  Hardware")
         title.get_style_context().add_class("header-title")
@@ -425,25 +416,6 @@ class HardwareDropdown(Gtk.Window):
 
     def on_update_clicked(self, widget):
         subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/soberano-update.sh")])
-
-    def on_header_drag_begin(self, widget, event):
-        if event.button == 1:
-            self._drag_start_x = event.x_root
-            self._drag_start_y = event.y_root
-            self._drag_init_top = GtkLayerShell.get_margin(self, GtkLayerShell.Edge.TOP)
-            self._drag_init_right = GtkLayerShell.get_margin(self, GtkLayerShell.Edge.RIGHT)
-
-    def on_header_drag_motion(self, widget, event):
-        if hasattr(self, "_drag_start_x") and (event.state & Gdk.ModifierType.BUTTON1_MASK):
-            dx = event.x_root - self._drag_start_x
-            dy = event.y_root - self._drag_start_y
-            new_top = int(self._drag_init_top + dy)
-            new_right = int(self._drag_init_right - dx)
-            GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, max(0, new_top))
-            GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, max(0, new_right))
-
-    def on_focus_out(self, widget, event):
-        Gtk.main_quit()
 
     def on_key_press(self, widget, event):
         if event.keyval == Gdk.KEY_Escape:
