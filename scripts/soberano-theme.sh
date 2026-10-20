@@ -64,7 +64,7 @@ case "$id" in
     1)
         # Nordic Slate
         THEME_NAME="Nordic Slate"
-        WALLPAPER="$DOTFILES_DIR/wallpapers/Themes/Nordic-Slate.jpg"
+        WALLPAPER="$DOTFILES_DIR/wallpapers/Mountain_dark.dynamic.png"
         WAYLE_PRESET="2"
         MATUGEN_SCHEME="neutral"
         SHADER="off"
@@ -72,7 +72,7 @@ case "$id" in
     2)
         # Cyberpunk Glow
         THEME_NAME="Cyberpunk Glow"
-        WALLPAPER="$DOTFILES_DIR/wallpapers/Themes/Cyberpunk-Neon.jpg"
+        WALLPAPER="$DOTFILES_DIR/wallpapers/Anime-City-Night.png"
         WAYLE_PRESET="3"
         MATUGEN_SCHEME="vibrant"
         SHADER="cyberpunk"
@@ -80,7 +80,7 @@ case "$id" in
     3)
         # Catppuccin Velvet
         THEME_NAME="Catppuccin Velvet"
-        WALLPAPER="$DOTFILES_DIR/wallpapers/Themes/Catppuccin-Mocha.jpg"
+        WALLPAPER="$DOTFILES_DIR/wallpapers/Lofi - Chill Room.png"
         WAYLE_PRESET="1"
         MATUGEN_SCHEME="tonal-spot"
         SHADER="soft-bloom"
@@ -88,7 +88,7 @@ case "$id" in
     4)
         # Japanese Minimalist
         THEME_NAME="Japanese Minimalist"
-        WALLPAPER="$DOTFILES_DIR/wallpapers/Themes/Japanese-Minimalist.jpg"
+        WALLPAPER="$DOTFILES_DIR/wallpapers/Concept-Japanese house.png"
         WAYLE_PRESET="10"
         MATUGEN_SCHEME="fidelity"
         SHADER="off"

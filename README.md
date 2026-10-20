@@ -22,7 +22,7 @@ O Soberano Dotfiles foi desenvolvido com um motor de temas responsivo integrado 
 
 > [!TIP]
 > **Todos os temas acima vêm 100% integrados e prontos para uso no repositório!**
-> Você pode alternar entre eles a qualquer momento pressionando **`Super + Shift + T`** ou rodando **`soberano-theme`** no terminal. O script aplica instantaneamente o papel de parede oficial em `wallpapers/Themes/`, a geometria da barra do Wayle, o algoritmo de cores do Matugen e os shaders GLSL correspondentes.
+> Você pode alternar entre eles a qualquer momento pressionando **`Super + Shift + T`** ou rodando **`soberano-theme`** no terminal. O script aplica instantaneamente o papel de parede correspondente da coleção em `wallpapers/`, a geometria da barra do Wayle, o algoritmo de cores do Matugen e os shaders GLSL correspondentes.
 
 ---
 
