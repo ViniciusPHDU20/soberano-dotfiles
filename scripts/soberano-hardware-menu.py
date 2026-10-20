@@ -48,7 +48,7 @@ class HardwareDropdown(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, True)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 42)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 34)
         GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 160)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
 
@@ -200,13 +200,6 @@ class HardwareDropdown(Gtk.Window):
         title = Gtk.Label(label="󰍛  Hardware")
         title.get_style_context().add_class("header-title")
         header.pack_start(title, False, False, 0)
-
-        header.pack_start(Gtk.Box(), True, True, 0)
-
-        btn_close = Gtk.Button(label="✕")
-        btn_close.get_style_context().add_class("header-close")
-        btn_close.connect("clicked", lambda w: Gtk.main_quit())
-        header.pack_end(btn_close, False, False, 0)
 
         # 1. CPU Row & Slider
         cpu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
