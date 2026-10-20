@@ -380,6 +380,7 @@ fn build_ui(app: &Application) {
         click.connect_released(move |_, _, _, _| {
             apply_wallpaper(&path_clone);
             win_clone.close();
+            std::process::exit(0);
         });
         card_item.add_controller(click);
 
@@ -445,18 +446,20 @@ fn build_ui(app: &Application) {
 
             if x < min_x || x > max_x || y < min_y || y > max_y {
                 win_bg.close();
+                std::process::exit(0);
             }
         }
     });
     window.add_controller(bg_click);
 
-    // Key controller: Escape closes
+    // Key controller: Escape closes (using Capture phase so focused inputs don't swallow it)
     let key_controller = EventControllerKey::new();
+    key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     let win_key = window.clone();
     key_controller.connect_key_pressed(move |_, keyval, _, _| {
         if keyval == gdk::Key::Escape {
             win_key.close();
-            glib::Propagation::Stop
+            std::process::exit(0);
         } else {
             glib::Propagation::Proceed
         }
