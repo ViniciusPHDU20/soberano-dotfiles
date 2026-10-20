@@ -23,6 +23,24 @@ success() { printf "${C_GREEN}✓${C_RESET} ${C_BOLD}%s${C_RESET}\n" "$*"; }
 warn()    { printf "${C_YELLOW}⚠${C_RESET} %s\n" "$*"; }
 error()   { printf "${C_RED}✗${C_RESET} ${C_BOLD}%s${C_RESET}\n" "$*"; exit 1; }
 
+# Helper to visually center text inside a dialog box
+center_dialog_line() {
+    local text="$1"
+    local width="${2:-70}"
+    local clean
+    clean=$(printf "%b" "$text" | sed -E 's/\\Z[bB0-7nr]//g')
+    local len=${#clean}
+    local pad=$(( (width - len) / 2 ))
+    [ "$pad" -lt 0 ] && pad=0
+    local nbsp
+    nbsp=$(printf "\xc2\xa0")
+    local spaces=""
+    for ((i=0; i<pad; i++)); do
+        spaces="${spaces}${nbsp}"
+    done
+    printf "%s%s" "$spaces" "$text"
+}
+
 # 1. Safety Checks
 if [ "$EUID" -eq 0 ]; then
     error "Este instalador NÃO deve ser executado diretamente como root. Execute como seu usuário normal com permissões sudo."
@@ -200,7 +218,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     fi
     DIAG_MSG+=" • \Zb\Z7Tipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook (Touchpad)" || echo "Desktop")\n"
     DIAG_MSG+=" • \Zb\Z7Virtualização:\Zn   $([ "$IS_VM" = true ] && echo "Sim (VM)" || echo "Não (Físico)")\n\n"
-    DIAG_MSG+="Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador."
+    DIAG_MSG+="$(center_dialog_line 'Pressione \Zb\Z2<OK>\ZB\Zn para avançar para o instalador.' 70)"
 
     dialog --colors --cr-wrap \
         --backtitle "$BACKTITLE" \
