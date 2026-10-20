@@ -187,67 +187,28 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
 fn apply_wallpaper(path: &Path) {
     let path_str = path.to_string_lossy();
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
-    let state_file = dirs_or_home_cache().join("soberano_wallpaper.txt");
-    let _ = fs::write(&state_file, path_str.as_ref());
+    let script_path = PathBuf::from(&home).join("dotfiles/scripts/WallpaperSelect.sh");
 
-    let wayle_cfg = PathBuf::from(&home).join("dotfiles/config/wayle/config.toml");
-    if wayle_cfg.exists() {
-        if let Ok(content) = fs::read_to_string(&wayle_cfg) {
-            let mut new_lines = Vec::new();
-            for line in content.lines() {
-                if line.trim_start().starts_with("wallpaper =") {
-                    new_lines.push(format!("wallpaper = \"{}\"", path_str));
-                } else {
-                    new_lines.push(line.to_string());
-                }
-            }
-            let _ = fs::write(&wayle_cfg, new_lines.join("\n"));
-        }
+    if script_path.exists() {
+        let _ = Command::new(&script_path)
+            .args(["--apply", path_str.as_ref()])
+            .status();
+    } else {
+        let _ = Command::new("matugen")
+            .args([
+                "image",
+                path_str.as_ref(),
+                "-t",
+                "scheme-vibrant",
+                "-m",
+                "dark",
+                "--prefer",
+                "saturation",
+                "--contrast",
+                "-0.45",
+            ])
+            .status();
     }
-
-    // 1. Wayle native wallpaper / awww
-    let _ = Command::new("wayle")
-        .args(["wallpaper", "set", &path_str, "--monitor", "DP-1"])
-        .spawn();
-
-    let _ = Command::new("awww")
-        .args([
-            "img",
-            &path_str,
-            "--transition-type",
-            "grow",
-            "--transition-fps",
-            "144",
-        ])
-        .spawn();
-
-    // 2. Matugen color extraction
-    let _ = Command::new("matugen")
-        .args([
-            "image",
-            &path_str,
-            "-t",
-            "scheme-vibrant",
-            "-m",
-            "dark",
-            "--prefer",
-            "saturation",
-            "--contrast",
-            "-0.45",
-        ])
-        .spawn();
-
-    let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Novo Wallpaper");
-    let _ = Command::new("notify-send")
-        .args([
-            "-u",
-            "low",
-            "-a",
-            "Soberano",
-            "󰸉 Wallpaper Atualizado",
-            name,
-        ])
-        .spawn();
 }
 
 fn load_css() {

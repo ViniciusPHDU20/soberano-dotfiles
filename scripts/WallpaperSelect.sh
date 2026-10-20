@@ -26,19 +26,27 @@ apply_wallpaper() {
 
     echo "$img" > "$STATE_FILE"
 
+    # Terminate any previous lagging matugen processes to prevent race conditions
+    pkill -x matugen 2>/dev/null || true
+
     # Update persistent wallpaper path in Wayle config.toml
     sed -i "s|^wallpaper = .*|wallpaper = \"$img\"|" "${HOME}/dotfiles/config/wayle/config.toml" 2>/dev/null || true
 
-    # 1. Wayle native wallpaper + internal Matugen CSS compilation
-    wayle wallpaper set "$img" --monitor "$MONITOR" >/dev/null 2>&1 || awww img "$img" --transition-type grow --transition-fps 144 >/dev/null 2>&1
+    # 1. Wayle native wallpaper + awww transition in background
+    (wayle wallpaper set "$img" --monitor "$MONITOR" >/dev/null 2>&1 || awww img "$img" --transition-type grow --transition-fps 144 >/dev/null 2>&1) &
 
-    # 2. Matugen templates (Hyprland borders, Kitty, Fuzzel, Btop, GTK3/4)
+    # 2. Synchronous Matugen color extraction (guarantees fuzzel, hyprland, kitty are ready)
     local scheme
     scheme=$(cat "$SCHEME_FILE" 2>/dev/null || echo "vibrant")
     matugen image "$img" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true
 
     notify-send -u low -a "Soberano" "󰸉 Wallpaper & Matugen" "$(basename "$img") (${scheme})" 2>/dev/null || true
 }
+
+if [[ "${1:-}" == "--apply" ]] && [ -n "${2:-}" ]; then
+    apply_wallpaper "$2"
+    exit 0
+fi
 
 if [[ "${1:-}" == "--random" ]]; then
     random_img=$(find "$WALL_DIR" -maxdepth 2 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.webp" \) | shuf -n 1)
