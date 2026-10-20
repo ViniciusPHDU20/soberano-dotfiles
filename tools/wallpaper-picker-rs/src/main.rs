@@ -26,6 +26,65 @@ struct WallpaperItem {
     thumbnail_path: PathBuf,
 }
 
+struct SystemColors {
+    accent: String,
+    window_bg: String,
+    card_bg: String,
+    window_fg: String,
+}
+
+fn hex_to_rgba(hex: &str, alpha: f32) -> String {
+    let clean = hex.trim_start_matches('#');
+    if clean.len() >= 6 {
+        let r = u8::from_str_radix(&clean[0..2], 16).unwrap_or(255);
+        let g = u8::from_str_radix(&clean[2..4], 16).unwrap_or(96);
+        let b = u8::from_str_radix(&clean[4..6], 16).unwrap_or(90);
+        format!("rgba({}, {}, {}, {})", r, g, b, alpha)
+    } else {
+        format!("rgba(255, 96, 90, {})", alpha)
+    }
+}
+
+fn load_system_colors() -> SystemColors {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let colors_file = PathBuf::from(&home).join(".config/gtk-4.0/colors.css");
+
+    let mut accent = "#ff605a".to_string();
+    let mut window_bg = "#12131a".to_string();
+    let mut card_bg = "#1c1d26".to_string();
+    let mut window_fg = "#f0f0f5".to_string();
+
+    if let Ok(content) = fs::read_to_string(&colors_file) {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.starts_with("@define-color accent_color") {
+                if let Some(col) = line.split_whitespace().nth(2) {
+                    accent = col.trim_matches(';').to_string();
+                }
+            } else if line.starts_with("@define-color window_bg_color") {
+                if let Some(col) = line.split_whitespace().nth(2) {
+                    window_bg = col.trim_matches(';').to_string();
+                }
+            } else if line.starts_with("@define-color card_bg_color") {
+                if let Some(col) = line.split_whitespace().nth(2) {
+                    card_bg = col.trim_matches(';').to_string();
+                }
+            } else if line.starts_with("@define-color window_fg_color") {
+                if let Some(col) = line.split_whitespace().nth(2) {
+                    window_fg = col.trim_matches(';').to_string();
+                }
+            }
+        }
+    }
+
+    SystemColors {
+        accent,
+        window_bg,
+        card_bg,
+        window_fg,
+    }
+}
+
 fn get_cache_dir() -> PathBuf {
     let mut dir = dirs_or_home_cache();
     dir.push("soberano_thumbnails");
@@ -193,55 +252,69 @@ fn apply_wallpaper(path: &Path) {
 
 fn load_css() {
     let provider = gtk4::CssProvider::new();
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
-    let colors_file = PathBuf::from(&home).join(".config/gtk-4.0/colors.css");
+    let colors = load_system_colors();
 
-    let colors_def = if let Ok(s) = fs::read_to_string(&colors_file) {
-        s
-    } else {
-        r#"
-            @define-color accent_color #30ac00;
-            @define-color accent_bg_color #30ac00;
-            @define-color accent_fg_color #ffffff;
-            @define-color window_bg_color #0f150b;
-            @define-color window_fg_color #b5bdad;
-            @define-color card_bg_color #171d13;
-            @define-color card_fg_color #b5bdad;
-        "#
-        .to_string()
-    };
+    let accent = &colors.accent;
+    let window_bg = &colors.window_bg;
+    let card_bg = &colors.card_bg;
+    let window_fg = &colors.window_fg;
+
+    let deck_bg = hex_to_rgba(window_bg, 0.94);
+    let deck_border = hex_to_rgba(accent, 0.38);
+    let deck_glow = hex_to_rgba(accent, 0.55);
+
+    let hero_bg = hex_to_rgba(card_bg, 0.70);
+    let hero_border = hex_to_rgba(accent, 0.25);
+    let hero_frame_border = hex_to_rgba(accent, 0.50);
+    let hero_frame_glow = hex_to_rgba(accent, 0.32);
+
+    let accent_badge_bg = hex_to_rgba(accent, 0.16);
+    let accent_badge_border = hex_to_rgba(accent, 0.38);
+
+    let btn_apply_shadow = hex_to_rgba(accent, 0.45);
+    let btn_apply_hover_shadow = hex_to_rgba(accent, 0.65);
+
+    let search_focus_border = accent;
+    let search_focus_shadow = hex_to_rgba(accent, 0.25);
+
+    let card_bg_rgba = hex_to_rgba(card_bg, 0.78);
+    let card_hover_bg = hex_to_rgba(card_bg, 0.98);
+    let card_hover_border = accent;
+    let card_hover_glow = hex_to_rgba(accent, 0.38);
+    let card_selected_glow = hex_to_rgba(accent, 0.55);
+
+    let scroll_slider_bg = hex_to_rgba(accent, 0.40);
+    let text_secondary = hex_to_rgba(window_fg, 0.70);
+    let text_muted = hex_to_rgba(window_fg, 0.45);
 
     let ui_css = format!(
         r#"
-        {}
-
         window.wallpaper-overlay {{
             background-color: rgba(3, 4, 7, 0.75);
         }}
 
         /* The Cinema Studio Floating Deck */
         .studio-deck {{
-            background-color: alpha(@window_bg_color, 0.94);
-            border: 1px solid alpha(@accent_color, 0.35);
+            background-color: {deck_bg};
+            border: 1px solid {deck_border};
             border-radius: 30px;
-            box-shadow: 0 35px 90px rgba(0, 0, 0, 0.9), 0 0 2px alpha(@accent_color, 0.6);
+            box-shadow: 0 35px 90px rgba(0, 0, 0, 0.9), 0 0 2px {deck_glow};
             padding: 24px;
         }}
 
         /* Left Hero Stage (Curator Showcase) */
         .hero-stage {{
-            background-color: alpha(@card_bg_color, 0.65);
-            border: 1px solid alpha(@accent_color, 0.20);
+            background-color: {hero_bg};
+            border: 1px solid {hero_border};
             border-radius: 26px;
             padding: 22px;
             min-width: 480px;
-            max-width: 480px;
         }}
 
         .hero-image-frame {{
             border-radius: 20px;
-            border: 2px solid alpha(@accent_color, 0.45);
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.70), 0 0 30px alpha(@accent_color, 0.30);
+            border: 2px solid {hero_frame_border};
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.70), 0 0 30px {hero_frame_glow};
             min-width: 440px;
             min-height: 248px;
         }}
@@ -257,9 +330,9 @@ fn load_css() {
         .hero-category-badge {{
             font-size: 11px;
             font-weight: 700;
-            color: @accent_color;
-            background-color: alpha(@accent_color, 0.16);
-            border: 1px solid alpha(@accent_color, 0.35);
+            color: {accent};
+            background-color: {accent_badge_bg};
+            border: 1px solid {accent_badge_border};
             border-radius: 9999px;
             padding: 4px 12px;
             letter-spacing: 0.5px;
@@ -273,40 +346,40 @@ fn load_css() {
         }}
 
         .hero-status-pill.active {{
-            color: @accent_fg_color;
-            background-color: @accent_color;
-            box-shadow: 0 0 12px alpha(@accent_color, 0.5);
+            color: #ffffff;
+            background-color: {accent};
+            box-shadow: 0 0 14px {card_hover_glow};
         }}
 
         .hero-status-pill.idle {{
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.65);
             background-color: rgba(255, 255, 255, 0.08);
         }}
 
         .hero-btn-apply {{
-            background-color: @accent_color;
+            background-color: {accent};
             border: none;
             border-radius: 16px;
-            color: @accent_fg_color;
+            color: #ffffff;
             font-size: 14px;
             font-weight: 800;
             letter-spacing: 0.6px;
-            padding: 12px 20px;
-            box-shadow: 0 6px 20px alpha(@accent_color, 0.4);
+            padding: 13px 20px;
+            box-shadow: 0 6px 22px {btn_apply_shadow};
             transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
         }}
 
         .hero-btn-apply:hover {{
-            background-color: alpha(@accent_color, 0.9);
-            box-shadow: 0 8px 26px alpha(@accent_color, 0.6);
+            background-color: {accent};
+            box-shadow: 0 8px 30px {btn_apply_hover_shadow};
             transform: translateY(-2px);
         }}
 
         .hero-btn-random {{
-            background-color: alpha(@accent_color, 0.12);
-            border: 1px solid alpha(@accent_color, 0.30);
+            background-color: {accent_badge_bg};
+            border: 1px solid {accent_badge_border};
             border-radius: 16px;
-            color: @accent_color;
+            color: {accent};
             font-size: 13px;
             font-weight: 700;
             padding: 10px 18px;
@@ -314,14 +387,14 @@ fn load_css() {
         }}
 
         .hero-btn-random:hover {{
-            background-color: alpha(@accent_color, 0.25);
-            border-color: @accent_color;
-            box-shadow: 0 4px 16px alpha(@accent_color, 0.3);
+            background-color: {accent};
+            color: #ffffff;
+            box-shadow: 0 4px 16px {card_hover_glow};
         }}
 
         .hero-hint {{
             font-size: 11px;
-            color: rgba(255, 255, 255, 0.45);
+            color: {text_muted};
             letter-spacing: 0.3px;
             padding-top: 6px;
         }}
@@ -344,8 +417,8 @@ fn load_css() {
 
         .search-field:focus {{
             background-color: rgba(255, 255, 255, 0.09);
-            border-color: @accent_color;
-            box-shadow: 0 0 0 2px alpha(@accent_color, 0.3), 0 0 18px alpha(@accent_color, 0.25);
+            border-color: {search_focus_border};
+            box-shadow: 0 0 0 2px {search_focus_shadow};
         }}
 
         /* Category Filter Chips */
@@ -353,7 +426,7 @@ fn load_css() {
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.10);
             border-radius: 9999px;
-            color: rgba(255, 255, 255, 0.70);
+            color: {text_secondary};
             font-size: 12px;
             font-weight: 600;
             padding: 6px 14px;
@@ -367,17 +440,17 @@ fn load_css() {
         }}
 
         .category-chip.active {{
-            background-color: @accent_color;
-            border-color: @accent_color;
-            color: @accent_fg_color;
-            box-shadow: 0 4px 14px alpha(@accent_color, 0.4);
+            background-color: {accent};
+            border-color: {accent};
+            color: #ffffff;
+            box-shadow: 0 4px 14px {card_hover_glow};
         }}
 
         .vault-close-btn {{
             background-color: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.10);
             border-radius: 14px;
-            color: rgba(255, 255, 255, 0.6);
+            color: {text_secondary};
             font-size: 13px;
             font-weight: bold;
             padding: 8px 14px;
@@ -393,7 +466,7 @@ fn load_css() {
 
         /* Wallpaper Thumbnails Grid */
         .vault-card {{
-            background-color: alpha(@card_bg_color, 0.75);
+            background-color: {card_bg_rgba};
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 18px;
             padding: 6px;
@@ -402,15 +475,15 @@ fn load_css() {
         }}
 
         .vault-card:hover {{
-            background-color: alpha(@card_bg_color, 0.98);
-            border-color: @accent_color;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 20px alpha(@accent_color, 0.35);
+            background-color: {card_hover_bg};
+            border-color: {card_hover_border};
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 20px {card_hover_glow};
             transform: scale(1.03) translateY(-2px);
         }}
 
         .vault-card.selected {{
-            border: 2px solid @accent_color;
-            box-shadow: 0 0 22px alpha(@accent_color, 0.5);
+            border: 2px solid {accent};
+            box-shadow: 0 0 22px {card_selected_glow};
         }}
 
         .card-thumb-image {{
@@ -420,20 +493,20 @@ fn load_css() {
         .card-caption {{
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.82);
+            color: {window_fg};
             padding-top: 5px;
             padding-bottom: 2px;
         }}
 
         .vault-card:hover .card-caption {{
-            color: @accent_color;
+            color: {accent};
         }}
 
         .card-badge-active {{
             font-size: 9px;
             font-weight: 800;
-            color: @accent_fg_color;
-            background-color: @accent_color;
+            color: #ffffff;
+            background-color: {accent};
             border-radius: 5px;
             padding: 2px 6px;
             letter-spacing: 0.5px;
@@ -445,16 +518,15 @@ fn load_css() {
             min-width: 6px;
         }}
         scrolledwindow scrollbar.vertical slider {{
-            background-color: alpha(@accent_color, 0.35);
+            background-color: {scroll_slider_bg};
             border-radius: 9999px;
             min-width: 6px;
             transition: background-color 200ms ease;
         }}
         scrolledwindow scrollbar.vertical slider:hover {{
-            background-color: @accent_color;
+            background-color: {accent};
         }}
         "#,
-        colors_def
     );
 
     provider.load_from_string(&ui_css);
@@ -462,7 +534,7 @@ fn load_css() {
         gtk4::style_context_add_provider_for_display(
             &display,
             &provider,
-            gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            gtk4::STYLE_PROVIDER_PRIORITY_USER,
         );
     }
 }
@@ -473,8 +545,8 @@ fn build_ui(app: &Application) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Soberano Wallpaper Studio")
-        .default_width(1380)
-        .default_height(820)
+        .default_width(1440)
+        .default_height(840)
         .build();
 
     window.add_css_class("wallpaper-overlay");
@@ -526,7 +598,7 @@ fn build_ui(app: &Application) {
     let hero_stage = GtkBox::new(Orientation::Vertical, 16);
     hero_stage.add_css_class("hero-stage");
 
-    // Large Hero Picture (uses Picture with ContentFit::Cover so it expands properly!)
+    // Large Hero Picture (uses Picture with ContentFit::Cover)
     let hero_picture = Picture::new();
     hero_picture.set_content_fit(ContentFit::Cover);
     hero_picture.set_can_shrink(true);
@@ -843,8 +915,8 @@ fn build_ui(app: &Application) {
         if let Some(widget) = gesture.widget() {
             let width = widget.width() as f64;
             let height = widget.height() as f64;
-            let deck_w = 1320.0;
-            let deck_h = 780.0;
+            let deck_w = 1380.0;
+            let deck_h = 800.0;
             let min_x = (width - deck_w) / 2.0;
             let max_x = min_x + deck_w;
             let min_y = (height - deck_h) / 2.0;
