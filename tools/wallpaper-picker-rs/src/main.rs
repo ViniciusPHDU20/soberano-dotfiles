@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     gdk, gdk::Texture, gdk_pixbuf::Pixbuf, glib, Application, ApplicationWindow, Box as GtkBox,
-    EventControllerKey, FlowBox, FlowBoxChild, GestureClick, Image, Label, Orientation,
+    Button, EventControllerKey, FlowBox, FlowBoxChild, GestureClick, Image, Label, Orientation,
     ScrolledWindow, SearchEntry,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -14,8 +14,8 @@ use std::rc::Rc;
 use walkdir::WalkDir;
 
 const APP_ID: &str = "org.soberano.wallpaperpicker";
-const THUMB_W: i32 = 280;
-const THUMB_H: i32 = 158;
+const THUMB_W: i32 = 276;
+const THUMB_H: i32 = 155;
 
 #[derive(Clone)]
 struct WallpaperItem {
@@ -171,108 +171,185 @@ fn apply_wallpaper(path: &Path) {
 
 fn load_css() {
     let provider = gtk4::CssProvider::new();
-    let css = r#"
-        window.wallpaper-overlay {
-            background-color: rgba(6, 7, 10, 0.72);
-        }
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let colors_file = PathBuf::from(&home).join(".config/gtk-4.0/colors.css");
 
-        .main-card {
-            background-color: rgba(18, 19, 26, 0.94);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 26px;
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+    // Dynamic color tokens from Matugen
+    let colors_def = if let Ok(s) = fs::read_to_string(&colors_file) {
+        s
+    } else {
+        r#"
+            @define-color accent_color #ff605a;
+            @define-color accent_bg_color #ff605a;
+            @define-color accent_fg_color #ffffff;
+            @define-color window_bg_color #12131a;
+            @define-color window_fg_color #f0f0f5;
+            @define-color card_bg_color #1c1d26;
+            @define-color card_fg_color #d8d8e5;
+        "#
+        .to_string()
+    };
+
+    let ui_css = format!(
+        r#"
+        {}
+
+        window.wallpaper-overlay {{
+            background-color: rgba(4, 5, 8, 0.72);
+        }}
+
+        .main-card {{
+            background-color: alpha(@window_bg_color, 0.94);
+            border: 1px solid alpha(@accent_color, 0.30);
+            border-radius: 28px;
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.85), 0 0 1px alpha(@accent_color, 0.45);
             padding: 24px 28px;
-        }
+        }}
 
-        .header-title {
+        .header-icon-badge {{
             font-size: 20px;
-            font-weight: 700;
-            color: #f0f0f5;
-            letter-spacing: 0.5px;
-        }
+            color: @accent_color;
+            background-color: alpha(@accent_color, 0.14);
+            border: 1px solid alpha(@accent_color, 0.30);
+            border-radius: 12px;
+            padding: 6px 12px;
+        }}
 
-        .header-badge {
+        .header-title {{
+            font-size: 18px;
+            font-weight: 800;
+            color: @window_fg_color;
+            letter-spacing: 0.6px;
+        }}
+
+        .header-badge {{
             font-size: 11px;
-            font-weight: 600;
-            color: #ff605a;
-            background-color: rgba(255, 96, 90, 0.15);
+            font-weight: 700;
+            color: @accent_color;
+            background-color: alpha(@accent_color, 0.14);
             border-radius: 9999px;
             padding: 4px 12px;
-        }
+            letter-spacing: 0.4px;
+        }}
 
-        .search-entry {
-            background-color: rgba(255, 255, 255, 0.06);
+        .search-entry {{
+            background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.10);
-            border-radius: 12px;
+            border-radius: 9999px;
             color: #ffffff;
             font-size: 13px;
-            padding: 8px 14px;
+            padding: 8px 18px;
             min-width: 320px;
-            transition: all 200ms ease;
-        }
+            transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        }}
 
-        .search-entry:focus {
-            background-color: rgba(255, 255, 255, 0.10);
-            border-color: #ff605a;
-            box-shadow: 0 0 0 2px rgba(255, 96, 90, 0.25);
-        }
+        .search-entry:focus {{
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: @accent_color;
+            box-shadow: 0 0 0 2px alpha(@accent_color, 0.25), 0 0 18px alpha(@accent_color, 0.20);
+        }}
 
-        .btn-random {
-            background-color: rgba(255, 96, 90, 0.18);
-            border: 1px solid rgba(255, 96, 90, 0.4);
-            border-radius: 12px;
-            color: #ff8e89;
+        .btn-action {{
+            background-color: alpha(@accent_color, 0.14);
+            border: 1px solid alpha(@accent_color, 0.35);
+            border-radius: 9999px;
+            color: @accent_color;
             font-size: 12px;
-            font-weight: 600;
-            padding: 6px 16px;
-            transition: all 200ms ease;
-        }
+            font-weight: 700;
+            padding: 7px 18px;
+            transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        }}
 
-        .btn-random:hover {
-            background-color: #ff605a;
+        .btn-action:hover {{
+            background-color: @accent_color;
+            color: @accent_fg_color;
+            box-shadow: 0 4px 18px alpha(@accent_color, 0.45);
+        }}
+
+        .btn-close {{
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 9999px;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 14px;
+            font-weight: bold;
+            padding: 7px 14px;
+            transition: all 180ms ease;
+        }}
+
+        .btn-close:hover {{
+            background-color: #ff5450;
+            border-color: #ff5450;
             color: #ffffff;
-            box-shadow: 0 4px 16px rgba(255, 96, 90, 0.4);
-        }
+            box-shadow: 0 4px 14px rgba(255, 84, 80, 0.4);
+        }}
 
-        .wallpaper-card {
-            background-color: rgba(28, 29, 38, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
+        .wallpaper-card {{
+            background-color: alpha(@card_bg_color, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 18px;
             padding: 6px;
             margin: 6px;
             transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
+        }}
 
-        .wallpaper-card:hover {
-            background-color: rgba(40, 42, 54, 0.95);
-            border-color: #ff605a;
-            box-shadow: 0 10px 24px rgba(255, 96, 90, 0.22);
-        }
+        .wallpaper-card:hover {{
+            background-color: alpha(@card_bg_color, 0.95);
+            border-color: @accent_color;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55), 0 0 22px alpha(@accent_color, 0.32);
+        }}
 
-        .wallpaper-card.active {
-            border: 2px solid #ff605a;
-            box-shadow: 0 0 16px rgba(255, 96, 90, 0.4);
-        }
+        .wallpaper-card.active {{
+            border: 2px solid @accent_color;
+            box-shadow: 0 0 22px alpha(@accent_color, 0.45);
+        }}
 
-        .card-image {
-            border-radius: 12px;
-        }
+        .card-image {{
+            border-radius: 14px;
+        }}
 
-        .card-label {
+        .card-label {{
             font-size: 11px;
-            font-weight: 500;
-            color: #d8d8e5;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.78);
             padding-top: 6px;
             padding-bottom: 2px;
-        }
+            transition: color 180ms ease;
+        }}
 
-        .wallpaper-card:hover .card-label {
-            color: #ff8e89;
-            font-weight: 600;
-        }
-    "#;
+        .wallpaper-card:hover .card-label {{
+            color: @accent_color;
+        }}
 
-    provider.load_from_string(css);
+        .active-badge {{
+            font-size: 9px;
+            font-weight: 800;
+            color: @accent_fg_color;
+            background-color: @accent_color;
+            border-radius: 6px;
+            padding: 2px 7px;
+            letter-spacing: 0.5px;
+        }}
+
+        /* Modern minimal scrollbar */
+        scrolledwindow scrollbar.vertical {{
+            background-color: transparent;
+            min-width: 6px;
+        }}
+        scrolledwindow scrollbar.vertical slider {{
+            background-color: alpha(@accent_color, 0.35);
+            border-radius: 9999px;
+            min-width: 6px;
+            transition: background-color 200ms ease;
+        }}
+        scrolledwindow scrollbar.vertical slider:hover {{
+            background-color: @accent_color;
+        }}
+        "#,
+        colors_def
+    );
+
+    provider.load_from_string(&ui_css);
     if let Some(display) = gdk::Display::default() {
         gtk4::style_context_add_provider_for_display(
             &display,
@@ -319,25 +396,47 @@ fn build_ui(app: &Application) {
     let header = GtkBox::new(Orientation::Horizontal, 14);
     header.set_valign(gtk4::Align::Center);
 
-    let title_box = GtkBox::new(Orientation::Horizontal, 8);
-    let title_label = Label::new(Some("󰸉 Wallpapers"));
+    let title_box = GtkBox::new(Orientation::Horizontal, 10);
+    title_box.set_valign(gtk4::Align::Center);
+
+    let icon_badge = Label::new(Some("󰸉"));
+    icon_badge.add_css_class("header-icon-badge");
+
+    let text_col = GtkBox::new(Orientation::Vertical, 2);
+    let title_label = Label::new(Some("WALLPAPERS"));
     title_label.add_css_class("header-title");
-    let count_label = Label::new(Some(&format!("{} imagens", wallpapers.len())));
+    title_label.set_halign(gtk4::Align::Start);
+
+    let count_label = Label::new(Some(&format!("{} IMAGENS DISPONÍVEIS", wallpapers.len())));
     count_label.add_css_class("header-badge");
-    title_box.append(&title_label);
-    title_box.append(&count_label);
+    count_label.set_halign(gtk4::Align::Start);
+
+    text_col.append(&title_label);
+    text_col.append(&count_label);
+
+    title_box.append(&icon_badge);
+    title_box.append(&text_col);
 
     let search_entry = SearchEntry::new();
-    search_entry.set_placeholder_text(Some("Buscar wallpaper por nome..."));
+    search_entry.set_placeholder_text(Some("Buscar por nome..."));
     search_entry.add_css_class("search-entry");
     search_entry.set_hexpand(true);
 
-    let random_btn = gtk4::Button::with_label("󰒝 Aleatório");
-    random_btn.add_css_class("btn-random");
+    let random_btn = Button::with_label("󰒝 Aleatório");
+    random_btn.add_css_class("btn-action");
+
+    let close_btn = Button::with_label("✕");
+    close_btn.add_css_class("btn-close");
+    let win_close = window.clone();
+    close_btn.connect_clicked(move |_| {
+        win_close.close();
+        std::process::exit(0);
+    });
 
     header.append(&title_box);
     header.append(&search_entry);
     header.append(&random_btn);
+    header.append(&close_btn);
 
     // FlowBox for wallpapers grid
     let flowbox = FlowBox::new();
@@ -354,10 +453,14 @@ fn build_ui(app: &Application) {
         card_item.add_css_class("wallpaper-card");
         card_item.set_size_request(THUMB_W + 12, THUMB_H + 34);
 
-        if let Some(ref cur) = current_wp {
-            if cur == &item.path {
-                card_item.add_css_class("active");
-            }
+        let is_active = if let Some(ref cur) = current_wp {
+            cur == &item.path
+        } else {
+            false
+        };
+
+        if is_active {
+            card_item.add_css_class("active");
         }
 
         if let Ok(pixbuf) = Pixbuf::from_file(&item.thumbnail_path) {
@@ -368,11 +471,20 @@ fn build_ui(app: &Application) {
             card_item.append(&img);
         }
 
+        let label_box = GtkBox::new(Orientation::Horizontal, 6);
         let name_label = Label::new(Some(&item.name));
         name_label.add_css_class("card-label");
         name_label.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-        name_label.set_max_width_chars(32);
-        card_item.append(&name_label);
+        name_label.set_hexpand(true);
+        name_label.set_halign(gtk4::Align::Start);
+        label_box.append(&name_label);
+
+        if is_active {
+            let badge = Label::new(Some("✓ ATIVO"));
+            badge.add_css_class("active-badge");
+            label_box.append(&badge);
+        }
+        card_item.append(&label_box);
 
         let click = GestureClick::new();
         let path_clone = item.path.clone();
@@ -416,6 +528,7 @@ fn build_ui(app: &Application) {
             let idx = (seed as usize) % all_wps.len();
             apply_wallpaper(&all_wps[idx].path);
             win_rand.close();
+            std::process::exit(0);
         }
     });
 
@@ -452,7 +565,7 @@ fn build_ui(app: &Application) {
     });
     window.add_controller(bg_click);
 
-    // Key controller: Escape closes (using Capture phase so focused inputs don't swallow it)
+    // Key controller: Escape closes in Capture phase
     let key_controller = EventControllerKey::new();
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     let win_key = window.clone();
