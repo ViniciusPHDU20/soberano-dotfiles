@@ -39,8 +39,8 @@ def send_to_server(msg: str) -> bool:
 class HardwareDropdown(Gtk.Window):
     def __init__(self, initial_tab="cpu"):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
-        self.set_title("Soberano Hardware Dropdown")
-        self.set_default_size(380, 480)
+        self.set_title("Soberano Hardware Control")
+        self.set_default_size(430, 530)
         self.set_resizable(False)
 
         # Layer Shell Configuration
@@ -48,8 +48,8 @@ class HardwareDropdown(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, True)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 44)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 14)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 48)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 16)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
 
         # Dismiss on focus lost or Escape
@@ -63,7 +63,8 @@ class HardwareDropdown(Gtk.Window):
 
         # Select tab
         tab_map = {"cpu": 0, "ram": 1, "storage": 2, "disco": 2}
-        self.stack.set_visible_child_name(initial_tab if initial_tab in tab_map else "cpu")
+        target_name = initial_tab if initial_tab in tab_map else "cpu"
+        self.switch_to_tab(target_name)
 
         # Initial metrics & periodic refresh
         self.update_metrics()
@@ -73,11 +74,12 @@ class HardwareDropdown(Gtk.Window):
         self.setup_socket()
 
     def load_theme(self):
-        # Default fallback palette
+        # Default Material Design 3 fallback palette
         bg = "#1a1110"
         surface = "#271d1c"
+        surface_elevated = "#342624"
         accent = "#d18073"
-        fg = "#c7b6b4"
+        fg = "#f0dedc"
         fg_muted = "#a5918e"
 
         # Try reading from Matugen kitty or hypr colors
@@ -100,27 +102,46 @@ class HardwareDropdown(Gtk.Window):
             background-color: transparent;
         }}
         .dropdown-card {{
-            background-color: alpha({bg}, 0.94);
+            background-color: alpha({bg}, 0.95);
             border: 1px solid alpha({accent}, 0.35);
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
         }}
         .header-title {{
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 16px;
+            font-weight: 800;
             color: {fg};
-            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }}
+        .header-close {{
+            background: alpha({surface}, 0.7);
+            color: {fg_muted};
+            border: 1px solid alpha({accent}, 0.25);
+            border-radius: 50%;
+            min-width: 28px;
+            min-height: 28px;
+            padding: 0;
+            font-weight: 700;
+            font-size: 13px;
+        }}
+        .header-close:hover {{
+            background: {accent};
+            color: #140c0b;
         }}
         .tab-btn {{
-            background: alpha({surface}, 0.6);
+            background: alpha({surface}, 0.75);
             color: {fg_muted};
-            border: 1px solid alpha({accent}, 0.2);
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-weight: 600;
-            font-size: 12px;
+            border: 1px solid alpha({accent}, 0.25);
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-weight: 700;
+            font-size: 13px;
             transition: all 150ms ease;
+        }}
+        .tab-btn:hover {{
+            background: alpha({surface_elevated}, 0.9);
+            color: {fg};
         }}
         .tab-btn:checked, .tab-btn:active {{
             background: {accent};
@@ -128,59 +149,86 @@ class HardwareDropdown(Gtk.Window):
             border-color: {accent};
         }}
         .metric-big {{
-            font-size: 28px;
-            font-weight: 800;
+            font-size: 34px;
+            font-weight: 900;
             color: {accent};
+            letter-spacing: -0.5px;
         }}
-        .metric-label {{
-            font-size: 12px;
+        .metric-subtitle {{
+            font-size: 13px;
+            font-weight: 600;
             color: {fg_muted};
         }}
-        .metric-val {{
+        .spec-box {{
+            background: alpha({surface}, 0.65);
+            border: 1px solid alpha({accent}, 0.15);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }}
+        .spec-label {{
             font-size: 12px;
             font-weight: 600;
+            color: {fg_muted};
+        }}
+        .spec-val {{
+            font-size: 13px;
+            font-weight: 700;
             color: {fg};
         }}
-        .proc-box {{
-            background: alpha({surface}, 0.5);
-            border-radius: 8px;
-            padding: 8px 10px;
+        .section-header {{
+            font-size: 12px;
+            font-weight: 700;
+            color: {accent};
+            margin-top: 6px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .proc-item {{
+            background: alpha({surface}, 0.55);
+            border: 1px solid alpha({accent}, 0.12);
+            border-radius: 10px;
+            padding: 8px 12px;
             margin-top: 4px;
         }}
         .proc-name {{
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 700;
             color: {fg};
         }}
         .proc-badge {{
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 800;
             color: {accent};
-            background: alpha({accent}, 0.15);
-            border-radius: 4px;
-            padding: 2px 6px;
+            background: alpha({accent}, 0.18);
+            border-radius: 6px;
+            padding: 3px 8px;
         }}
         progressbar trough {{
-            background: alpha({surface}, 0.8);
-            border-radius: 6px;
-            min-height: 8px;
+            background: alpha({surface}, 0.9);
+            border-radius: 8px;
+            min-height: 10px;
         }}
         progressbar progress {{
             background: {accent};
-            border-radius: 6px;
-            min-height: 8px;
+            border-radius: 8px;
+            min-height: 10px;
         }}
         .action-btn {{
             background: alpha({accent}, 0.15);
             color: {accent};
-            border: 1px solid alpha({accent}, 0.3);
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 600;
+            border: 1px solid alpha({accent}, 0.35);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 120ms ease;
         }}
         .action-btn:hover {{
-            background: alpha({accent}, 0.28);
+            background: alpha({accent}, 0.3);
+            color: {fg};
         }}
         """
         provider = Gtk.CssProvider()
@@ -193,7 +241,7 @@ class HardwareDropdown(Gtk.Window):
 
     def build_ui(self):
         # Outer Card
-        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         outer.get_style_context().add_class("dropdown-card")
         self.add(outer)
 
@@ -201,37 +249,37 @@ class HardwareDropdown(Gtk.Window):
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         outer.pack_start(header, False, False, 0)
 
-        title = Gtk.Label(label="󰍛  Monitor de Hardware")
+        title = Gtk.Label(label="󰍛  Hardware & Performance")
         title.get_style_context().add_class("header-title")
         header.pack_start(title, False, False, 0)
 
         header.pack_start(Gtk.Box(), True, True, 0) # Spacer
 
         btn_close = Gtk.Button(label="✕")
-        btn_close.get_style_context().add_class("tab-btn")
+        btn_close.get_style_context().add_class("header-close")
         btn_close.connect("clicked", lambda w: Gtk.main_quit())
         header.pack_end(btn_close, False, False, 0)
 
         # Tab Segmented Switcher
-        tab_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        tab_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         tab_box.set_homogeneous(True)
-        tab_box.set_margin_top(6)
-        tab_box.set_margin_bottom(12)
+        tab_box.set_margin_top(4)
+        tab_box.set_margin_bottom(8)
         outer.pack_start(tab_box, False, False, 0)
 
-        self.btn_cpu = Gtk.RadioButton.new_with_label(None, "󰍛 CPU")
+        self.btn_cpu = Gtk.RadioButton.new_with_label(None, "󰍛  Processador")
         self.btn_cpu.set_mode(False)
         self.btn_cpu.get_style_context().add_class("tab-btn")
         self.btn_cpu.connect("toggled", lambda w: self.on_tab_toggled(w, "cpu"))
         tab_box.pack_start(self.btn_cpu, True, True, 0)
 
-        self.btn_ram = Gtk.RadioButton.new_with_label_from_widget(self.btn_cpu, "󰘚 RAM")
+        self.btn_ram = Gtk.RadioButton.new_with_label_from_widget(self.btn_cpu, "󰘚  Memória")
         self.btn_ram.set_mode(False)
         self.btn_ram.get_style_context().add_class("tab-btn")
         self.btn_ram.connect("toggled", lambda w: self.on_tab_toggled(w, "ram"))
         tab_box.pack_start(self.btn_ram, True, True, 0)
 
-        self.btn_storage = Gtk.RadioButton.new_with_label_from_widget(self.btn_cpu, "󰋊 Disco")
+        self.btn_storage = Gtk.RadioButton.new_with_label_from_widget(self.btn_cpu, "󰋊  Disco")
         self.btn_storage.set_mode(False)
         self.btn_storage.get_style_context().add_class("tab-btn")
         self.btn_storage.connect("toggled", lambda w: self.on_tab_toggled(w, "storage"))
@@ -240,7 +288,7 @@ class HardwareDropdown(Gtk.Window):
         # Stack Views
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.stack.set_transition_duration(150)
+        self.stack.set_transition_duration(180)
         outer.pack_start(self.stack, True, True, 0)
 
         # 1. CPU View
@@ -257,13 +305,22 @@ class HardwareDropdown(Gtk.Window):
 
         # Footer Actions
         footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        footer.set_margin_top(12)
+        footer.set_margin_top(8)
         outer.pack_start(footer, False, False, 0)
 
-        btn_update = Gtk.Button(label="󰚰 Checar Atualizações")
+        btn_displays = Gtk.Button(label="󰍹  Telas & Hz (Super + M)")
+        btn_displays.get_style_context().add_class("action-btn")
+        btn_displays.connect("clicked", self.on_displays_clicked)
+        footer.pack_start(btn_displays, True, True, 0)
+
+        btn_update = Gtk.Button(label="󰚰  Atualizar Dotfiles")
         btn_update.get_style_context().add_class("action-btn")
         btn_update.connect("clicked", self.on_update_clicked)
         footer.pack_start(btn_update, True, True, 0)
+
+    def on_displays_clicked(self, widget):
+        Gtk.main_quit()
+        subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/MonitorSelect.sh")])
 
     def on_tab_toggled(self, button, name):
         if button.get_active():
@@ -272,55 +329,71 @@ class HardwareDropdown(Gtk.Window):
     def create_cpu_view(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
 
-        # Big percentage and bar
+        # Header with Big % and CPU Name
         top_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.cpu_big_label = Gtk.Label(label="0%")
         self.cpu_big_label.get_style_context().add_class("metric-big")
         top_h.pack_start(self.cpu_big_label, False, False, 0)
 
+        right_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        right_col.set_halign(Gtk.Align.END)
         self.cpu_model_label = Gtk.Label(label="Processador")
-        self.cpu_model_label.get_style_context().add_class("metric-label")
-        self.cpu_model_label.set_halign(Gtk.Align.END)
-        top_h.pack_end(self.cpu_model_label, False, False, 0)
+        self.cpu_model_label.get_style_context().add_class("spec-val")
+        self.cpu_threads_label = Gtk.Label(label="Threads Ativas")
+        self.cpu_threads_label.get_style_context().add_class("metric-subtitle")
+        right_col.pack_start(self.cpu_model_label, False, False, 0)
+        right_col.pack_start(self.cpu_threads_label, False, False, 0)
+        top_h.pack_end(right_col, False, False, 0)
         box.pack_start(top_h, False, False, 0)
 
         self.cpu_bar = Gtk.ProgressBar()
         box.pack_start(self.cpu_bar, False, False, 0)
 
-        # Grid Specs
-        grid = Gtk.Grid()
-        grid.set_column_spacing(16)
-        grid.set_row_spacing(6)
-        grid.set_margin_top(6)
-        grid.set_margin_bottom(6)
-        box.pack_start(grid, False, False, 0)
+        # Spec Card
+        spec_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        spec_box.get_style_context().add_class("spec-box")
+        box.pack_start(spec_box, False, False, 0)
 
-        l_freq = Gtk.Label(label="Frequência:")
-        l_freq.get_style_context().add_class("metric-label")
+        grid = Gtk.Grid()
+        grid.set_column_spacing(24)
+        grid.set_row_spacing(6)
+        spec_box.pack_start(grid, True, True, 0)
+
+        l_freq = Gtk.Label(label="Frequência Atual:")
+        l_freq.get_style_context().add_class("spec-label")
         l_freq.set_halign(Gtk.Align.START)
         self.cpu_freq_val = Gtk.Label(label="-- GHz")
-        self.cpu_freq_val.get_style_context().add_class("metric-val")
+        self.cpu_freq_val.get_style_context().add_class("spec-val")
         self.cpu_freq_val.set_halign(Gtk.Align.START)
 
         l_temp = Gtk.Label(label="Temperatura:")
-        l_temp.get_style_context().add_class("metric-label")
+        l_temp.get_style_context().add_class("spec-label")
         l_temp.set_halign(Gtk.Align.START)
         self.cpu_temp_val = Gtk.Label(label="-- °C")
-        self.cpu_temp_val.get_style_context().add_class("metric-val")
+        self.cpu_temp_val.get_style_context().add_class("spec-val")
         self.cpu_temp_val.set_halign(Gtk.Align.START)
+
+        l_arch = Gtk.Label(label="Arquitetura:")
+        l_arch.get_style_context().add_class("spec-label")
+        l_arch.set_halign(Gtk.Align.START)
+        self.cpu_arch_val = Gtk.Label(label="x86_64")
+        self.cpu_arch_val.get_style_context().add_class("spec-val")
+        self.cpu_arch_val.set_halign(Gtk.Align.START)
 
         grid.attach(l_freq, 0, 0, 1, 1)
         grid.attach(self.cpu_freq_val, 1, 0, 1, 1)
         grid.attach(l_temp, 0, 1, 1, 1)
         grid.attach(self.cpu_temp_val, 1, 1, 1, 1)
+        grid.attach(l_arch, 0, 2, 1, 1)
+        grid.attach(self.cpu_arch_val, 1, 2, 1, 1)
 
         # Top processes section
-        sub_title = Gtk.Label(label="Processos com Maior Carga:")
-        sub_title.get_style_context().add_class("metric-label")
+        sub_title = Gtk.Label(label="Processos com Maior Carga")
+        sub_title.get_style_context().add_class("section-header")
         sub_title.set_halign(Gtk.Align.START)
         box.pack_start(sub_title, False, False, 0)
 
-        self.cpu_proc_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.cpu_proc_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         box.pack_start(self.cpu_proc_box, True, True, 0)
 
         return box
@@ -328,14 +401,14 @@ class HardwareDropdown(Gtk.Window):
     def create_ram_view(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
 
-        # RAM Usage
+        # RAM Usage Header
         top_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.ram_big_label = Gtk.Label(label="0%")
         self.ram_big_label.get_style_context().add_class("metric-big")
         top_h.pack_start(self.ram_big_label, False, False, 0)
 
         self.ram_used_label = Gtk.Label(label="0 / 0 GiB")
-        self.ram_used_label.get_style_context().add_class("metric-label")
+        self.ram_used_label.get_style_context().add_class("spec-val")
         self.ram_used_label.set_halign(Gtk.Align.END)
         top_h.pack_end(self.ram_used_label, False, False, 0)
         box.pack_start(top_h, False, False, 0)
@@ -343,29 +416,31 @@ class HardwareDropdown(Gtk.Window):
         self.ram_bar = Gtk.ProgressBar()
         box.pack_start(self.ram_bar, False, False, 0)
 
-        # Swap Usage
+        # Spec Box
+        spec_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        spec_box.get_style_context().add_class("spec-box")
+        box.pack_start(spec_box, False, False, 0)
+
         swap_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        swap_h.set_margin_top(6)
-        l_swap = Gtk.Label(label="Swap Ocupado:")
-        l_swap.get_style_context().add_class("metric-label")
+        l_swap = Gtk.Label(label="Swap em Uso:")
+        l_swap.get_style_context().add_class("spec-label")
         swap_h.pack_start(l_swap, False, False, 0)
 
         self.swap_val = Gtk.Label(label="-- GiB")
-        self.swap_val.get_style_context().add_class("metric-val")
+        self.swap_val.get_style_context().add_class("spec-val")
         swap_h.pack_end(self.swap_val, False, False, 0)
-        box.pack_start(swap_h, False, False, 0)
+        spec_box.pack_start(swap_h, False, False, 0)
 
         self.swap_bar = Gtk.ProgressBar()
-        box.pack_start(self.swap_bar, False, False, 0)
+        spec_box.pack_start(self.swap_bar, False, False, 0)
 
         # Top processes section
-        sub_title = Gtk.Label(label="Processos com Maior Memória:")
-        sub_title.get_style_context().add_class("metric-label")
+        sub_title = Gtk.Label(label="Processos com Maior Consumo de Memória")
+        sub_title.get_style_context().add_class("section-header")
         sub_title.set_halign(Gtk.Align.START)
-        sub_title.set_margin_top(6)
         box.pack_start(sub_title, False, False, 0)
 
-        self.ram_proc_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.ram_proc_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         box.pack_start(self.ram_proc_box, True, True, 0)
 
         return box
@@ -379,31 +454,34 @@ class HardwareDropdown(Gtk.Window):
         top_h.pack_start(self.disk_big_label, False, False, 0)
 
         self.disk_used_label = Gtk.Label(label="-- / --")
-        self.disk_used_label.get_style_context().add_class("metric-label")
+        self.disk_used_label.get_style_context().add_class("spec-val")
         top_h.pack_end(self.disk_used_label, False, False, 0)
         box.pack_start(top_h, False, False, 0)
 
         self.disk_bar = Gtk.ProgressBar()
         box.pack_start(self.disk_bar, False, False, 0)
 
-        grid = Gtk.Grid()
-        grid.set_column_spacing(16)
-        grid.set_row_spacing(6)
-        grid.set_margin_top(10)
-        box.pack_start(grid, False, False, 0)
+        spec_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        spec_box.get_style_context().add_class("spec-box")
+        box.pack_start(spec_box, False, False, 0)
 
-        l_mount = Gtk.Label(label="Partição:")
-        l_mount.get_style_context().add_class("metric-label")
+        grid = Gtk.Grid()
+        grid.set_column_spacing(24)
+        grid.set_row_spacing(6)
+        spec_box.pack_start(grid, True, True, 0)
+
+        l_mount = Gtk.Label(label="Ponto de Montagem:")
+        l_mount.get_style_context().add_class("spec-label")
         l_mount.set_halign(Gtk.Align.START)
         v_mount = Gtk.Label(label="/ (Raiz do Sistema)")
-        v_mount.get_style_context().add_class("metric-val")
+        v_mount.get_style_context().add_class("spec-val")
         v_mount.set_halign(Gtk.Align.START)
 
         l_avail = Gtk.Label(label="Espaço Livre:")
-        l_avail.get_style_context().add_class("metric-label")
+        l_avail.get_style_context().add_class("spec-label")
         l_avail.set_halign(Gtk.Align.START)
         self.disk_avail_val = Gtk.Label(label="--")
-        self.disk_avail_val.get_style_context().add_class("metric-val")
+        self.disk_avail_val.get_style_context().add_class("spec-val")
         self.disk_avail_val.set_halign(Gtk.Align.START)
 
         grid.attach(l_mount, 0, 0, 1, 1)
@@ -412,15 +490,15 @@ class HardwareDropdown(Gtk.Window):
         grid.attach(self.disk_avail_val, 1, 1, 1, 1)
 
         # Info Box
-        info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        info.get_style_context().add_class("proc-box")
-        info.set_margin_top(12)
-        lbl1 = Gtk.Label(label="• Monitoramento de Armazenamento Local")
-        lbl1.get_style_context().add_class("metric-label")
+        info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        info.get_style_context().add_class("spec-box")
+        info.set_margin_top(8)
+        lbl1 = Gtk.Label(label="󰋊  Monitoramento Ativo de Discos NVMe / SSD")
+        lbl1.get_style_context().add_class("spec-val")
         lbl1.set_halign(Gtk.Align.START)
         info.pack_start(lbl1, False, False, 0)
-        lbl2 = Gtk.Label(label="• Taxa de I/O em tempo real ativa")
-        lbl2.get_style_context().add_class("metric-label")
+        lbl2 = Gtk.Label(label="• Monitorando partição raiz com taxas I/O em tempo real.")
+        lbl2.get_style_context().add_class("spec-label")
         lbl2.set_halign(Gtk.Align.START)
         info.pack_start(lbl2, False, False, 0)
         box.pack_start(info, False, False, 0)
@@ -449,7 +527,7 @@ class HardwareDropdown(Gtk.Window):
         except Exception:
             pass
 
-        # CPU Freq
+        # CPU Freq & Model
         try:
             with open("/proc/cpuinfo") as f:
                 for line in f:
@@ -461,7 +539,9 @@ class HardwareDropdown(Gtk.Window):
                         m_name = line.split(":")[1].strip()
                         m_name = re.sub(r' [0-9]+-Core.*', '', m_name)
                         m_name = re.sub(r' Processor| CPU|@.*', '', m_name)
-                        self.cpu_model_label.set_text(m_name[:26])
+                        self.cpu_model_label.set_text(m_name[:24])
+                        n_cores = os.cpu_count() or 16
+                        self.cpu_threads_label.set_text(f"{n_cores} Threads Ativas")
                         self._cpu_model_set = True
         except Exception:
             pass
@@ -493,7 +573,7 @@ class HardwareDropdown(Gtk.Window):
                 if len(parts) >= 2:
                     name, pct = parts[0], parts[1]
                     row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-                    row.get_style_context().add_class("proc-box")
+                    row.get_style_context().add_class("proc-item")
                     l_name = Gtk.Label(label=f"▸  {name}")
                     l_name.get_style_context().add_class("proc-name")
                     l_badge = Gtk.Label(label=f"{pct}%")
@@ -532,7 +612,7 @@ class HardwareDropdown(Gtk.Window):
             if swap_total > 0:
                 swap_pct = swap_used / swap_total
                 self.swap_bar.set_fraction(max(0.0, min(1.0, swap_pct)))
-                self.swap_val.set_text(f"{swap_used/1024/1024:.1f} GiB / {swap_total/1024/1024:.1f} GiB")
+                self.swap_val.set_text(f"{swap_used/1024/1024:.1f} / {swap_total/1024/1024:.1f} GiB")
             else:
                 self.swap_bar.set_fraction(0.0)
                 self.swap_val.set_text("Nenhum")
@@ -550,7 +630,7 @@ class HardwareDropdown(Gtk.Window):
                 if len(parts) >= 2:
                     name, pct = parts[0], parts[1]
                     row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-                    row.get_style_context().add_class("proc-box")
+                    row.get_style_context().add_class("proc-item")
                     l_name = Gtk.Label(label=f"▸  {name}")
                     l_name.get_style_context().add_class("proc-name")
                     l_badge = Gtk.Label(label=f"{pct}%")
@@ -571,7 +651,7 @@ class HardwareDropdown(Gtk.Window):
             pct = int(pct_str)
             self.disk_big_label.set_text(f"{pct}%")
             self.disk_used_label.set_text(f"{used} de {size}")
-            self.disk_avail_val.set_text(f"{avail} disponível")
+            self.disk_avail_val.set_text(f"{avail} livre")
             self.disk_bar.set_fraction(max(0.0, min(1.0, pct / 100.0)))
         except Exception:
             pass
@@ -645,10 +725,13 @@ class HardwareDropdown(Gtk.Window):
     def switch_to_tab(self, tab):
         if tab == "cpu":
             self.btn_cpu.set_active(True)
+            self.stack.set_visible_child_name("cpu")
         elif tab == "ram":
             self.btn_ram.set_active(True)
+            self.stack.set_visible_child_name("ram")
         elif tab in ("storage", "disk", "disco"):
             self.btn_storage.set_active(True)
+            self.stack.set_visible_child_name("storage")
 
 def main():
     action = sys.argv[1] if len(sys.argv) > 1 else "toggle"

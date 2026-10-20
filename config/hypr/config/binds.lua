@@ -195,6 +195,10 @@ hl.bind(mainMod .. " + CONTROL + B", hl.dsp.exec_cmd(scriptsDir .. "/WayleBarPre
 hl.bind(mainMod .. " + SHIFT + T",   hl.dsp.exec_cmd(scriptsDir .. "/soberano-theme.sh"))
 hl.bind(mainMod .. " + ALT + A",     hl.dsp.exec_cmd(scriptsDir .. "/HyprAnimationsSelector.sh"))
 
+-- Display & Monitor Manager (Resolution & Refresh Rate)
+hl.bind(mainMod .. " + M",           hl.dsp.exec_cmd(scriptsDir .. "/MonitorSelect.sh"))
+hl.bind(mainMod .. " + SHIFT + M",   hl.dsp.exec_cmd(scriptsDir .. "/MonitorSelect.sh"))
+
 -- Game Mode (Ryzen 9 9950X + RTX 3060 Ti Low-Latency Mode)
 hl.bind(mainMod .. " + SHIFT + G",   hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))
 hl.bind(mainMod .. " + G",           hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))
