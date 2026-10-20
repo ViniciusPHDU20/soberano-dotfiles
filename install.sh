@@ -635,12 +635,23 @@ fi
 
 success "hardware.lua gerado com sucesso!"
 
-# 10. Symlinks & Permissions
+# 10. Native Tool Suite Compilation (Rust + GTK4 Layer-Shell)
+info "Compilando suíte nativa de ferramentas Rust otimizadas para o processador do cliente..."
+if [ -f "$DOTFILES_DIR/tools/build.sh" ]; then
+    bash "$DOTFILES_DIR/tools/build.sh" || warn "Compilação de ferramentas retornou aviso, utilizando binários existentes."
+fi
+
+# 11. Symlinks & Permissions
 info "Vinculando diretórios em ${CONFIG_DIR}..."
 mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0" "$HOME/.local/bin" "$CONFIG_DIR/systemd/user"
-chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py 2>/dev/null || true
+chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py "$DOTFILES_DIR"/scripts/*-rs 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-update.sh" "$HOME/.local/bin/soberano-update"
 ln -sfn "$DOTFILES_DIR/scripts/soberano-theme.sh" "$HOME/.local/bin/soberano-theme"
+ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/display-picker-rs" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/soberano-monitors" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/monitor-select" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/wallpaper-picker-rs" "$HOME/.local/bin/wallpaper-picker-rs" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/soberano-hardware-menu.py" "$HOME/.local/bin/soberano-hardware-menu" 2>/dev/null || true
 cp -f "$DOTFILES_DIR"/config/systemd/user/soberano-autoupdate.* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
 
 CONFIGS=(

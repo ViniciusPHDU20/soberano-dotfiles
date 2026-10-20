@@ -79,7 +79,12 @@ if git pull --ff-only origin "$BRANCH" --quiet 2>/dev/null; then
     fi
 
     # Fix permissions
-    chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py 2>/dev/null || true
+    chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py "$DOTFILES_DIR"/scripts/*-rs 2>/dev/null || true
+
+    # Recompile native Rust tools if tool sources were updated
+    if [ -f "$DOTFILES_DIR/tools/build.sh" ]; then
+        bash "$DOTFILES_DIR/tools/build.sh" >/dev/null 2>&1 || true
+    fi
 
     # Reload Hyprland if active
     if command -v hyprctl >/dev/null 2>&1 && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
