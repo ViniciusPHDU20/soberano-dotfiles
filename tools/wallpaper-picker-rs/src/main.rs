@@ -180,7 +180,7 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
             }
         }
     }
-    items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    items.sort_by_key(|a| a.name.to_lowercase());
     items
 }
 
@@ -784,7 +784,7 @@ fn build_ui(app: &Application) {
         card_item.add_css_class("vault-card");
         card_item.set_size_request(THUMB_W + 12, THUMB_H + 34);
 
-        let is_initial = &item.path == &selected_item.borrow().path;
+        let is_initial = item.path == selected_item.borrow().path;
         if is_initial {
             card_item.add_css_class("selected");
         }
