@@ -239,6 +239,15 @@ fn setup_css(colors: &SystemColors) {
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px {accent_glow};
         }}
 
+        .draggable-header {{
+            cursor: grab;
+            padding-bottom: 4px;
+        }}
+
+        .draggable-header:active {{
+            cursor: grabbing;
+        }}
+
         .header-title {{
             font-size: 18px;
             font-weight: 800;
@@ -446,32 +455,60 @@ fn build_ui(app: &Application) {
         .resizable(false)
         .build();
 
+    let mon_w = monitors[0].width;
+    let mon_h = monitors[0].height;
+    let win_w = 820;
+    let win_h = 580;
+    let init_left = (mon_w - win_w) / 2;
+    let init_top = (mon_h - win_h) / 2;
+
     // Layer-Shell Setup
     window.init_layer_shell();
     window.set_layer(Layer::Overlay);
     window.set_keyboard_mode(KeyboardMode::Exclusive);
-    // Center window
     window.set_anchor(Edge::Top, true);
-    window.set_anchor(Edge::Bottom, true);
     window.set_anchor(Edge::Left, true);
-    window.set_anchor(Edge::Right, true);
-
-    // Main background overlay (click outside to dismiss)
-    let backdrop = GtkBox::new(Orientation::Vertical, 0);
-    backdrop.set_halign(gtk4::Align::Center);
-    backdrop.set_valign(gtk4::Align::Center);
-    window.set_child(Some(&backdrop));
+    window.set_anchor(Edge::Bottom, false);
+    window.set_anchor(Edge::Right, false);
+    window.set_margin(Edge::Left, init_left);
+    window.set_margin(Edge::Top, init_top);
 
     // Modal Card
     let card = GtkBox::new(Orientation::Vertical, 12);
     card.add_css_class("modal-card");
-    card.set_width_request(820);
-    card.set_height_request(580);
-    backdrop.append(&card);
+    card.set_width_request(win_w);
+    card.set_height_request(win_h);
+    window.set_child(Some(&card));
 
-    // Header
+    // Header (Draggable)
     let header = GtkBox::new(Orientation::Horizontal, 12);
+    header.add_css_class("draggable-header");
     card.append(&header);
+
+    // Header Drag Controller
+    let drag = gtk4::GestureDrag::new();
+    let start_pos = Rc::new(RefCell::new((init_left, init_top)));
+    let cur_margin = Rc::new(RefCell::new((init_left, init_top)));
+
+    let start_pos_c1 = start_pos.clone();
+    let cur_margin_c1 = cur_margin.clone();
+    drag.connect_drag_begin(move |_, _, _| {
+        let (cx, cy) = *cur_margin_c1.borrow();
+        *start_pos_c1.borrow_mut() = (cx, cy);
+    });
+
+    let win_drag2 = window.clone();
+    let start_pos_c2 = start_pos.clone();
+    let cur_margin_c2 = cur_margin.clone();
+    drag.connect_drag_update(move |_, offset_x, offset_y| {
+        let (sx, sy) = *start_pos_c2.borrow();
+        let nx = sx + offset_x as i32;
+        let ny = sy + offset_y as i32;
+        *cur_margin_c2.borrow_mut() = (nx, ny);
+        win_drag2.set_margin(Edge::Left, nx);
+        win_drag2.set_margin(Edge::Top, ny);
+    });
+    header.add_controller(drag);
 
     let header_texts = GtkBox::new(Orientation::Vertical, 3);
     let title = Label::new(Some("󰍹  Soberano Displays & Taxa de Atualização"));

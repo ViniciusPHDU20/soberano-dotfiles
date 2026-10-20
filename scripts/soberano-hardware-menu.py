@@ -114,6 +114,12 @@ class HardwareDropdown(Gtk.Window):
             color: {fg};
             letter-spacing: 0.3px;
         }}
+        .draggable-header {{
+            cursor: grab;
+        }}
+        .draggable-header:active {{
+            cursor: grabbing;
+        }}
         .header-close {{
             background: alpha({surface}, 0.7);
             color: {fg_muted};
@@ -245,9 +251,17 @@ class HardwareDropdown(Gtk.Window):
         outer.get_style_context().add_class("dropdown-card")
         self.add(outer)
 
-        # Header Bar
+        # Header Bar (Draggable)
+        header_ev = Gtk.EventBox()
+        header_ev.set_visible_window(False)
+        header_ev.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON1_MOTION_MASK)
+        header_ev.connect("button-press-event", self.on_header_drag_begin)
+        header_ev.connect("motion-notify-event", self.on_header_drag_motion)
+        header_ev.get_style_context().add_class("draggable-header")
+
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        outer.pack_start(header, False, False, 0)
+        header_ev.add(header)
+        outer.pack_start(header_ev, False, False, 0)
 
         title = Gtk.Label(label="󰍛  Hardware & Performance")
         title.get_style_context().add_class("header-title")
@@ -325,6 +339,22 @@ class HardwareDropdown(Gtk.Window):
             subprocess.Popen([picker])
         else:
             subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/MonitorSelect.sh")])
+
+    def on_header_drag_begin(self, widget, event):
+        if event.button == 1:
+            self._drag_start_x = event.x_root
+            self._drag_start_y = event.y_root
+            self._drag_init_top = GtkLayerShell.get_margin(self, GtkLayerShell.Edge.TOP)
+            self._drag_init_right = GtkLayerShell.get_margin(self, GtkLayerShell.Edge.RIGHT)
+
+    def on_header_drag_motion(self, widget, event):
+        if hasattr(self, "_drag_start_x") and (event.state & Gdk.ModifierType.BUTTON1_MASK):
+            dx = event.x_root - self._drag_start_x
+            dy = event.y_root - self._drag_start_y
+            new_top = int(self._drag_init_top + dy)
+            new_right = int(self._drag_init_right - dx)
+            GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, max(0, new_top))
+            GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, max(0, new_right))
 
     def on_tab_toggled(self, button, name):
         if button.get_active():
