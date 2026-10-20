@@ -2,11 +2,14 @@
 # ==============================================================================
 # Soberano Dotfiles Installer & Hardware Prober
 # Architected for Arch Linux / CachyOS (Minimal TTY or Post-Installation)
+# Inspired by Sovereign Gentoo Install (dialog TUI + Auto-Prober)
 # Stack: Hyprland (Native Lua) + Wayle (Rust) + Matugen + Fuzzel + awww + Pipewire
 # ==============================================================================
 set -euo pipefail
 
-# Colors
+BACKTITLE="Soberano Edition — Hyprland & Wayle Desktop Installer"
+
+# Colors for CLI fallback
 C_RESET="\033[0m"
 C_BOLD="\033[1m"
 C_GREEN="\033[1;32m"
@@ -28,62 +31,175 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 
-clear 2>/dev/null || true
-cat << "EOF"
-  ____       _                               
- / ___|  ___ | |__   ___ _ __ __ _ _ __   ___  
- \___ \ / _ \| '_ \ / _ \ '__/ _` | '_ \ / _ \ 
-  ___) | (_) | |_) |  __/ | | (_| | | | | (_) |
- |____/ \___/|_.__/ \___|_|  \__,_|_| |_|\___/ 
-      Dotfiles & Hardware Adaptation Suite
-EOF
+# Check interactive mode
+INTERACTIVE=true
+if [ ! -t 0 ] || [ "${1:-}" = "--auto" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--non-interactive" ]; then
+    INTERACTIVE=false
+fi
 
-printf "\n"
+# Ensure sudo credentials
 info "Verificando privilégios sudo..."
 sudo -v
-# Keep sudo alive during script execution
+# Keep sudo alive
 while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+
+# Ensure dialog & pciutils are available before UI
+if ! command -v dialog >/dev/null 2>&1 || ! command -v lspci >/dev/null 2>&1; then
+    info "Instalando pré-requisitos para a interface (dialog, pciutils)..."
+    sudo pacman -S --needed --noconfirm dialog pciutils >/dev/null 2>&1 || true
+fi
 
 # 2. Hardware Detection Engine
 info "Analisando hardware da máquina..."
+CPU_MODEL=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs 2>/dev/null || echo "Processador Desconhecido")
+CPU_CORES=$(nproc --all 2>/dev/null || echo 4)
+RAM_GB=$(grep MemTotal /proc/meminfo | awk '{printf "%.1f GB", $2/1024/1024}' 2>/dev/null || echo "4.0 GB")
+
 HAS_NVIDIA=false
 HAS_AMD_GPU=false
 HAS_INTEL_GPU=false
 IS_LAPTOP=false
 IS_VM=false
+GPU_DESC=""
 
-# Check PCI devices
-if command -v lspci >/dev/null 2>&1 || sudo pacman -S --needed --noconfirm pciutils >/dev/null 2>&1; then
+if command -v lspci >/dev/null 2>&1; then
     PCI_DISPLAYS=$(lspci 2>/dev/null | grep -iE "(vga|3d|display)" || true)
     if echo "$PCI_DISPLAYS" | grep -qi "nvidia"; then
         HAS_NVIDIA=true
+        NVIDIA_NAME=$(echo "$PCI_DISPLAYS" | grep -i "nvidia" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
+        GPU_DESC+="NVIDIA ($NVIDIA_NAME) "
     fi
     if echo "$PCI_DISPLAYS" | grep -qiE "(amd|radeon|ati)"; then
         HAS_AMD_GPU=true
+        AMD_NAME=$(echo "$PCI_DISPLAYS" | grep -iE "(amd|radeon|ati)" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
+        GPU_DESC+="AMD ($AMD_NAME) "
     fi
     if echo "$PCI_DISPLAYS" | grep -qi "intel"; then
         HAS_INTEL_GPU=true
+        INTEL_NAME=$(echo "$PCI_DISPLAYS" | grep -i "intel" | sed -E 's/.*: //; s/ \(rev .*\)//' | head -1)
+        GPU_DESC+="Intel ($INTEL_NAME) "
     fi
     if echo "$PCI_DISPLAYS" | grep -qiE "(vmware|virtualbox|qemu|virtio|bochs)"; then
         IS_VM=true
+        GPU_DESC="Ambiente Virtualizado (VM) "
     fi
 fi
+[ -z "$GPU_DESC" ] && GPU_DESC="Vídeo Padrão Genérico"
 
-# Detect chassis / battery
 if ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
     IS_LAPTOP=true
 fi
 
-printf "${C_CYAN}┌── Diagnóstico de Hardware detectado:${C_RESET}\n"
-printf "${C_CYAN}│${C_RESET} • GPU NVIDIA:      %s\n" "$([ "$HAS_NVIDIA" = true ] && echo -e "${C_GREEN}Sim${C_RESET}" || echo "Não")"
-printf "${C_CYAN}│${C_RESET} • GPU AMD:         %s\n" "$([ "$HAS_AMD_GPU" = true ] && echo -e "${C_GREEN}Sim${C_RESET}" || echo "Não")"
-printf "${C_CYAN}│${C_RESET} • GPU Intel:       %s\n" "$([ "$HAS_INTEL_GPU" = true ] && echo -e "${C_GREEN}Sim${C_RESET}" || echo "Não")"
-printf "${C_CYAN}│${C_RESET} • Form-factor:     %s\n" "$([ "$IS_LAPTOP" = true ] && echo -e "${C_YELLOW}Notebook/Laptop${C_RESET}" || echo "Desktop")"
-printf "${C_CYAN}│${C_RESET} • Máquina Virtual: %s\n" "$([ "$IS_VM" = true ] && echo -e "${C_YELLOW}Sim${C_RESET}" || echo "Não")"
-printf "${C_CYAN}└──${C_RESET}\n\n"
+# Defaults
+CHOSEN_GPU="AUTO"
+INSTALL_GAMING=false
+INSTALL_SHADERS=true
+ENABLE_TOUCHPAD="$IS_LAPTOP"
+CHOSEN_PRESET="10"
 
-# 3. Pacotes Base e Ferramentas de Compilação
-info "[1/6] Sincronizando pacotes essenciais do sistema..."
+# 3. Interactive Dialog Interface (Gentoo-Style)
+if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
+    # Screen 1: Welcome & Hardware Diagnosis
+    dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z6 Diagnóstico de Hardware Detectado \ZB\Zn" \
+        --msgbox \
+"\Zb\Z2Diagnóstico da máquina concluído com sucesso!\ZB\Zn
+
+\ZbProcessador:\Zn  $CPU_MODEL ($CPU_CORES núcleos)
+\ZbMemória RAM:\Zn  $RAM_GB
+\ZbPlaca de Vídeo:\Zn $GPU_DESC
+\ZbTipo de Máquina:\Zn $([ "$IS_LAPTOP" = true ] && echo "Notebook / Laptop (Touchpad detectado)" || echo "Desktop / Gabinete")
+\ZbVirtualização:\Zn  $([ "$IS_VM" = true ] && echo "Sim (Máquina Virtual)" || echo "Não (Bare-metal Nativo)")
+
+Pressione \Zb<OK>\ZB para entrar no assistente de instalação." \
+        16 74
+
+    # Screen 2: GPU Drivers Selection
+    GPU_RADIO=(
+        "NVIDIA_HYBRID" "Híbrido NVIDIA + AMD/Intel (Optimus / iGPU + dGPU)" "$([ "$HAS_NVIDIA" = true ] && [ "$HAS_AMD_GPU" = true -o "$HAS_INTEL_GPU" = true ] && echo "on" || echo "off")"
+        "NVIDIA_ONLY"   "Apenas NVIDIA proprietário (nvidia-utils + dkms)" "$([ "$HAS_NVIDIA" = true ] && [ "$HAS_AMD_GPU" = false -a "$HAS_INTEL_GPU" = false ] && echo "on" || echo "off")"
+        "AMD_ONLY"      "Apenas AMD (Mesa + Vulkan-Radeon + VA-API)" "$([ "$HAS_NVIDIA" = false ] && [ "$HAS_AMD_GPU" = true ] && echo "on" || echo "off")"
+        "INTEL_ONLY"    "Apenas Intel (Mesa + Vulkan-Intel + Media Driver)" "$([ "$HAS_NVIDIA" = false ] && [ "$HAS_INTEL_GPU" = true ] && echo "on" || echo "off")"
+        "VM"            "Ambiente Virtualizado (VMware / QEMU / VirGL)" "$([ "$IS_VM" = true ] && echo "on" || echo "off")"
+        "GENERIC"       "Drivers Genéricos Mesa / Modos de Compatibilidade" "off"
+    )
+
+    CHOSEN_GPU=$(dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z6 Seleção de Drivers de Vídeo \ZB\Zn" \
+        --radiolist \
+"Selecione o perfil de aceleração gráfica para sua placa de vídeo:\n(Já pré-selecionado de acordo com seu hardware)" \
+        18 76 6 \
+        "${GPU_RADIO[@]}" \
+        3>&1 1>&2 2>&3) || CHOSEN_GPU="AUTO"
+
+    # Screen 3: Optional Components Checklist
+    COMPONENTS=$(dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z6 Componentes e Módulos do Sistema \ZB\Zn" \
+        --checklist \
+"Escolha os pacotes e recursos que deseja instalar no seu sistema:\nUse [Espaço] para marcar/desmarcar e [Enter] para confirmar." \
+        18 76 6 \
+        "CORE"     "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
+        "AUDIO"    "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
+        "FONTS"    "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
+        "TOOLS"    "Kitty + Btop + Fastfetch + Fish + Grim/Slurp" "on" \
+        "SHADERS"  "Shaders GLSL para Hyprland (Super + Alt + S)" "$([ "$INSTALL_SHADERS" = true ] && echo "on" || echo "off")" \
+        "GAMING"   "Stack Gamer (Steam, Gamemode, MangoHud, Wine)" "$([ "$INSTALL_GAMING" = true ] && echo "on" || echo "off")" \
+        3>&1 1>&2 2>&3) || true
+
+    if echo "$COMPONENTS" | grep -qw "GAMING"; then INSTALL_GAMING=true; fi
+    if echo "$COMPONENTS" | grep -qw "SHADERS"; then INSTALL_SHADERS=true; else INSTALL_SHADERS=false; fi
+
+    # Screen 4: Initial Wayle Bar Layout Selection
+    PRESET_CHOICES=(
+        "10" "Stealth Zen Minimalist (Workspaces + App + Bandeja + Relógio)" "on"
+        "1"  "Floating Pill Top (Pílula Flutuante Suave • Gaps 10/8)" "off"
+        "2"  "Block-Prefix Chips (Padrão Wayle Nativo • Gaps 8/8)" "off"
+        "3"  "Full-Width Top Blade (Lâmina Cyberpunk • Gaps 2px)" "off"
+        "4"  "Floating macOS Dock (Dock Inferior Flutuante • Rounding 14px)" "off"
+        "5"  "Split Dual-Wings HUD (Asas nos Cantos • Centro 100% Livre)" "off"
+        "6"  "Dynamic Island Capsule (Cápsula Central • Rounding 14px)" "off"
+        "7"  "Island Floating Clusters (Ilhas Transparentes • Gaps 10px)" "off"
+        "8"  "Audiophile Soundstage (Foco CAVA & Player Musical)" "off"
+        "9"  "Glassmorphism Frost (Vidro Fosco Translúcido 50%)" "off"
+    )
+
+    CHOSEN_PRESET=$(dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z6 Layout Inicial da Barra Wayle \ZB\Zn" \
+        --radiolist \
+"Escolha o layout e geometria visual da barra para iniciar seu desktop:\n(Você poderá trocar a qualquer momento usando Super + Ctrl + B)" \
+        18 78 10 \
+        "${PRESET_CHOICES[@]}" \
+        3>&1 1>&2 2>&3) || CHOSEN_PRESET="10"
+
+    # Screen 5: Final Confirmation
+    dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z2 Confirmar Instalação \ZB\Zn" \
+        --yesno \
+"Deseja iniciar a instalação com as seguintes opções?
+
+ • \ZbPerfil GPU:\Zn        $CHOSEN_GPU
+ • \ZbPreset Wayle:\Zn      Preset $CHOSEN_PRESET
+ • \ZbStack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")
+ • \ZbShaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")
+ • \ZbGestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")
+
+Seus arquivos de configuração antigos terão backup automático antes da substituição." \
+        15 72 || {
+            dialog --clear; clear; echo "Instalação cancelada pelo usuário."; exit 0;
+        }
+    dialog --clear
+fi
+
+clear 2>/dev/null || true
+info "Iniciando processo de instalação do Soberano Dotfiles..."
+
+# 4. Base Packages
+info "[1/6] Sincronizando ferramentas essenciais..."
 BASE_PKGS=(
     base-devel
     git
@@ -94,7 +210,7 @@ BASE_PKGS=(
 )
 sudo pacman -S --needed --noconfirm "${BASE_PKGS[@]}"
 
-# 4. Bootstrap do AUR Helper (caso esteja em Arch Minimal)
+# 5. AUR Helper Bootstrap (yay)
 info "[2/6] Verificando AUR Helper (yay/paru)..."
 AUR_CMD=""
 if command -v yay >/dev/null 2>&1; then
@@ -102,7 +218,7 @@ if command -v yay >/dev/null 2>&1; then
 elif command -v paru >/dev/null 2>&1; then
     AUR_CMD="paru"
 else
-    info "Nenhum AUR helper encontrado. Instalando 'yay-bin' automaticamente..."
+    info "Nenhum AUR helper encontrado. Compilando e instalando 'yay-bin' automaticamente..."
     TMP_YAY=$(mktemp -d)
     git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$TMP_YAY"
     (cd "$TMP_YAY" && makepkg -si --noconfirm)
@@ -111,58 +227,51 @@ else
     success "'yay-bin' instalado com sucesso!"
 fi
 
-# 5. Instalação Dinâmica de Drivers de Vídeo
-info "[3/6] Instalando drivers gráficos e aceleração de vídeo..."
+# 6. GPU Packages based on selection or auto-probe
+info "[3/6] Instalando drivers de vídeo e aceleração ($CHOSEN_GPU)..."
 GPU_PKGS=()
 
-if [ "$HAS_NVIDIA" = true ]; then
-    info "Adicionando stack NVIDIA com suporte egl-wayland..."
-    # If on CachyOS, prefer its optimized packages if available, otherwise standard Arch
-    GPU_PKGS+=(
-        nvidia-utils
-        lib32-nvidia-utils
-        egl-wayland
-    )
-    # Install DKMS driver if no nvidia driver exists
-    if ! pacman -Q nvidia >/dev/null 2>&1 && ! pacman -Q nvidia-dkms >/dev/null 2>&1 && ! pacman -Q nvidia-open >/dev/null 2>&1; then
-        GPU_PKGS+=(nvidia-dkms)
-    fi
-fi
-
-if [ "$HAS_AMD_GPU" = true ]; then
-    info "Adicionando stack Vulkan e Mesa para AMD..."
-    GPU_PKGS+=(
-        mesa
-        vulkan-radeon
-        lib32-mesa
-        lib32-vulkan-radeon
-        libva-mesa-driver
-    )
-fi
-
-if [ "$HAS_INTEL_GPU" = true ]; then
-    info "Adicionando stack Vulkan e VA-API para Intel..."
-    GPU_PKGS+=(
-        mesa
-        vulkan-intel
-        intel-media-driver
-        libva-intel-driver
-    )
-fi
-
-if [ "$IS_VM" = true ]; then
-    info "Adicionando drivers gráficos para ambiente virtualizado..."
-    GPU_PKGS+=(
-        mesa
-        xf86-video-vmware
-    )
-fi
+case "$CHOSEN_GPU" in
+    NVIDIA_HYBRID|NVIDIA_ONLY)
+        GPU_PKGS+=(nvidia-utils lib32-nvidia-utils egl-wayland)
+        if ! pacman -Q nvidia >/dev/null 2>&1 && ! pacman -Q nvidia-dkms >/dev/null 2>&1 && ! pacman -Q nvidia-open >/dev/null 2>&1; then
+            GPU_PKGS+=(nvidia-dkms)
+        fi
+        if [ "$CHOSEN_GPU" = "NVIDIA_HYBRID" ]; then
+            GPU_PKGS+=(mesa vulkan-radeon lib32-mesa lib32-vulkan-radeon)
+        fi
+        ;;
+    AMD_ONLY)
+        GPU_PKGS+=(mesa vulkan-radeon lib32-mesa lib32-vulkan-radeon libva-mesa-driver)
+        ;;
+    INTEL_ONLY)
+        GPU_PKGS+=(mesa vulkan-intel intel-media-driver libva-intel-driver)
+        ;;
+    VM)
+        GPU_PKGS+=(mesa xf86-video-vmware)
+        ;;
+    *)
+        # Auto fallback
+        if [ "$HAS_NVIDIA" = true ]; then
+            GPU_PKGS+=(nvidia-utils lib32-nvidia-utils egl-wayland)
+            if ! pacman -Q nvidia >/dev/null 2>&1 && ! pacman -Q nvidia-dkms >/dev/null 2>&1; then
+                GPU_PKGS+=(nvidia-dkms)
+            fi
+        fi
+        if [ "$HAS_AMD_GPU" = true ]; then
+            GPU_PKGS+=(mesa vulkan-radeon lib32-mesa lib32-vulkan-radeon)
+        fi
+        if [ "$HAS_INTEL_GPU" = true ]; then
+            GPU_PKGS+=(mesa vulkan-intel intel-media-driver)
+        fi
+        ;;
+esac
 
 if [ ${#GPU_PKGS[@]} -gt 0 ]; then
     sudo pacman -S --needed --noconfirm "${GPU_PKGS[@]}"
 fi
 
-# 6. Wayland, Hyprland, Áudio e Fontes
+# 7. Desktop System Stack
 info "[4/6] Instalando Hyprland, Portais, Áudio Pipewire e Fontes..."
 SYSTEM_STACK=(
     # Compositor & Portals
@@ -209,21 +318,27 @@ SYSTEM_STACK=(
     python
     python-gobject
 )
+
+if [ "$INSTALL_GAMING" = true ]; then
+    info "Adicionando suite Gamer (Steam, Gamemode, Mangohud)..."
+    SYSTEM_STACK+=(steam gamemode lib32-gamemode mangohud lib32-mangohud)
+fi
+
 sudo pacman -S --needed --noconfirm "${SYSTEM_STACK[@]}"
 
-# 7. Pacotes AUR (Wayle & Matugen)
-info "[5/6] Instalando Wayle Shell e Theming Engine (AUR)..."
+# 8. AUR Packages (Wayle & Matugen)
+info "[5/6] Instalando Wayle Shell e Matugen (AUR)..."
 AUR_PKGS=(
     wayle-bin
     matugen-bin
 )
 $AUR_CMD -S --needed --noconfirm "${AUR_PKGS[@]}"
 
-# 8. Geração da Camada de Hardware no Hyprland (`config/hardware.lua`)
-info "[6/6] Gerando diretivas de hardware personalizadas para esta máquina..."
+# 9. Hardware Configuration Layer (`config/hardware.lua`)
+info "[6/6] Gerando diretivas de hardware personalizadas..."
 mkdir -p "$DOTFILES_DIR/config/hypr/config"
-
 HW_LUA="$DOTFILES_DIR/config/hypr/config/hardware.lua"
+
 cat > "$HW_LUA" << LUA_EOF
 -- ==============================================================================
 -- Soberano Hyprland - Hardware Adaptation Layer
@@ -244,7 +359,7 @@ hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 LUA_EOF
 
-if [ "$HAS_NVIDIA" = true ]; then
+if [ "$HAS_NVIDIA" = true ] || [[ "$CHOSEN_GPU" =~ NVIDIA ]]; then
     cat >> "$HW_LUA" << LUA_EOF
 
 -- Dedicated NVIDIA Environment & Renderer
@@ -276,7 +391,7 @@ hl.env("LIBVA_DRIVER_NAME", "iHD")
 LUA_EOF
 fi
 
-if [ "$IS_LAPTOP" = true ]; then
+if [ "$ENABLE_TOUCHPAD" = true ]; then
     cat >> "$HW_LUA" << LUA_EOF
 
 -- Laptop Touchpad Gestures
@@ -298,7 +413,7 @@ fi
 
 success "hardware.lua gerado com sucesso!"
 
-# 9. Vinculação de Configurações (Symlinks com Backup Seguro)
+# 10. Symlinks & Permissions
 info "Vinculando diretórios em ${CONFIG_DIR}..."
 mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0"
 chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py 2>/dev/null || true
@@ -325,13 +440,17 @@ for dir in "${CONFIGS[@]}"; do
     printf "   ${C_CYAN}→${C_RESET} %s -> %s\n" "$target" "${DOTFILES_DIR}/config/${dir}"
 done
 
-# 10. Ativação de Serviços de Usuário
+# 11. Apply Chosen Wayle Bar Preset
+info "Aplicando preset selecionado ($CHOSEN_PRESET)..."
+"$DOTFILES_DIR/scripts/WayleBarPresetSelect.sh" "$CHOSEN_PRESET" >/dev/null 2>&1 || true
+
+# 12. User Services
 info "Configurando serviços systemd do usuário..."
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service >/dev/null 2>&1 || true
 systemctl --user enable --now wayle.service >/dev/null 2>&1 || true
 
-# 11. Finalização
+# 13. Live Session Reload
 if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
     info "Sessão do Hyprland ativa detectada! Aplicando configurações em tempo real..."
     pgrep -x awww-daemon >/dev/null 2>&1 || (awww-daemon >/dev/null 2>&1 & sleep 0.4)
@@ -340,14 +459,35 @@ if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
     systemctl --user restart wayle.service >/dev/null 2>&1 || true
 fi
 
-printf "\n"
-success "================================================================"
-success "   INSTALAÇÃO CONCLUÍDA COM SUCESSO!"
-success "================================================================"
-if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-    printf "${C_BOLD}Para iniciar sua interface gráfica completa agora mesmo:${C_RESET}\n"
-    printf "   ${C_GREEN}Hyprland${C_RESET}\n\n"
-    printf "Ou faça login via seu Display Manager (SDDM/GDM/Greetd).\n"
+# 14. Finished Screen
+if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
+    dialog --colors \
+        --backtitle "$BACKTITLE" \
+        --title "\Zb\Z2 Instalação Concluída com Sucesso! \ZB\Zn" \
+        --msgbox \
+"\Zb\Z2O Soberano Dotfiles está pronto para uso!\ZB\Zn
+
+\ZbPrincipais Atalhos:\Zn
+ • \ZbSuper + Q:\Zn         Abrir Terminal Kitty
+ • \ZbSuper + Espaço:\Zn    Lançador de Aplicativos (Fuzzel)
+ • \ZbSuper + W:\Zn         Galeria de Wallpapers GTK4 (Cinema Studio)
+ • \ZbSuper + Ctrl + B:\Zn  Seletor de Presets da Barra Wayle
+ • \ZbSuper + Alt + S:\Zn   Alternar Shaders GLSL de Tela
+ • \ZbSuper + M:\Zn         Cheat-Sheet de Teclas e Comandos
+
+$([ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && echo "Para iniciar seu desktop agora mesmo, digite:\n   \Zb\Z2Hyprland\ZB\Zn" || echo "Sua sessão atual foi 100% atualizada sem reiniciar!")" \
+        18 74
+    dialog --clear
+    clear
 else
-    printf "${C_BOLD}Todas as configurações e o Wayle foram atualizados ao vivo!${C_RESET}\n"
+    printf "\n"
+    success "================================================================"
+    success "   INSTALAÇÃO CONCLUÍDA COM SUCESSO!"
+    success "================================================================"
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        printf "${C_BOLD}Para iniciar sua interface gráfica completa agora mesmo:${C_RESET}\n"
+        printf "   ${C_GREEN}Hyprland${C_RESET}\n\n"
+    else
+        printf "${C_BOLD}Todas as configurações e o Wayle foram atualizados ao vivo!${C_RESET}\n"
+    fi
 fi
