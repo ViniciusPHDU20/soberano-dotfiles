@@ -176,6 +176,8 @@ fi
 CHOSEN_GPU="AUTO"
 INSTALL_GAMING=false
 INSTALL_SHADERS=true
+INSTALL_OPTIMIZE=true
+INSTALL_AUTOUPDATE=true
 ENABLE_TOUCHPAD="$IS_LAPTOP"
 CHOSEN_PRESET="10"
 
@@ -281,19 +283,21 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --title "\Zb\Z3 Componentes e Módulos do Sistema \ZB\Zn" \
         --checklist \
 "Escolha os pacotes e recursos que deseja instalar no seu sistema:\nUse [Espaço] para marcar/desmarcar e [Enter] para confirmar." \
-        17 76 7 \
-        "CORE"     "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
-        "AUDIO"    "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
-        "FONTS"    "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
-        "TOOLS"    "Kitty + Btop + Fastfetch + Fish + Grim/Slurp" "on" \
-        "OPTIMIZE" "Otimizar Makepkg com CFLAGS nativos (-march=native -j$CPU_CORES)" "on" \
-        "SHADERS"  "Shaders GLSL para Hyprland (Super + Alt + S)" "$([ "$INSTALL_SHADERS" = true ] && echo "on" || echo "off")" \
-        "GAMING"   "Stack Gamer (Steam, Gamemode, MangoHud, Wine)" "$([ "$INSTALL_GAMING" = true ] && echo "on" || echo "off")" \
+        18 76 8 \
+        "CORE"       "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
+        "AUDIO"      "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
+        "FONTS"      "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
+        "TOOLS"      "Kitty + Btop + Fastfetch + Fish + Grim/Slurp" "on" \
+        "OPTIMIZE"   "Otimizar Makepkg com CFLAGS nativos (-march=native -j$CPU_CORES)" "on" \
+        "AUTOUPDATE" "Sincronização Contínua Git (Atualização automática de dotfiles)" "on" \
+        "SHADERS"    "Shaders GLSL para Hyprland (Super + Alt + S)" "$([ "$INSTALL_SHADERS" = true ] && echo "on" || echo "off")" \
+        "GAMING"     "Stack Gamer (Steam, Gamemode, MangoHud, Wine)" "$([ "$INSTALL_GAMING" = true ] && echo "on" || echo "off")" \
         3>&1 1>&2 2>&3) || true
 
     if echo "$COMPONENTS" | grep -qw "GAMING"; then INSTALL_GAMING=true; fi
     if echo "$COMPONENTS" | grep -qw "SHADERS"; then INSTALL_SHADERS=true; else INSTALL_SHADERS=false; fi
     if echo "$COMPONENTS" | grep -qw "OPTIMIZE"; then INSTALL_OPTIMIZE=true; else INSTALL_OPTIMIZE=false; fi
+    if echo "$COMPONENTS" | grep -qw "AUTOUPDATE"; then INSTALL_AUTOUPDATE=true; else INSTALL_AUTOUPDATE=false; fi
 
     # Screen 4: Initial Wayle Bar Layout Selection
     PRESET_CHOICES=(
@@ -323,6 +327,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     CONFIRM_MSG+=" • \Zb\Z7Perfil GPU:\Zn        $CHOSEN_GPU\n"
     CONFIRM_MSG+=" • \Zb\Z7Preset Wayle:\Zn      Preset $CHOSEN_PRESET\n"
     CONFIRM_MSG+=" • \Zb\Z7Otimização Makepkg:\Zn $([ "$INSTALL_OPTIMIZE" = true ] && echo "CFLAGS/MAKEFLAGS Nativos ($CPU_ARCH • -j$CPU_CORES)" || echo "Padrão Arch Linux")\n"
+    CONFIRM_MSG+=" • \Zb\Z7Auto-Atualização:\Zn  $([ "$INSTALL_AUTOUPDATE" = true ] && echo "Ativo (Sincronização contínua via Git)" || echo "Manual")\n"
     CONFIRM_MSG+=" • \Zb\Z7Stack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")\n"
     CONFIRM_MSG+=" • \Zb\Z7Shaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")\n"
     CONFIRM_MSG+=" • \Zb\Z7Gestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")\n\n"
@@ -337,7 +342,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --backtitle "$BACKTITLE" \
         --title "\Zb\Z2 Confirmar Instalação \ZB\Zn" \
         --yesno "$(printf "%b" "$CONFIRM_MSG")" \
-        17 76 || {
+        18 76 || {
             dialog --clear; clear; echo "Instalação cancelada pelo usuário."; exit 0;
         }
     dialog --clear
@@ -351,6 +356,7 @@ if [ "$DRY_RUN" = true ]; then
         REPORT_MSG+=" • \Zb\Z7Perfil de GPU:\Zn       $CHOSEN_GPU\n"
         REPORT_MSG+=" • \Zb\Z7Stack de Drivers:\Zn    $([ "$CHOSEN_GPU" = "NVIDIA_HYBRID" -o "$CHOSEN_GPU" = "NVIDIA_ONLY" ] && echo "nvidia-utils, egl-wayland" || echo "mesa, vulkan")\n"
         REPORT_MSG+=" • \Zb\Z7Otimização Makepkg:\Zn $([ "$INSTALL_OPTIMIZE" = true ] && echo "makepkg.conf calibrado para $CPU_ARCH ($CPU_SIMD) com -j$CPU_CORES" || echo "Ignorado")\n"
+        REPORT_MSG+=" • \Zb\Z7Auto-Atualização:\Zn  $([ "$INSTALL_AUTOUPDATE" = true ] && echo "systemd timer ativado (soberano-autoupdate.timer)" || echo "Manual")\n"
         REPORT_MSG+=" • \Zb\Z7Stack Gráfica:\Zn       Hyprland + Wayle + Matugen + Pipewire + Fontes\n"
         REPORT_MSG+=" • \Zb\Z7Layout da Barra:\Zn     Preset $CHOSEN_PRESET\n"
         REPORT_MSG+=" • \Zb\Z7Stack Gamer:\Zn         $([ "$INSTALL_GAMING" = true ] && echo "Steam, Gamemode, Mangohud, Wine" || echo "Ignorado")\n"
@@ -364,7 +370,7 @@ if [ "$DRY_RUN" = true ]; then
             --backtitle "$BACKTITLE" \
             --title "\Zb\Z2 Relatório de Simulação (Dry-Run Concluído) \ZB\Zn" \
             --msgbox "$(printf "%b" "$REPORT_MSG")" \
-            21 76
+            22 76
         dialog --clear
         clear
     else
@@ -374,6 +380,7 @@ if [ "$DRY_RUN" = true ]; then
         success "================================================================"
         printf " • Perfil de GPU:     %s\n" "$CHOSEN_GPU"
         printf " • Flags Makepkg:     %s\n" "$([ "$INSTALL_OPTIMIZE" = true ] && echo "$OPTIMIZED_CFLAGS ($CPU_ARCH) -j$CPU_CORES" || echo "Padrão")"
+        printf " • Auto-Atualização:  %s\n" "$([ "$INSTALL_AUTOUPDATE" = true ] && echo "Ativo (Timer Git)" || echo "Manual")"
         printf " • Preset Wayle:      Preset %s\n" "$CHOSEN_PRESET"
         printf " • Stack Gamer:       %s\n" "$([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")"
         printf " • Shaders GLSL:      %s\n" "$([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")"
@@ -622,8 +629,10 @@ success "hardware.lua gerado com sucesso!"
 
 # 10. Symlinks & Permissions
 info "Vinculando diretórios em ${CONFIG_DIR}..."
-mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0"
+mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0" "$HOME/.local/bin" "$CONFIG_DIR/systemd/user"
 chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/soberano-update.sh" "$HOME/.local/bin/soberano-update"
+cp -f "$DOTFILES_DIR"/config/systemd/user/soberano-autoupdate.* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
 
 CONFIGS=(
     hypr
@@ -656,6 +665,10 @@ info "Configurando serviços systemd do usuário..."
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service >/dev/null 2>&1 || true
 systemctl --user enable --now wayle.service >/dev/null 2>&1 || true
+if [ "$INSTALL_AUTOUPDATE" = true ]; then
+    systemctl --user enable --now soberano-autoupdate.timer >/dev/null 2>&1 || true
+    success "Auto-atualizador periódico ativado (soberano-autoupdate.timer)!"
+fi
 
 # 13. Live Session Reload
 if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then

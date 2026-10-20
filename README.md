@@ -1,55 +1,151 @@
 # Soberano Dotfiles
 
-Arquitetura enxuta e de baixa latência para **CachyOS / Arch Linux** construída do zero sobre **Hyprland (Lua Nativo)**, **Wayle (`wayle-bin` em Rust/GTK4)**, **Matugen (`matugen-bin` Material Design 3)**, **Fuzzel** e **awww**.
+<p align="center">
+  <img src="assets/screenshots/soberano-banner.jpg" alt="Soberano Edition Desktop & TUI Installer" width="100%">
+</p>
 
-## Stack Principal
+Arquitetura enxuta, modular e de altíssimo desempenho para **Arch Linux** e **CachyOS**, construída do zero sobre **Hyprland (Lua Nativo)**, **Wayle Shell (`wayle-bin` em Rust/GTK4)**, **Matugen (Material Design 3)**, **Fuzzel** e **awww**.
 
-| Componente | Binário | Papel |
+---
+
+## Galeria Visual & Presets
+
+O Soberano Dotfiles foi desenvolvido com um motor de temas responsivo integrado ao Material Design 3. Ao trocar o papel de parede, todos os componentes do sistema (Barra Wayle, Hyprland, Kitty, Fuzzel, Btop e GTK) se adaptam harmonicamente em milissegundos.
+
+| Nordic Slate (Foco & Código) | Cyberpunk Glow (Shaders & CAVA) |
+| :---: | :---: |
+| <img src="assets/screenshots/soberano-nordic-slate.jpg" width="100%"> | <img src="assets/screenshots/soberano-cyberpunk-neon.jpg" width="100%"> |
+
+| Catppuccin Velvet (Pastel Suave) | Japanese Minimalist (Estética Clean) |
+| :---: | :---: |
+| <img src="assets/screenshots/soberano-catppuccin-mocha.jpg" width="100%"> | <img src="assets/screenshots/soberano-japanese-minimalist.jpg" width="100%"> |
+
+---
+
+## Destaques da Arquitetura
+
+- **Instalador TUI Inteligente (Inspirado no Gentoo)**: Interface via `dialog` com alto contraste, autodetecção de hardware e validação sem quebras visuais.
+- **Auto-Detecção de Hardware & Microarquitetura**:
+  - Detecção precisa de GPUs (NVIDIA Híbrido, AMD Radeon iGPU/dGPU, Intel Iris/Xe, ou Máquinas Virtuais).
+  - Leitura do ISA real da CPU (ex: `znver5`, `znver4`, `alderlake`, `skylake`) e extensões vetoriais (`AVX-512`, `AVX2`, `FMA`, `AES`, `SHA`).
+  - Calibragem automática de `CFLAGS="-march=native -O3 -pipe -fno-plt"` e `MAKEFLAGS="-j$CORES"` em `/etc/makepkg.conf.d/` para que pacotes do AUR compilem com máxima performance de hardware.
+  - Reconhecimento de chassi para ativação de gestos de touchpad em notebooks (`workspace_swipe`).
+- **Sincronização Contínua & Auto-Atualização Git**:
+  - Serviço e timer systemd (`soberano-autoupdate.timer`) para verificar e atualizar os dotfiles em segundo plano sem quebrar configs locais.
+  - Notificações de desktop nativas (`notify-send`) informando novas revisões aplicadas.
+  - Comando direto `soberano-update` no terminal.
+- **Wayle Desktop Shell (Rust)**:
+  - 10 presets visuais de barra alternáveis instantaneamente via `Super + Ctrl + B` (Floating Pill, Cyber Blade, Dynamic Island, macOS Dock, Audiophile Soundstage, etc.).
+- **Material You Engine (Matugen)**:
+  - Extração harmônica de cores em tempo real via algoritmo Material Design 3 (`Super + Alt + B`).
+- **Shaders GLSL Hyprland**:
+  - Filtros visuais de pós-processamento aplicados em tempo real na GPU (`Super + Alt + S`).
+
+---
+
+## Stack de Componentes
+
+| Componente | Binário | Função Principal |
 | :--- | :--- | :--- |
-| **Compositor** | `Hyprland` (`hyprland.lua`) | Gerenciador de janelas Wayland configurado 100% em Lua nativo (`1920x1080@144Hz`, VRR, Direct Scanout) |
-| **Desktop Shell** | `wayle` (`wayle-bin`) | Barra, Centro de Notificações, OSD, Cava, Áudio, Rede, Clima e Integração Nativa com Matugen + awww |
-| **Motor de Cores** | `matugen` (`matugen-bin`) | Extração Material Design 3 (`tonal-spot`, `vibrant`, `expressive`, `fidelity`, etc.) sincronizando Wayle, Hyprland, Kitty, Fuzzel, Btop e GTK3/4 |
-| **App Launcher & Menus** | `fuzzel` | Launcher Wayland nativo em C (~3 MB RAM) estilizado dinamicamente pelo Matugen |
-| **Wallpaper Engine** | `awww` (`awww-daemon`) | Transições suaves a 144 FPS controladas diretamente pelo Wayle (`~2.7 MB RAM`) |
-| **Terminal & Monitor** | `kitty` + `btop` | Sincronizados em tempo real via `SIGUSR1` e templates Matugen |
+| **Compositor** | `Hyprland` (`hyprland.lua`) | Gerenciador de janelas Wayland configurado 100% em Lua nativo (`144Hz`, VRR, Direct Scanout) |
+| **Desktop Shell** | `wayle` (`wayle-bin`) | Barra, Central de Notificações, OSD, CAVA, Áudio, Rede, Clima e Integração Nativa Matugen |
+| **Motor de Cores** | `matugen` (`matugen-bin`) | Harmonização Material Design 3 sincronizando Wayle, Hyprland, Kitty, Fuzzel, Btop e GTK3/4 |
+| **App Launcher** | `fuzzel` | Launcher Wayland ultraleve em C estilizado dinamicamente pelo Matugen |
+| **Wallpaper Engine** | `awww` (`awww-daemon`) | Transições fluidas a 144 FPS controladas diretamente pelo Wayle (~2.7 MB RAM) |
+| **Terminal & Monitor** | `kitty` + `btop` | Sincronizados em tempo real via templates Matugen |
+| **Auto-Updater** | `soberano-update` | Sincronizador contínuo com repositório remoto via git e systemd timer |
 
-## Estrutura do Repositório
+---
+
+## Como Instalar
+
+### 1. Clonar o Repositório
+
+```bash
+git clone https://github.com/ViniciusPHDU20/soberano-dotfiles.git ~/dotfiles
+cd ~/dotfiles
+```
+
+### 2. Modo de Simulação / Teste (Dry-Run Seguro)
+Para testar a interface TUI, visualizar a detecção de hardware da sua máquina e conferir o relatório sem alterar nenhum pacote ou arquivo:
+
+```bash
+./install.sh --test
+```
+
+### 3. Instalação Definitiva
+Para aplicar a instalação completa, configurar os drivers de vídeo e iniciar o ambiente:
+
+```bash
+./install.sh
+```
+
+---
+
+## Atualizações Automáticas (Clientes)
+
+O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a máquina do cliente sempre sincronizada com as novidades do repositório:
+
+- **Automático via Systemd**: o timer `soberano-autoupdate.timer` executa a sincronização periódica silenciosamente. Quando você envia um commit no GitHub, a máquina do cliente baixa as novidades, recarrega o Hyprland ao vivo e envia uma notificação visual.
+- **Manual via Terminal**: a qualquer momento, o usuário pode rodar:
+  ```bash
+  soberano-update
+  ```
+
+---
+
+## Atalhos de Teclado Principais
+
+| Atalho | Ação |
+| :--- | :--- |
+| `Super + Q` | Abrir Terminal Kitty |
+| `Super + Espaço` / `Super + D` | Lançador de Aplicativos (Fuzzel) |
+| `Super + W` | Galeria de Wallpapers GTK4 (Cinema Studio) |
+| `Super + Alt + W` | Wallpaper Aleatório com Transição + Matugen |
+| `Super + Ctrl + B` | Seletor de Presets da Barra Wayle (10 layouts) |
+| `Super + Alt + B` | Seletor de Esquemas de Cores Material You |
+| `Super + Alt + S` | Alternar Shaders GLSL de Tela (Cyberpunk, CRT, etc.) |
+| `Super + Alt + A` | Seletor de Perfis de Animação do Hyprland |
+| `Super + V` | Histórico da Área de Transferência (`cliphist` + `fuzzel`) |
+| `Super + G` / `Super + F1` | GameMode Competitivo (Max Clock GPU + CPU Performance) |
+| `Super + A` | Visão Geral de Workspaces (`quickshell` overview) |
+| `Super + M` / `Super + K` | Cheat-Sheet Visual de Atalhos e Teclas |
+| `Super + C` | Fechar Janela Focada |
+| `Super + Shift + Q` | Menu de Encerramento / Logout |
+
+---
+
+## Estrutura do Projeto
 
 ```text
 soberano-dotfiles/
+├── assets/
+│   └── screenshots/        # Galeria ilustrativa do desktop
 ├── config/
-│   ├── hypr/               # Configuração modular em Lua nativo
-│   ├── wayle/              # Configuração pura do Wayle (schema 0.7.0) + Matugen
-│   ├── matugen/            # Templates Material Design 3 (Hyprland, Kitty, Fuzzel, Btop, GTK)
+│   ├── hypr/               # Configuração modular em Lua nativo (hyprland.lua)
+│   ├── wayle/              # Configuração do Wayle Shell (schema 0.7.0) + presets
+│   ├── matugen/            # Templates Material Design 3
 │   ├── fuzzel/             # Launcher Wayland ultraleve
 │   ├── kitty/              # Terminal acelerado por GPU
-│   ├── btop/               # Monitor de recursos com tema Matugen
+│   ├── btop/               # Monitor de recursos com tema dinâmico
+│   ├── systemd/user/       # Units do timer de auto-atualização contínua
 │   ├── fastfetch/
 │   ├── fish/
-│   └── quickshell/         # Workspace Overview (Super + A)
+│   └── quickshell/
 ├── scripts/
-│   ├── WallpaperSelect.sh        # Seletor de Wallpaper + Matugen (Super + W / Super + Alt + W)
-│   ├── MatugenSchemeSelect.sh    # Seletor de Esquema Material You (Super + Alt + B)
-│   ├── WayleBarPresetSelect.sh   # Seletor de Layout Nativo do Wayle (Super + Ctrl + B)
-│   ├── HyprAnimationsSelector.sh # Seletor de Perfis de Animação (Super + Alt + A)
-│   ├── GameMode.sh               # Modo Competitivo Ryzen 9 9950X + NVIDIA (Super + G / F1)
-│   ├── OverviewToggle.sh         # Expose de Workspaces (Super + A)
-│   └── KeyBinds.sh               # HUD Visual de Atalhos (Super + K / Super + H)
-├── wallpapers/
-└── install.sh
+│   ├── soberano-update.sh        # Motor de sincronização contínua Git
+│   ├── WallpaperSelect.sh        # Seletor de Wallpaper + Matugen
+│   ├── MatugenSchemeSelect.sh    # Seletor de Esquemas de Cores
+│   ├── WayleBarPresetSelect.sh   # Seletor dos 10 Presets do Wayle
+│   ├── HyprAnimationsSelector.sh # Perfis de física e animações
+│   ├── GameMode.sh               # Modo de baixa latência para jogos
+│   └── KeyBinds.sh               # HUD de atalhos interativo
+├── wallpapers/             # Biblioteca curada de papéis de parede dinâmicos
+└── install.sh              # Instalador TUI Gentoo-Style com autoprobing
 ```
 
-## Atalhos Principais
+---
 
-* `SUPER + Return`: Terminal (`kitty`)
-* `SUPER + D`: Launcher de Aplicativos (`fuzzel`)
-* `SUPER + W`: Seletor de Wallpaper + Matugen
-* `SUPER + ALT + W`: Wallpaper Aleatório + Matugen
-* `SUPER + ALT + B`: Seletor de Esquema de Cores do Matugen (`tonal-spot`, `vibrant`, `expressive`, etc.)
-* `SUPER + CTRL + B`: Seletor de Layout Nativo da Barra Wayle (Floating Pill, Block-Prefix, Full-Width, Bottom Dock, Icon-Square)
-* `SUPER + ALT + A`: Seletor de Animações do Hyprland
-* `SUPER + V`: Histórico de Clipboard (`cliphist` + `fuzzel`)
-* `SUPER + G` / `SUPER + F1`: GameMode Extremo (CPU Performance + GPU Max Clock + Tearing ON)
-* `SUPER + Z`: Painel de Configurações do Wayle
-* `SUPER + A`: Visão Geral de Workspaces (`quickshell`)
-* `SUPER + K` / `SUPER + H`: Cheat-Sheet Visual de Atalhos
+<p align="center">
+  <b>Soberano Dotfiles</b> • Arquitetura de Elite para Arch Linux & CachyOS
+</p>

@@ -1,0 +1,13 @@
+[Unit]
+Description=Soberano Dotfiles Background Sync & Auto-Updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/scripts/soberano-update.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

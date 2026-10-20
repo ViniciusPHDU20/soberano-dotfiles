@@ -1,0 +1,11 @@
+[Unit]
+Description=Soberano Dotfiles Periodic Auto-Updater Timer
+Documentation=https://github.com/ViniciusPHDU20/soberano-dotfiles
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
