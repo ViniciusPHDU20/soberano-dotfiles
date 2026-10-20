@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# Soberano Hardware Popover Menu (Native Wayle Dropdown Replica)
-# Matches Wayle's volume & calendar dropdowns: compact 320px, anchored directly
-# under the hardware chip, auto-dismisses on click away or Escape.
+# Soberano Hardware Popover Menu (Native Wayle Popover Replica)
+# Sits seamlessly right below the top bar (y=54), auto-dismisses on click outside
+# or when clicking the bar icon again (toggle). Fixed position.
 # ==============================================================================
 
 import os
@@ -40,19 +40,17 @@ class HardwareDropdown(Gtk.Window):
     def __init__(self):
         super().__init__(type=Gtk.WindowType.TOPLEVEL)
         self.set_title("Hardware Popover")
-        self.set_default_size(320, 360)
-        self.set_resizable(False)
 
-        # Layer Shell Configuration - Anchored directly below the bar
+        # Layer Shell Configuration - Fullscreen overlay for reliable click-outside dismiss
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, True)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, True)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, True)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 34)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 160)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
 
-        # Keyboard shortcuts and cleanup (closes on Escape or click toggle)
+        # Keyboard shortcuts and cleanup
         self.connect("key-press-event", self.on_key_press)
         self.connect("destroy", self.on_destroy)
 
@@ -74,7 +72,6 @@ class HardwareDropdown(Gtk.Window):
         fg = "#e2e2e9"
         fg_muted = "#c4c6d0"
 
-        # Try reading from Matugen colors
         hypr_colors = os.path.expanduser("~/dotfiles/config/hypr/config/colors_dynamic.lua")
         if os.path.exists(hypr_colors):
             try:
@@ -94,27 +91,16 @@ class HardwareDropdown(Gtk.Window):
             background-color: transparent;
         }}
         .popover-card {{
-            background-color: alpha({bg}, 0.96);
+            background-color: alpha({bg}, 0.98);
             border: 1px solid alpha({accent}, 0.35);
             border-radius: 16px;
             padding: 14px 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
         }}
         .header-title {{
             font-size: 13px;
             font-weight: 700;
             color: {fg};
-        }}
-        .header-close {{
-            background: transparent;
-            color: {fg_muted};
-            border: none;
-            padding: 2px 6px;
-            font-weight: 700;
-            font-size: 13px;
-        }}
-        .header-close:hover {{
-            color: {accent};
         }}
         .metric-title {{
             font-size: 12px;
@@ -189,9 +175,34 @@ class HardwareDropdown(Gtk.Window):
             print("CSS loading notice:", e)
 
     def build_ui(self):
+        # Transparent backdrop covering screen (click outside to dismiss)
+        backdrop = Gtk.EventBox()
+        backdrop.set_visible_window(False)
+        backdrop.connect("button-press-event", lambda w, e: Gtk.main_quit())
+        self.add(backdrop)
+
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        backdrop.add(container)
+
+        # Card Container placed exactly below the top bar
+        card_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        card_wrapper.set_halign(Gtk.Align.END)
+        card_wrapper.set_valign(Gtk.Align.START)
+        # Margin: 54px from top (right beneath 50px bar surface) and 160px from right
+        card_wrapper.set_margin_top(54)
+        card_wrapper.set_margin_end(160)
+        container.pack_start(card_wrapper, False, False, 0)
+
+        # Actual Popover Card (catches its own clicks so clicks inside do not close)
+        card_ev = Gtk.EventBox()
+        card_ev.set_visible_window(False)
+        card_ev.connect("button-press-event", lambda w, e: True)
+        card_wrapper.pack_start(card_ev, False, False, 0)
+
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        outer.set_size_request(320, 360)
         outer.get_style_context().add_class("popover-card")
-        self.add(outer)
+        card_ev.add(outer)
 
         # Header Bar (Fixed / Native Dropdown Style)
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -446,7 +457,7 @@ class HardwareDropdown(Gtk.Window):
             data = conn.recv(1024).decode("utf-8").strip()
             conn.close()
             if data:
-                # Toggle: if already running, clicking closes it
+                # Toggle: clicking icon closes the open popover
                 Gtk.main_quit()
         except Exception:
             pass
