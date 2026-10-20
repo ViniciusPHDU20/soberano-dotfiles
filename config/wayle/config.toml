@@ -5,17 +5,17 @@ tearing-mode = false
 scale = 0.95
 location = "top"
 exclusive = true
-inset-edge = 0.25
-inset-ends = 0.4
-padding = 0.25
-padding-ends = 0.4
+inset-edge = 0.0
+inset-ends = 0.0
+padding = 0.28
+padding-ends = 0.45
 module-gap = 0.4
 bg = "bg-surface"
-background-opacity = 85
-border-location = "all"
-border-width = 1
-border-color = "border-subtle"
-rounding = "md"
+background-opacity = 95
+border-location = "bottom"
+border-width = 2
+border-color = "border-accent"
+rounding = "none"
 button-variant = "icon-square"
 button-opacity = 100
 button-bg-opacity = 90
@@ -24,20 +24,22 @@ button-icon-padding = 0.85
 button-label-size = 0.92
 button-label-weight = "semibold"
 button-label-padding = 0.85
-button-rounding = "sm"
+button-rounding = "none"
 button-gap = 0.75
 button-border-location = "all"
 button-border-width = 1
 button-group-padding = 0.15
 button-group-module-gap = 0.25
 button-group-background = "bg-elevated"
-button-group-opacity = 90
-button-group-rounding = "sm"
+button-group-opacity = 92
+button-group-rounding = "none"
 button-group-border-location = "none"
 dropdown-shadow = true
 dropdown-opacity = 96
 dropdown-autohide = true
 
+shadow = "none"
+button-group-border-color = "border-accent"
 [[bar.layout]]
 monitor = "*"
 show = true
@@ -52,13 +54,12 @@ right = [
     "systray",
     "notifications"
 ]
-
 [styling]
 scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
-matugen-scheme = "vibrant"
+matugen-scheme = "fidelity"
 matugen-contrast = -0.45
 matugen-source-color = 0
 matugen-light = false
@@ -87,7 +88,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Red_Eclipse.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Dreamy-Aesthetic-Home-Under-Moonlight.png"
 fit-mode = "fill"
 
 [osd]
