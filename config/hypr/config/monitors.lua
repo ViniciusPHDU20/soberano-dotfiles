@@ -1,8 +1,16 @@
--- Monitor Configuration (DP-1 @ 144Hz)
+-- Universal Monitor Configuration
 
 hl.monitor({
     output   = MONITOR1,
-    mode     = "1920x1080@144",
+    mode     = "preferred",
     position = "0x0",
     scale    = "1",
+})
+
+-- Universal Fallback for any PC / Laptop / Secondary Displays
+hl.monitor({
+    output   = "",
+    mode     = "preferred",
+    position = "auto",
+    scale    = "auto",
 })

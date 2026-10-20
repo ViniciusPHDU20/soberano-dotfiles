@@ -44,14 +44,14 @@ button-group-border-color = "border-accent"
 monitor = "*"
 show = true
 left = []
-center = ["hyprland-workspaces", "window-title", "systray", "clock"]
+center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
 right = []
 [styling]
 scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
-matugen-scheme = "fidelity"
+matugen-scheme = "tonal-spot"
 matugen-contrast = -0.45
 matugen-source-color = 0
 matugen-light = false
@@ -80,7 +80,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Dreamy-Aesthetic-Home-Under-Moonlight.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Lofi - Chill Room.png"
 fit-mode = "fill"
 
 [osd]
@@ -147,6 +147,7 @@ poll-interval-ms = 3000
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
+left-click = "kitty --class float_monitor -e btop"
 
 [modules.ram]
 format = "{{ percent }}%"
@@ -154,6 +155,7 @@ poll-interval-ms = 5000
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
+left-click = "kitty --class float_monitor -e btop"
 
 [modules.storage]
 mount-point = "/"
@@ -162,6 +164,7 @@ poll-interval-ms = 30000
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
+left-click = "kitty --class float_monitor -e btop"
 
 [modules.weather]
 provider = "open-meteo"
@@ -209,4 +212,14 @@ icon-scale = 0.9
 item-gap = 0.25
 internal-padding = 0.3
 border-show = false
+
+[[modules.custom]]
+id = "updates"
+command = "bash -c '$HOME/dotfiles/scripts/soberano-check-updates.sh'"
+interval-ms = 300000
+icon-name = "system-software-update-symbolic"
+icon-color = "auto"
+icon-bg-color = "accent"
+label-color = "accent"
+left-click = "soberano-update"
 

@@ -571,6 +571,14 @@ hl.env("SDL_VIDEODRIVER", "wayland")
 hl.env("CLUTTER_BACKEND", "wayland")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
+
+-- Universal Display Auto-Configuration (Plug & Play on any monitor)
+hl.monitor({
+    output   = "",
+    mode     = "preferred",
+    position = "auto",
+    scale    = "1",
+})
 LUA_EOF
 
 if [ "$HAS_NVIDIA" = true ] || [[ "$CHOSEN_GPU" =~ NVIDIA ]]; then

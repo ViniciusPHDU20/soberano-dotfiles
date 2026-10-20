@@ -70,6 +70,7 @@ right = [
     "volume",
     "microphone",
     "network",
+    "custom-updates",
     "systray",
     "notifications"
 ]"""
@@ -78,7 +79,7 @@ L_DOCK = """[[bar.layout]]
 monitor = "*"
 show = true
 left = []
-center = ["dashboard", "hyprland-workspaces", "window-title", "media", "cava", "volume", "clock", "notifications"]
+center = ["dashboard", "hyprland-workspaces", "window-title", "media", "cava", "volume", "custom-updates", "clock", "notifications"]
 right = []"""
 
 L_WINGS = """[[bar.layout]]
@@ -90,6 +91,7 @@ right = [
     { name = "hardware", modules = ["cpu", "ram", "storage"] },
     "weather",
     "volume",
+    "custom-updates",
     "clock",
     "notifications"
 ]"""
@@ -98,7 +100,7 @@ L_ISLAND = """[[bar.layout]]
 monitor = "*"
 show = true
 left = []
-center = ["dashboard", "hyprland-workspaces", "clock", "media", "volume"]
+center = ["dashboard", "hyprland-workspaces", "clock", "media", "custom-updates", "volume"]
 right = []"""
 
 L_AUDIOPHILE = """[[bar.layout]]
@@ -106,13 +108,13 @@ monitor = "*"
 show = true
 left = ["dashboard", "hyprland-workspaces"]
 center = ["media", "cava"]
-right = ["volume", "clock", "notifications"]"""
+right = ["volume", "custom-updates", "clock", "notifications"]"""
 
 L_ZEN = """[[bar.layout]]
 monitor = "*"
 show = true
 left = []
-center = ["hyprland-workspaces", "window-title", "systray", "clock"]
+center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
 right = []"""
 
 presets = {

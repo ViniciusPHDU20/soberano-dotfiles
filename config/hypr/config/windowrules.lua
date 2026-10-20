@@ -86,8 +86,16 @@ local floatApps = {
     { class = "^(.*dialog.*)$" },
     { title = "^(.*dialog.*)$" },
     { class = "^(hyprland-share-picker)$" },
+    { class = "^(float_monitor)$" },
 }
 for _, m in ipairs(floatApps) do hl.window_rule({ match = m, float = true }) end
+
+hl.window_rule({
+    match = { class = "^(float_monitor)$" },
+    float = true,
+    center = true,
+    size = { 960, 600 },
+})
 
 hl.window_rule({
     name  = "suppress-maximize-events",
