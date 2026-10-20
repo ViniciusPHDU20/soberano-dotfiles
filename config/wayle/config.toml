@@ -99,7 +99,7 @@ margin = 120.0
 border = true
 
 [modules.dashboard]
-icon-override = ""
+icon-override = "cm-beastie-symbolic"
 border-show = false
 icon-color = "accent"
 icon-bg-color = "bg-elevated"
