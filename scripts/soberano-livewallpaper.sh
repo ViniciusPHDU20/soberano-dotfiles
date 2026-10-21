@@ -83,6 +83,9 @@ find_workshop_dirs() {
 
 # Stop live wallpaper and restore static engine
 stop_live() {
+    systemctl --user stop soberano-wallpaper-watcher 2>/dev/null || true
+    systemctl --user reset-failed soberano-wallpaper-watcher 2>/dev/null || true
+    pkill -f soberano-wallpaper-watcher.py 2>/dev/null || true
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
     systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
@@ -113,6 +116,9 @@ apply_live() {
     mon=$(get_monitor)
 
     # 1. Cleanly terminate any running live wallpaper and suspend awww-daemon to allow video layer
+    systemctl --user stop soberano-wallpaper-watcher 2>/dev/null || true
+    systemctl --user reset-failed soberano-wallpaper-watcher 2>/dev/null || true
+    pkill -f soberano-wallpaper-watcher.py 2>/dev/null || true
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
     systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
@@ -149,6 +155,7 @@ apply_live() {
         --screen-root "$mon"
         --fps "$FPS"
         --scaling "$SCALING"
+        --clamp border
         --layer background
     )
 
@@ -162,10 +169,9 @@ apply_live() {
         cmd_args+=(--volume "$eff_vol")
     fi
 
-    # Crucial: pass --noautomute so Discord / browser / CAVA doesn't silently mute wallpaper audio
-    if [ "$AUTOMUTE" = "false" ]; then
-        cmd_args+=(--noautomute)
-    fi
+    # Crucial: pass --noautomute so Discord / browser / CAVA doesn't silently mute wallpaper audio.
+    # Dynamic workspace & focus auto-mute is handled natively by soberano-wallpaper-watcher.py
+    cmd_args+=(--noautomute)
 
     if [ "$AUDIO_PROCESSING" = "false" ]; then
         cmd_args+=(
@@ -214,6 +220,9 @@ apply_live() {
 
     # 4. Launch linux-wallpaperengine isolated as a systemd user unit
     systemd-run --user --unit=soberano-livewallpaper linux-wallpaperengine "${cmd_args[@]}" >/dev/null 2>&1
+
+    # 5. Spawn dynamic focus & workspace audio watcher as a systemd user unit
+    systemd-run --user --unit=soberano-wallpaper-watcher python3 "$HOME/dotfiles/scripts/soberano-wallpaper-watcher.py" >/dev/null 2>&1
 
     echo "$target" > "$STATE_FILE"
     notify-send -u normal -a "Soberano Wallpapers" "󰸉 Live Wallpaper Ativo" "${title} (${mon} • ${FPS} FPS • Vol: ${VOLUME}%)" 2>/dev/null || true
