@@ -84,8 +84,12 @@ find_workshop_dirs() {
 # Stop live wallpaper and restore static engine
 stop_live() {
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
+    systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
     rm -f "$STATE_FILE"
+
+    # Ensure awww service is restored
+    systemctl --user start awww-daemon.service 2>/dev/null || true
 
     # Restore awww + last static wallpaper
     if [ -f "$STATIC_RESTORE" ]; then
@@ -108,9 +112,11 @@ apply_live() {
     local mon
     mon=$(get_monitor)
 
-    # 1. Cleanly terminate any running live wallpaper or awww-daemon to prevent conflicts
+    # 1. Cleanly terminate any running live wallpaper and suspend awww-daemon to allow video layer
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
+    systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
+    systemctl --user stop awww-daemon.service 2>/dev/null || true
     killall -9 awww-daemon 2>/dev/null || true
 
     # 2. Extract Matugen color scheme from preview image if present

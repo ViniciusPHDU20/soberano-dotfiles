@@ -38,14 +38,16 @@ apply_wallpaper() {
 
     # Terminate any previous live wallpaper engines and matugen
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
+    systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
     rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/soberano_livewallpaper.state"
     pkill -x matugen 2>/dev/null || true
 
-    # Ensure awww-daemon is alive for static rendering
+    # Ensure awww-daemon service is active for static rendering
+    systemctl --user start awww-daemon.service 2>/dev/null || true
     if ! pgrep -x awww-daemon >/dev/null 2>&1; then
         awww-daemon >/dev/null 2>&1 &
-        sleep 0.15
+        sleep 0.2
     fi
 
     # Update persistent wallpaper path in Wayle config.toml

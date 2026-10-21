@@ -188,7 +188,7 @@ hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd("grim - | wl-copy"))
 
 -- Wallpaper + Matugen Dynamic Material You
 hl.bind(mainMod .. " + W",           hl.dsp.exec_cmd(scriptsDir .. "/WallpaperSelect.sh"))
-hl.bind(mainMod .. " + SHIFT + W",   hl.dsp.exec_cmd(scriptsDir .. "/WallpaperSelect.sh"))
+hl.bind(mainMod .. " + SHIFT + W",   hl.dsp.exec_cmd(scriptsDir .. "/soberano-livewallpaper.sh"))
 hl.bind(mainMod .. " + CONTROL + W", hl.dsp.exec_cmd(scriptsDir .. "/soberano-livewallpaper.sh"))
 hl.bind(mainMod .. " + ALT + W",     hl.dsp.exec_cmd(scriptsDir .. "/WallpaperSelect.sh --random"))
 hl.bind(mainMod .. " + ALT + B",     hl.dsp.exec_cmd(scriptsDir .. "/MatugenSchemeSelect.sh"))

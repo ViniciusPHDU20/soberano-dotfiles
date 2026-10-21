@@ -2,21 +2,21 @@
 tearing-mode = false
 
 [bar]
-scale = 0.95
+scale = 0.88
 location = "top"
 exclusive = true
-inset-edge = 0.35
-inset-ends = 0.5
-padding = 0.3
-padding-ends = 0.5
-module-gap = 0.4
+inset-edge = 0.2
+inset-ends = 0.8
+padding = 0.22
+padding-ends = 0.45
+module-gap = 0.35
 bg = "bg-surface"
-background-opacity = 88
+background-opacity = 92
 border-location = "all"
 border-width = 1
 border-color = "border-subtle"
-rounding = "lg"
-button-variant = "block-prefix"
+rounding = "full"
+button-variant = "basic"
 button-opacity = 100
 button-bg-opacity = 90
 button-icon-size = 0.95
@@ -24,15 +24,15 @@ button-icon-padding = 0.85
 button-label-size = 0.92
 button-label-weight = "semibold"
 button-label-padding = 0.85
-button-rounding = "sm"
+button-rounding = "full"
 button-gap = 0.75
-button-border-location = "all"
-button-border-width = 1
+button-border-location = "none"
+button-border-width = 0
 button-group-padding = 0.15
 button-group-module-gap = 0.25
 button-group-background = "bg-elevated"
 button-group-opacity = 92
-button-group-rounding = "sm"
+button-group-rounding = "full"
 button-group-border-location = "none"
 dropdown-shadow = true
 dropdown-opacity = 96
@@ -43,24 +43,15 @@ button-group-border-color = "border-accent"
 [[bar.layout]]
 monitor = "*"
 show = true
-left = ["dashboard", "hyprland-workspaces", "window-title"]
-center = ["clock", "media", "cava"]
-right = [
-    { name = "hardware", modules = ["custom-cpu", "custom-ram", "custom-storage"] },
-    "weather",
-    "volume",
-    "microphone",
-    "network",
-    "custom-updates",
-    "systray",
-    "notifications"
-]
+left = []
+center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
+right = []
 [styling]
 scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
-matugen-scheme = "neutral"
+matugen-scheme = "fidelity"
 matugen-contrast = -0.45
 matugen-source-color = 0
 matugen-light = false
@@ -89,7 +80,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Mountain_dark.dynamic.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Concept-Japanese house.png"
 fit-mode = "fill"
 
 [osd]
