@@ -318,6 +318,13 @@ fn ensure_thumbnail(orig: &Path, thumb: &Path) -> bool {
 }
 
 fn ensure_workshop_thumbnail(item_dir: &Path, thumb: &Path) -> PathBuf {
+    let item_id = item_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    let cache_dir = get_cache_dir();
+    let hires = cache_dir.join(format!("hires_{}.jpg", item_id));
+    if hires.exists() && fs::metadata(&hires).map(|m| m.len() > 1000).unwrap_or(false) {
+        return hires;
+    }
+
     if thumb.exists() && fs::metadata(thumb).map(|m| m.len() > 1000).unwrap_or(false) {
         return thumb.to_path_buf();
     }
@@ -335,7 +342,7 @@ fn ensure_workshop_thumbnail(item_dir: &Path, thumb: &Path) -> PathBuf {
                             "-o", thumb.to_string_lossy().as_ref(),
                             "-s", "640",
                             "-q", "9",
-                            "-t", "10%",
+                            "-t", "25%",
                         ])
                         .output();
                     if let Ok(o) = res {
