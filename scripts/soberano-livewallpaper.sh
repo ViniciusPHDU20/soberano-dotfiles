@@ -311,6 +311,11 @@ set_live_mute() {
     if [ -f "$CONFIG_FILE" ]; then
         jq ".silent = $bool_val" "$CONFIG_FILE" > "$CONFIG_FILE.tmp" 2>/dev/null && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
     fi
+    set_runtime_mute "$mute_val"
+}
+
+set_runtime_mute() {
+    local mute_val="${1:-1}"
     pactl list sink-inputs 2>/dev/null | awk -v m="$mute_val" '
         /^Sink Input #/ { id = substr($3, 2) }
         /application.name = "(linux-wallpaperengine|mpv)"/ || /application.process.binary = "linux-wallpaperengine"/ {
@@ -332,6 +337,9 @@ case "${1:-}" in
         ;;
     --mute)
         set_live_mute "${2:-1}"
+        ;;
+    --runtime-mute)
+        set_runtime_mute "${2:-1}"
         ;;
     --status)
         if systemctl --user is-active --quiet soberano-livewallpaper || pgrep -x linux-wallpaperengine >/dev/null 2>&1; then

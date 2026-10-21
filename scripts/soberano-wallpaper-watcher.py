@@ -2,7 +2,7 @@
 """
 Soberano Live Wallpaper Smart Focus & Workspace Audio Watcher
 Listens to Hyprland IPC socket2 events and dynamically manages
-wallpaper audio mute/unmute and pause states based on user preferences.
+wallpaper audio mute/unmute states based on user preferences.
 """
 
 import os
@@ -43,19 +43,29 @@ def get_hypr_socket():
         return sock_path
     return None
 
-def set_wallpaper_mute(mute: bool):
+def set_wallpaper_runtime_mute(mute: bool):
     mute_arg = "1" if mute else "0"
     script = os.path.expanduser("~/dotfiles/scripts/soberano-livewallpaper.sh")
-    subprocess.run([script, "--mute", mute_arg], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run([script, "--runtime-mute", mute_arg], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def get_active_workspace_info():
     try:
-        res = subprocess.run(["hyprctl", "activeworkspace", "-j"], capture_output=True, text=True, timeout=0.5)
+        res = subprocess.run(["hyprctl", "activeworkspace", "-j"], capture_output=True, text=True, timeout=0.3)
         if res.returncode == 0 and res.stdout.strip():
             return json.loads(res.stdout)
     except Exception:
         pass
     return None
+
+def get_active_window_class():
+    try:
+        res = subprocess.run(["hyprctl", "activewindow", "-j"], capture_output=True, text=True, timeout=0.3)
+        if res.returncode == 0 and res.stdout.strip():
+            d = json.loads(res.stdout)
+            return d.get("class") or ""
+    except Exception:
+        pass
+    return ""
 
 def main():
     sock_path = get_hypr_socket()
@@ -65,43 +75,45 @@ def main():
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         s.connect(sock_path)
-    except Exception as e:
+    except Exception:
         sys.exit(1)
 
     last_mute_state = None
 
     while True:
         try:
-            r, _, _ = select.select([s], [], [], 2.0)
+            # Wake up on any Hyprland socket event or every 1.5s
+            r, _, _ = select.select([s], [], [], 1.5)
             if r:
                 data = s.recv(4096)
                 if not data:
                     break
-                events = data.decode("utf-8", errors="ignore").splitlines()
-            else:
-                events = ["poll"]
 
             cfg = load_config()
+
+            # If user explicitly turned on "Mudo Total" in GUI, respect it
             if cfg.get("silent", False):
+                if last_mute_state is not True:
+                    set_wallpaper_runtime_mute(True)
+                    last_mute_state = True
                 continue
 
             automute = cfg.get("automute", False)
             fullscreen_pause = cfg.get("fullscreen_pause", True)
 
             ws_info = get_active_workspace_info()
-            if not ws_info:
-                continue
+            windows_count = ws_info.get("windows", 0) if ws_info else 0
+            has_fullscreen = ws_info.get("hasfullscreen", False) if ws_info else False
+            active_class = get_active_window_class()
 
-            windows_count = ws_info.get("windows", 0)
-            has_fullscreen = ws_info.get("hasfullscreen", False)
+            # Determine whether user is on clean desktop
+            is_desktop = (windows_count == 0) or (active_class == "")
 
-            # Determine whether wallpaper should be muted
             should_mute = False
 
             if automute:
-                # If automute is enabled, mute when user is in an active workspace with windows
-                # Unmute when user returns to a clean/empty desktop (windows == 0)
-                if windows_count > 0:
+                # Automute mode: mute when focused on an active app window, unmute on desktop
+                if not is_desktop:
                     should_mute = True
                 else:
                     should_mute = False
@@ -109,7 +121,7 @@ def main():
                 should_mute = True
 
             if should_mute != last_mute_state:
-                set_wallpaper_mute(should_mute)
+                set_wallpaper_runtime_mute(should_mute)
                 last_mute_state = should_mute
 
         except Exception:
