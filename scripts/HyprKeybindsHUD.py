@@ -9,7 +9,7 @@ import signal
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
-# Sync theme with system and Noctalia style
+# Sync theme with system and Soberano style
 try:
     import hud_theme_sync
     hud_theme_sync.sync_all()
