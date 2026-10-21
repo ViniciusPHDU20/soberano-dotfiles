@@ -155,7 +155,11 @@ apply_live() {
     if [ "$SILENT" = "true" ]; then
         cmd_args+=(--silent)
     else
-        cmd_args+=(--volume "$VOLUME")
+        local eff_vol="$VOLUME"
+        if [ "$eff_vol" -gt 0 ]; then
+            eff_vol=$(python3 -c "import sys; v=int(sys.argv[1]); print(min(100, int(round((v/100.0)**0.6 * 100))))" "$VOLUME" 2>/dev/null || echo "$VOLUME")
+        fi
+        cmd_args+=(--volume "$eff_vol")
     fi
 
     # Crucial: pass --noautomute so Discord / browser / CAVA doesn't silently mute wallpaper audio

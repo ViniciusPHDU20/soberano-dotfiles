@@ -269,6 +269,21 @@ fn detect_category(name_lower: &str) -> &'static str {
     }
 }
 
+fn map_perceptual_volume(slider_val: u32) -> u32 {
+    if slider_val == 0 {
+        return 0;
+    }
+    // Perceptual audio curve: slider_val^0.6 scaled to 100%
+    // 20% on slider -> ~38% PipeWire
+    // 30% on slider -> ~49% PipeWire
+    // 50% on slider -> ~66% PipeWire
+    // 80% on slider -> ~87% PipeWire
+    // 100% on slider -> 100% PipeWire
+    let norm = (slider_val as f64) / 100.0;
+    let mapped = norm.powf(0.6) * 100.0;
+    mapped.round().clamp(0.0, 100.0) as u32
+}
+
 fn get_thumbnail_path(orig: &Path, cache_dir: &Path) -> PathBuf {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -281,14 +296,61 @@ fn get_thumbnail_path(orig: &Path, cache_dir: &Path) -> PathBuf {
 }
 
 fn ensure_thumbnail(orig: &Path, thumb: &Path) -> bool {
-    if thumb.exists() {
+    if thumb.exists() && fs::metadata(thumb).map(|m| m.len() > 1000).unwrap_or(false) {
         return true;
     }
-    if let Ok(pixbuf) = Pixbuf::from_file_at_scale(orig, THUMB_W, THUMB_H, true) {
-        let _ = pixbuf.savev(thumb, "jpeg", &[("quality", "85")]);
+    // High-DPI supersampled thumbnail (500x281, 16:9)
+    if let Ok(pixbuf) = Pixbuf::from_file_at_scale(orig, 500, 281, true) {
+        let _ = pixbuf.savev(thumb, "jpeg", &[("quality", "90")]);
         return true;
     }
     false
+}
+
+fn ensure_workshop_thumbnail(item_dir: &Path, thumb: &Path) -> PathBuf {
+    if thumb.exists() && fs::metadata(thumb).map(|m| m.len() > 1000).unwrap_or(false) {
+        return thumb.to_path_buf();
+    }
+
+    // 1. If it has an .mp4 or .webm, extract 640x360 crisp frame via ffmpegthumbnailer
+    if let Ok(entries) = fs::read_dir(item_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let p = entry.path();
+            if let Some(ext) = p.extension().and_then(|s| s.to_str()) {
+                let ext_l = ext.to_lowercase();
+                if ext_l == "mp4" || ext_l == "webm" {
+                    let res = Command::new("ffmpegthumbnailer")
+                        .args([
+                            "-i", p.to_string_lossy().as_ref(),
+                            "-o", thumb.to_string_lossy().as_ref(),
+                            "-s", "640",
+                            "-q", "9",
+                            "-t", "10%",
+                        ])
+                        .output();
+                    if let Ok(o) = res {
+                        if o.status.success() && thumb.exists() && fs::metadata(thumb).map(|m| m.len() > 1000).unwrap_or(false) {
+                            return thumb.to_path_buf();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Fallback to preview.* image
+    for cand in ["preview.jpg", "preview.png", "preview.gif", "preview.webp"] {
+        let prev_p = item_dir.join(cand);
+        if prev_p.is_file() {
+            if let Ok(pixbuf) = Pixbuf::from_file_at_scale(&prev_p, 500, 281, true) {
+                let _ = pixbuf.savev(thumb, "jpeg", &[("quality", "90")]);
+                return thumb.to_path_buf();
+            }
+            return prev_p;
+        }
+    }
+
+    thumb.to_path_buf()
 }
 
 fn find_workshop_dirs() -> Vec<PathBuf> {
@@ -390,7 +452,6 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                     let project_file = p.join("project.json");
                     let mut title = p.file_name().and_then(|s| s.to_str()).unwrap_or("Workshop Item").to_string();
                     let mut engine_type = "Scene".to_string();
-                    let mut preview_found: Option<PathBuf> = None;
                     let mut detected_cat = "Geral".to_string();
 
                     if project_file.is_file() {
@@ -406,12 +467,6 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                                         engine_type = t.trim().to_string();
                                     }
                                 }
-                                if let Some(prev) = meta.preview {
-                                    let prev_p = p.join(prev);
-                                    if prev_p.is_file() {
-                                        preview_found = Some(prev_p);
-                                    }
-                                }
                                 if let Some(tags) = meta.tags {
                                     let tag_str = tags.join(" ").to_lowercase();
                                     let det = detect_category(&tag_str);
@@ -423,29 +478,17 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                         }
                     }
 
-                    if preview_found.is_none() {
-                        for candidate in ["preview.jpg", "preview.png", "preview.gif", "preview.webp"] {
-                            let cand_p = p.join(candidate);
-                            if cand_p.is_file() {
-                                preview_found = Some(cand_p);
-                                break;
-                            }
-                        }
-                    }
+                    let thumb = get_thumbnail_path(&p, &cache_dir);
+                    let crisp_preview = ensure_workshop_thumbnail(&p, &thumb);
 
-                    if let Some(preview_file) = preview_found {
-                        let thumb = get_thumbnail_path(&p, &cache_dir);
-                        ensure_thumbnail(&preview_file, &thumb);
-
-                        items.push(WallpaperItem {
-                            path: p.clone(),
-                            name: title,
-                            category: detected_cat,
-                            thumbnail_path: thumb,
-                            preview_path: preview_file,
-                            kind: WallpaperKind::Live { engine_type },
-                        });
-                    }
+                    items.push(WallpaperItem {
+                        path: p.clone(),
+                        name: title,
+                        category: detected_cat,
+                        thumbnail_path: crisp_preview.clone(),
+                        preview_path: crisp_preview,
+                        kind: WallpaperKind::Live { engine_type },
+                    });
                 }
             }
         }
@@ -1509,7 +1552,8 @@ fn build_ui(app: &Application) {
         cfg_vol.borrow_mut().volume = v;
         vol_val_lbl_clone.set_text(&format!("{}%", v));
         save_live_config(&cfg_vol.borrow());
-        set_live_volume_realtime(v);
+        let effective_vol = map_perceptual_volume(v);
+        set_live_volume_realtime(effective_vol);
     });
 
     vol_box.append(&vol_header_row);
@@ -1606,10 +1650,14 @@ fn build_ui(app: &Application) {
     perf_card.append(&perf_title);
 
     let fps_box = GtkBox::new(Orientation::Vertical, 6);
-    let fps_lbl = Label::new(Some("Limite de Taxa de Quadros (FPS)"));
+    let fps_lbl = Label::new(Some("Limite de Taxa de Quadros (FPS / Hz)"));
     fps_lbl.add_css_class("settings-row-label");
     fps_lbl.set_halign(gtk4::Align::Start);
+    let fps_desc = Label::new(Some("Vídeos pré-gravados usam seu framerate nativo (30/60 FPS). Cenas 3D/OpenGL atingem 144/240 Hz."));
+    fps_desc.add_css_class("settings-row-desc");
+    fps_desc.set_halign(gtk4::Align::Start);
     fps_box.append(&fps_lbl);
+    fps_box.append(&fps_desc);
 
     let fps_chips_row = GtkBox::new(Orientation::Horizontal, 8);
     let fps_options = [30, 60, 120, 144, 240];
@@ -1645,10 +1693,10 @@ fn build_ui(app: &Application) {
     let pause_row = GtkBox::new(Orientation::Horizontal, 12);
     let pause_texts = GtkBox::new(Orientation::Vertical, 2);
     pause_texts.set_hexpand(true);
-    let pause_title = Label::new(Some("Pausar em Janelas Fullscreen / Jogos"));
+    let pause_title = Label::new(Some("Pausar em Tela Cheia (Super + F / Jogos)"));
     pause_title.add_css_class("settings-row-label");
     pause_title.set_halign(gtk4::Align::Start);
-    let pause_desc = Label::new(Some("Suspende a renderização para 0% de uso de GPU em tela cheia"));
+    let pause_desc = Label::new(Some("Suspende vídeo e áudio para 0% de GPU quando um jogo ou janela estiver em tela cheia real"));
     pause_desc.add_css_class("settings-row-desc");
     pause_desc.set_halign(gtk4::Align::Start);
     pause_texts.append(&pause_title);
