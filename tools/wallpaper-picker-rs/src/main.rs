@@ -5,6 +5,7 @@ use gtk4::{
     Picture, ScrolledWindow, SearchEntry,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
+use serde::Deserialize;
 use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,12 +19,31 @@ const THUMB_H: i32 = 138;
 const HERO_W: i32 = 440;
 const HERO_H: i32 = 248;
 
+#[derive(Clone, Debug, PartialEq)]
+enum WallpaperKind {
+    Static,
+    Live { engine_type: String },
+}
+
 #[derive(Clone, Debug)]
 struct WallpaperItem {
     path: PathBuf,
     name: String,
     category: String,
     thumbnail_path: PathBuf,
+    preview_path: PathBuf,
+    kind: WallpaperKind,
+}
+
+#[derive(Deserialize, Default)]
+#[allow(dead_code)]
+struct ProjectJson {
+    title: Option<String>,
+    #[serde(rename = "type")]
+    item_type: Option<String>,
+    preview: Option<String>,
+    file: Option<String>,
+    tags: Option<Vec<String>>,
 }
 
 struct SystemColors {
@@ -85,13 +105,6 @@ fn load_system_colors() -> SystemColors {
     }
 }
 
-fn get_cache_dir() -> PathBuf {
-    let mut dir = dirs_or_home_cache();
-    dir.push("soberano_thumbnails");
-    let _ = fs::create_dir_all(&dir);
-    dir
-}
-
 fn dirs_or_home_cache() -> PathBuf {
     if let Ok(c) = std::env::var("XDG_CACHE_HOME") {
         PathBuf::from(c)
@@ -102,15 +115,42 @@ fn dirs_or_home_cache() -> PathBuf {
     }
 }
 
-fn current_wallpaper_path() -> Option<PathBuf> {
-    let state = dirs_or_home_cache().join("soberano_wallpaper.txt");
+fn get_cache_dir() -> PathBuf {
+    let mut dir = dirs_or_home_cache();
+    dir.push("soberano_thumbnails");
+    let _ = fs::create_dir_all(&dir);
+    dir
+}
+
+fn is_live_engine_running() -> bool {
+    Command::new("pgrep")
+        .args(["-x", "linux-wallpaperengine"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn current_active_wallpaper() -> (Option<PathBuf>, bool) {
+    let cache_dir = dirs_or_home_cache();
+    if is_live_engine_running() {
+        let state = cache_dir.join("soberano_livewallpaper.state");
+        if let Ok(content) = fs::read_to_string(state) {
+            let trimmed = content.trim();
+            if !trimmed.is_empty() {
+                return (Some(PathBuf::from(trimmed)), true);
+            }
+        }
+    }
+
+    let state = cache_dir.join("soberano_wallpaper.txt");
     if let Ok(content) = fs::read_to_string(state) {
         let trimmed = content.trim();
         if !trimmed.is_empty() {
-            return Some(PathBuf::from(trimmed));
+            return (Some(PathBuf::from(trimmed)), false);
         }
     }
-    None
+
+    (None, false)
 }
 
 fn detect_category(name_lower: &str) -> &'static str {
@@ -153,62 +193,208 @@ fn ensure_thumbnail(orig: &Path, thumb: &Path) -> bool {
     false
 }
 
-fn scan_wallpapers() -> Vec<WallpaperItem> {
+fn find_workshop_dirs() -> Vec<PathBuf> {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
-    let wall_dir = PathBuf::from(home).join("dotfiles/wallpapers");
-    let cache_dir = get_cache_dir();
+    let mut dirs = Vec::new();
 
-    let mut items = Vec::new();
-    for entry in WalkDir::new(&wall_dir).max_depth(2).into_iter().filter_map(|e| e.ok()) {
-        let p = entry.path();
-        if p.is_file() {
-            if let Some(ext) = p.extension().and_then(|s| s.to_str()) {
-                let ext_lower = ext.to_lowercase();
-                if ["png", "jpg", "jpeg", "webp"].contains(&ext_lower.as_str()) {
-                    let thumb = get_thumbnail_path(p, &cache_dir);
-                    ensure_thumbnail(p, &thumb);
+    // 1. Default Steam library
+    let default_ws = PathBuf::from(&home).join(".local/share/Steam/steamapps/workshop/content/431960");
+    if default_ws.is_dir() {
+        dirs.push(default_ws);
+    }
 
-                    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("Wallpaper");
-                    let category = detect_category(&stem.to_lowercase()).to_string();
-                    items.push(WallpaperItem {
-                        path: p.to_path_buf(),
-                        name: stem.to_string(),
-                        category,
-                        thumbnail_path: thumb,
-                    });
+    // 2. Parse libraryfolders.vdf
+    let vdf_candidates = [
+        PathBuf::from(&home).join(".local/share/Steam/steamapps/libraryfolders.vdf"),
+        PathBuf::from(&home).join(".steam/steam/steamapps/libraryfolders.vdf"),
+    ];
+
+    for vdf in &vdf_candidates {
+        if let Ok(content) = fs::read_to_string(vdf) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("\"path\"") {
+                    let parts: Vec<&str> = trimmed.split('"').collect();
+                    if parts.len() >= 4 {
+                        let ws = PathBuf::from(parts[3]).join("steamapps/workshop/content/431960");
+                        if ws.is_dir() && !dirs.contains(&ws) {
+                            dirs.push(ws);
+                        }
+                    }
                 }
             }
         }
     }
-    items.sort_by_key(|a| a.name.to_lowercase());
+
+    // 3. User custom live wallpaper directory
+    let user_live = PathBuf::from(&home).join("wallpapers/live");
+    let _ = fs::create_dir_all(&user_live);
+    if user_live.is_dir() && !dirs.contains(&user_live) {
+        dirs.push(user_live);
+    }
+
+    dirs
+}
+
+fn scan_wallpapers() -> Vec<WallpaperItem> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let wall_dir = PathBuf::from(&home).join("dotfiles/wallpapers");
+    let cache_dir = get_cache_dir();
+
+    let mut items = Vec::new();
+
+    // 1. Scan Static Wallpapers
+    if wall_dir.is_dir() {
+        for entry in WalkDir::new(&wall_dir).max_depth(2).into_iter().filter_map(|e| e.ok()) {
+            let p = entry.path();
+            if p.is_file() {
+                if let Some(ext) = p.extension().and_then(|s| s.to_str()) {
+                    let ext_lower = ext.to_lowercase();
+                    if ["png", "jpg", "jpeg", "webp"].contains(&ext_lower.as_str()) {
+                        let thumb = get_thumbnail_path(p, &cache_dir);
+                        ensure_thumbnail(p, &thumb);
+
+                        let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("Wallpaper");
+                        let category = detect_category(&stem.to_lowercase()).to_string();
+                        items.push(WallpaperItem {
+                            path: p.to_path_buf(),
+                            name: stem.to_string(),
+                            category,
+                            thumbnail_path: thumb,
+                            preview_path: p.to_path_buf(),
+                            kind: WallpaperKind::Static,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Scan Steam Workshop & Live Wallpapers
+    for ws_dir in find_workshop_dirs() {
+        if let Ok(entries) = fs::read_dir(&ws_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let p = entry.path();
+                if p.is_dir() {
+                    let project_file = p.join("project.json");
+                    let mut title = p.file_name().and_then(|s| s.to_str()).unwrap_or("Workshop Item").to_string();
+                    let mut engine_type = "Scene".to_string();
+                    let mut preview_found: Option<PathBuf> = None;
+                    let mut detected_cat = "Live".to_string();
+
+                    if project_file.is_file() {
+                        if let Ok(content) = fs::read_to_string(&project_file) {
+                            if let Ok(meta) = serde_json::from_str::<ProjectJson>(&content) {
+                                if let Some(t) = meta.title {
+                                    if !t.trim().is_empty() {
+                                        title = t.trim().to_string();
+                                    }
+                                }
+                                if let Some(t) = meta.item_type {
+                                    if !t.trim().is_empty() {
+                                        engine_type = t.trim().to_string();
+                                    }
+                                }
+                                if let Some(prev) = meta.preview {
+                                    let prev_p = p.join(prev);
+                                    if prev_p.is_file() {
+                                        preview_found = Some(prev_p);
+                                    }
+                                }
+                                if let Some(tags) = meta.tags {
+                                    let tag_str = tags.join(" ").to_lowercase();
+                                    let det = detect_category(&tag_str);
+                                    if det != "Outros" {
+                                        detected_cat = det.to_string();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if preview_found.is_none() {
+                        for candidate in ["preview.jpg", "preview.png", "preview.gif", "preview.webp"] {
+                            let cand_p = p.join(candidate);
+                            if cand_p.is_file() {
+                                preview_found = Some(cand_p);
+                                break;
+                            }
+                        }
+                    }
+
+                    if let Some(preview_file) = preview_found {
+                        let thumb = get_thumbnail_path(&p, &cache_dir);
+                        ensure_thumbnail(&preview_file, &thumb);
+
+                        items.push(WallpaperItem {
+                            path: p.clone(),
+                            name: title,
+                            category: detected_cat,
+                            thumbnail_path: thumb,
+                            preview_path: preview_file,
+                            kind: WallpaperKind::Live { engine_type },
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    items.sort_by(|a, b| {
+        let a_live = matches!(a.kind, WallpaperKind::Live { .. });
+        let b_live = matches!(b.kind, WallpaperKind::Live { .. });
+        if a_live != b_live {
+            // Put static first or live? Group nicely
+            b_live.cmp(&a_live)
+        } else {
+            a.name.to_lowercase().cmp(&b.name.to_lowercase())
+        }
+    });
+
     items
 }
 
-fn apply_wallpaper(path: &Path) {
-    let path_str = path.to_string_lossy();
+fn apply_wallpaper(item: &WallpaperItem) {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
-    let script_path = PathBuf::from(&home).join("dotfiles/scripts/WallpaperSelect.sh");
-
-    if script_path.exists() {
-        let _ = Command::new(&script_path)
-            .args(["--apply", path_str.as_ref()])
-            .status();
-    } else {
-        let _ = Command::new("matugen")
-            .args([
-                "image",
-                path_str.as_ref(),
-                "-t",
-                "scheme-vibrant",
-                "-m",
-                "dark",
-                "--prefer",
-                "saturation",
-                "--contrast",
-                "-0.45",
-            ])
-            .status();
+    match &item.kind {
+        WallpaperKind::Live { .. } => {
+            let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
+            let _ = Command::new(&script)
+                .arg(&item.path)
+                .status();
+        }
+        WallpaperKind::Static => {
+            let script = PathBuf::from(&home).join("dotfiles/scripts/WallpaperSelect.sh");
+            if script.exists() {
+                let _ = Command::new(&script)
+                    .args(["--apply", item.path.to_string_lossy().as_ref()])
+                    .status();
+            } else {
+                let _ = Command::new("matugen")
+                    .args([
+                        "image",
+                        item.path.to_string_lossy().as_ref(),
+                        "-t",
+                        "scheme-vibrant",
+                        "-m",
+                        "dark",
+                        "--prefer",
+                        "saturation",
+                        "--contrast",
+                        "-0.45",
+                    ])
+                    .status();
+            }
+        }
     }
+}
+
+fn stop_live_wallpaper() {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
+    let _ = Command::new(&script)
+        .arg("--stop")
+        .status();
 }
 
 fn load_css() {
@@ -353,6 +539,23 @@ fn load_css() {
             box-shadow: 0 4px 16px {card_hover_glow};
         }}
 
+        .hero-btn-stop {{
+            background-color: rgba(255, 84, 80, 0.16);
+            border: 1px solid rgba(255, 84, 80, 0.45);
+            border-radius: 16px;
+            color: #ff5450;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 10px 18px;
+            transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        }}
+
+        .hero-btn-stop:hover {{
+            background-color: #ff5450;
+            color: #ffffff;
+            box-shadow: 0 4px 16px rgba(255, 84, 80, 0.4);
+        }}
+
         .hero-hint {{
             font-size: 11px;
             color: {text_muted};
@@ -473,6 +676,16 @@ fn load_css() {
             letter-spacing: 0.5px;
         }}
 
+        .card-badge-live {{
+            font-size: 9px;
+            font-weight: 800;
+            color: #ffffff;
+            background-color: #ff5450;
+            border-radius: 5px;
+            padding: 2px 6px;
+            letter-spacing: 0.5px;
+        }}
+
         /* Custom Modern Scrollbar */
         scrolledwindow scrollbar.vertical {{
             background-color: transparent;
@@ -522,14 +735,10 @@ fn build_ui(app: &Application) {
     window.set_anchor(Edge::Right, true);
 
     let wallpapers = scan_wallpapers();
-    let current_wp = current_wallpaper_path();
+    let (current_wp, _is_live_active) = current_active_wallpaper();
 
-    // Find currently selected item (default to active wallpaper, or first in list)
     let initial_idx = if let Some(ref cur) = current_wp {
-        wallpapers
-            .iter()
-            .position(|w| &w.path == cur)
-            .unwrap_or(0)
+        wallpapers.iter().position(|w| &w.path == cur).unwrap_or(0)
     } else {
         0
     };
@@ -540,6 +749,8 @@ fn build_ui(app: &Application) {
             name: "Nenhum".to_string(),
             category: "Todos".to_string(),
             thumbnail_path: PathBuf::new(),
+            preview_path: PathBuf::new(),
+            kind: WallpaperKind::Static,
         }),
     ));
 
@@ -559,7 +770,6 @@ fn build_ui(app: &Application) {
     let hero_stage = GtkBox::new(Orientation::Vertical, 16);
     hero_stage.add_css_class("hero-stage");
 
-    // Large Hero Picture (uses Picture with ContentFit::Cover)
     let hero_picture = Picture::new();
     hero_picture.set_content_fit(ContentFit::Cover);
     hero_picture.set_can_shrink(true);
@@ -572,19 +782,42 @@ fn build_ui(app: &Application) {
             pic_widget.set_paintable(Some(&texture));
         }
     };
-    update_hero_image(&hero_picture, &selected_item.borrow().path);
+    update_hero_image(&hero_picture, &selected_item.borrow().preview_path);
 
     // Metadata Row
     let meta_row = GtkBox::new(Orientation::Horizontal, 8);
     meta_row.set_valign(gtk4::Align::Center);
 
-    let category_badge = Label::new(Some(&selected_item.borrow().category));
+    let category_badge = Label::new(None);
     category_badge.add_css_class("hero-category-badge");
 
-    let is_cur_active = current_wp.as_ref() == Some(&selected_item.borrow().path);
-    let status_pill = Label::new(Some(if is_cur_active { "✓ ATUAL NO DESKTOP" } else { "PRONTO PARA APLICAR" }));
+    let status_pill = Label::new(None);
     status_pill.add_css_class("hero-status-pill");
-    status_pill.add_css_class(if is_cur_active { "active" } else { "idle" });
+
+    let update_meta_labels = |cat_widget: &Label, status_widget: &Label, item: &WallpaperItem| {
+        match &item.kind {
+            WallpaperKind::Live { engine_type } => {
+                cat_widget.set_text(&format!("󰑋 LIVE • {}", engine_type.to_uppercase()));
+            }
+            WallpaperKind::Static => {
+                cat_widget.set_text(&item.category);
+            }
+        }
+
+        let (cur_wp_now, cur_is_live) = current_active_wallpaper();
+        let is_cur_active = cur_wp_now.as_ref() == Some(&item.path);
+
+        if is_cur_active {
+            status_widget.set_text(if cur_is_live { "✓ LIVE ATIVO NO DESKTOP" } else { "✓ ATUAL NO DESKTOP" });
+            status_widget.remove_css_class("idle");
+            status_widget.add_css_class("active");
+        } else {
+            status_widget.set_text("PRONTO PARA APLICAR");
+            status_widget.remove_css_class("active");
+            status_widget.add_css_class("idle");
+        }
+    };
+    update_meta_labels(&category_badge, &status_pill, &selected_item.borrow());
 
     meta_row.append(&category_badge);
     meta_row.append(&status_pill);
@@ -604,15 +837,25 @@ fn build_ui(app: &Application) {
     let apply_btn = Button::with_label("󰸉  Aplicar Wallpaper");
     apply_btn.add_css_class("hero-btn-apply");
 
+    let update_apply_btn_label = |btn: &Button, item: &WallpaperItem| {
+        match &item.kind {
+            WallpaperKind::Live { engine_type } => {
+                btn.set_label(&format!("󰑋  Iniciar Live Wallpaper ({})", engine_type.to_uppercase()));
+            }
+            WallpaperKind::Static => {
+                btn.set_label("󰸉  Aplicar Wallpaper");
+            }
+        }
+    };
+    update_apply_btn_label(&apply_btn, &selected_item.borrow());
+
     let win_apply = window.clone();
     let sel_for_apply = Rc::clone(&selected_item);
     apply_btn.connect_clicked(move |_| {
         let item = sel_for_apply.borrow();
-        if item.path.exists() {
-            apply_wallpaper(&item.path);
-            win_apply.close();
-            std::process::exit(0);
-        }
+        apply_wallpaper(&item);
+        win_apply.close();
+        std::process::exit(0);
     });
 
     let random_btn = Button::with_label("󰒝  Sortear Aleatório");
@@ -628,18 +871,28 @@ fn build_ui(app: &Application) {
                 .map(|d| d.as_nanos())
                 .unwrap_or(42);
             let idx = (seed as usize) % all_wps_rand.len();
-            apply_wallpaper(&all_wps_rand[idx].path);
+            apply_wallpaper(&all_wps_rand[idx]);
             win_rand.close();
             std::process::exit(0);
         }
     });
 
-    let hint_label = Label::new(Some("Atalhos:  [Enter] Aplicar  •  [Esc] Fechar  •  [Setas] Navegar"));
+    let stop_btn = Button::with_label("⏹  Parar Live Wallpaper");
+    stop_btn.add_css_class("hero-btn-stop");
+    let win_stop = window.clone();
+    stop_btn.connect_clicked(move |_| {
+        stop_live_wallpaper();
+        win_stop.close();
+        std::process::exit(0);
+    });
+
+    let hint_label = Label::new(Some("Atalhos:  [Enter] Aplicar  •  [Esc] Fechar  •  Duplo Clique Aplica"));
     hint_label.add_css_class("hero-hint");
     hint_label.set_halign(gtk4::Align::Center);
 
     actions_box.append(&apply_btn);
     actions_box.append(&random_btn);
+    actions_box.append(&stop_btn);
     actions_box.append(&hint_label);
 
     hero_stage.append(&hero_picture);
@@ -659,7 +912,7 @@ fn build_ui(app: &Application) {
     top_bar.set_valign(gtk4::Align::Center);
 
     let search_entry = SearchEntry::new();
-    search_entry.set_placeholder_text(Some("Pesquisar entre todos os wallpapers..."));
+    search_entry.set_placeholder_text(Some("Pesquisar entre wallpapers estáticos e animados (Steam)..."));
     search_entry.add_css_class("search-field");
     search_entry.set_hexpand(true);
 
@@ -680,7 +933,7 @@ fn build_ui(app: &Application) {
 
     // Category Filter Chips Bar
     let chips_bar = GtkBox::new(Orientation::Horizontal, 8);
-    let categories = ["Todos", "Dynamic", "Anime", "Lofi", "Natureza", "City", "Space"];
+    let categories = ["Todos", "Live", "Dynamic", "Anime", "Lofi", "Natureza", "City", "Space"];
     let active_category = Rc::new(RefCell::new("Todos".to_string()));
     let category_buttons = Rc::new(RefCell::new(Vec::<Button>::new()));
 
@@ -697,6 +950,7 @@ fn build_ui(app: &Application) {
         container: GtkBox,
         name_lower: String,
         category: String,
+        is_live: bool,
         item: WallpaperItem,
     }
     let card_registry = Rc::new(RefCell::new(Vec::<CardMeta>::new()));
@@ -706,29 +960,18 @@ fn build_ui(app: &Application) {
     let hero_title_rc = hero_title.clone();
     let cat_badge_rc = category_badge.clone();
     let status_pill_rc = status_pill.clone();
-    let cur_wp_rc = current_wp.clone();
+    let apply_btn_rc = apply_btn.clone();
     let sel_item_rc = Rc::clone(&selected_item);
     let card_reg_for_sel = Rc::clone(&card_registry);
 
     let select_card = Rc::new(move |item: WallpaperItem| {
         *sel_item_rc.borrow_mut() = item.clone();
 
-        // Update hero image & metadata
-        update_hero_image(&hero_img_rc, &item.path);
+        update_hero_image(&hero_img_rc, &item.preview_path);
         hero_title_rc.set_text(&item.name);
-        cat_badge_rc.set_text(&item.category);
+        update_meta_labels(&cat_badge_rc, &status_pill_rc, &item);
+        update_apply_btn_label(&apply_btn_rc, &item);
 
-        let is_now_active = cur_wp_rc.as_ref() == Some(&item.path);
-        status_pill_rc.set_text(if is_now_active { "✓ ATUAL NO DESKTOP" } else { "PRONTO PARA APLICAR" });
-        if is_now_active {
-            status_pill_rc.remove_css_class("idle");
-            status_pill_rc.add_css_class("active");
-        } else {
-            status_pill_rc.remove_css_class("active");
-            status_pill_rc.add_css_class("idle");
-        }
-
-        // Highlight selected card border
         let reg = card_reg_for_sel.borrow();
         for meta in reg.iter() {
             if meta.item.path == item.path {
@@ -750,7 +993,8 @@ fn build_ui(app: &Application) {
             card_item.add_css_class("selected");
         }
 
-        let is_active_now = current_wp.as_ref() == Some(&item.path);
+        let (cur_wp_now, cur_is_live) = current_active_wallpaper();
+        let is_active_now = cur_wp_now.as_ref() == Some(&item.path);
 
         if let Ok(pixbuf) = Pixbuf::from_file(&item.thumbnail_path) {
             let texture = Texture::for_pixbuf(&pixbuf);
@@ -770,8 +1014,14 @@ fn build_ui(app: &Application) {
         name_label.set_halign(gtk4::Align::Start);
         label_row.append(&name_label);
 
+        if let WallpaperKind::Live { .. } = item.kind {
+            let live_tag = Label::new(Some("󰑋 LIVE"));
+            live_tag.add_css_class("card-badge-live");
+            label_row.append(&live_tag);
+        }
+
         if is_active_now {
-            let badge = Label::new(Some("✓ ATIVO"));
+            let badge = Label::new(Some(if cur_is_live { "✓ LIVE" } else { "✓ ATIVO" }));
             badge.add_css_class("card-badge-active");
             label_row.append(&badge);
         }
@@ -785,7 +1035,7 @@ fn build_ui(app: &Application) {
         click.connect_released(move |_, n_press, _, _| {
             sel_fn(item_click.clone());
             if n_press >= 2 {
-                apply_wallpaper(&item_click.path);
+                apply_wallpaper(&item_click);
                 win_apply_quick.close();
                 std::process::exit(0);
             }
@@ -801,6 +1051,7 @@ fn build_ui(app: &Application) {
             container: card_item,
             name_lower: item.name.to_lowercase(),
             category: item.category.clone(),
+            is_live: matches!(item.kind, WallpaperKind::Live { .. }),
             item: item.clone(),
         });
     }
@@ -817,7 +1068,13 @@ fn build_ui(app: &Application) {
 
         for meta in reg.iter() {
             let matches_query = query.is_empty() || meta.name_lower.contains(&query);
-            let matches_cat = cat == "Todos" || meta.category == cat;
+            let matches_cat = if cat == "Todos" {
+                true
+            } else if cat == "Live" {
+                meta.is_live
+            } else {
+                meta.category == cat
+            };
             meta.child.set_visible(matches_query && matches_cat);
         }
     });
@@ -903,12 +1160,9 @@ fn build_ui(app: &Application) {
             std::process::exit(0);
         } else if keyval == gdk::Key::Return || keyval == gdk::Key::KP_Enter {
             let item = sel_for_key.borrow();
-            if item.path.exists() {
-                apply_wallpaper(&item.path);
-                win_key.close();
-                std::process::exit(0);
-            }
-            glib::Propagation::Stop
+            apply_wallpaper(&item);
+            win_key.close();
+            std::process::exit(0);
         } else {
             glib::Propagation::Proceed
         }
