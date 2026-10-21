@@ -87,6 +87,7 @@ local floatApps = {
     { title = "^(.*dialog.*)$" },
     { class = "^(hyprland-share-picker)$" },
     { class = "^(float_monitor)$" },
+    { class = "^([Rr]v[Rr]vpn[Gg]ui\\.exe)$" },
 }
 for _, m in ipairs(floatApps) do hl.window_rule({ match = m, float = true }) end
 
