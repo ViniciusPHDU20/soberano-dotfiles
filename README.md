@@ -131,6 +131,7 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 | `Super + Q` | Abrir Terminal Kitty |
 | `Super + Espaço` / `Super + D` | Lançador de Aplicativos (Fuzzel) |
 | `Super + W` | Galeria de Wallpapers GTK4 (Cinema Studio) |
+| `Super + Ctrl + W` | Seletor de Wallpapers Animados (Steam Wallpaper Engine + Matugen) |
 | `Super + Alt + W` | Wallpaper Aleatório com Transição + Matugen |
 | `Super + Shift + T` | Seletor de Temas Oficiais (Nordic, Cyberpunk, Catppuccin, Zen) |
 | `Super + Ctrl + B` | Seletor de Presets da Barra Wayle (10 layouts) |
@@ -166,7 +167,8 @@ soberano-dotfiles/
 │   └── quickshell/
 ├── scripts/
 │   ├── soberano-update.sh        # Motor de sincronização contínua Git
-│   ├── WallpaperSelect.sh        # Seletor de Wallpaper + Matugen
+│   ├── soberano-livewallpaper.sh # Motor de Live Wallpapers (Steam Wallpaper Engine + Matugen)
+│   ├── WallpaperSelect.sh        # Seletor de Wallpaper Estático + Matugen
 │   ├── MatugenSchemeSelect.sh    # Seletor de Esquemas de Cores
 │   ├── WayleBarPresetSelect.sh   # Seletor dos 10 Presets do Wayle
 │   ├── HyprAnimationsSelector.sh # Perfis de física e animações

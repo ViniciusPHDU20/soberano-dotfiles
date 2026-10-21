@@ -540,13 +540,14 @@ fi
 
 sudo pacman -S --needed --noconfirm "${SYSTEM_STACK[@]}"
 
-# 8. AUR Packages (Wayle & Matugen)
-info "[5/6] Instalando Wayle Shell e Matugen (AUR)..."
+# 8. AUR Packages (Wayle, Matugen & Live Wallpaper Engine)
+info "[5/6] Instalando Wayle Shell, Matugen e Wallpaper Engine (AUR)..."
 AUR_PKGS=(
     wayle-bin
     matugen-bin
+    linux-wallpaperengine-v3-bin
 )
-$AUR_CMD -S --needed --noconfirm "${AUR_PKGS[@]}"
+$AUR_CMD -S --needed --noconfirm "${AUR_PKGS[@]}" || $AUR_CMD -S --needed --noconfirm wayle-bin matugen-bin linux-wallpaperengine-bin
 
 # 9. Hardware Configuration Layer (`config/hardware.lua`)
 info "[6/6] Gerando diretivas de hardware personalizadas..."
@@ -651,6 +652,8 @@ ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/display-pick
 ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/soberano-monitors" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/monitor-select" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/wallpaper-picker-rs" "$HOME/.local/bin/wallpaper-picker-rs" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/soberano-livewallpaper" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/livewallpaper" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-hardware-menu.py" "$HOME/.local/bin/soberano-hardware-menu" 2>/dev/null || true
 cp -f "$DOTFILES_DIR"/config/systemd/user/soberano-autoupdate.* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
 

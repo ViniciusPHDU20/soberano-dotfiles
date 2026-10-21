@@ -26,8 +26,9 @@ apply_wallpaper() {
 
     echo "$img" > "$STATE_FILE"
 
-    # Terminate any previous lagging matugen processes to prevent race conditions
+    # Terminate any previous lagging matugen processes or live wallpaper engines
     pkill -x matugen 2>/dev/null || true
+    pkill -x linux-wallpaperengine 2>/dev/null || true
 
     # Update persistent wallpaper path in Wayle config.toml
     sed -i "s|^wallpaper = .*|wallpaper = \"$img\"|" "${HOME}/dotfiles/config/wayle/config.toml" 2>/dev/null || true

@@ -19,7 +19,10 @@ if [ -f "$STATE_FILE" ]; then
     fi
 
     hyprctl reload >/dev/null 2>&1 || true
-    "${SCRIPTS_DIR}/WallpaperSelect.sh" --restore >/dev/null 2>&1 &
+    pkill -CONT -x linux-wallpaperengine 2>/dev/null || true
+    if ! pgrep -x linux-wallpaperengine >/dev/null 2>&1; then
+        "${SCRIPTS_DIR}/WallpaperSelect.sh" --restore >/dev/null 2>&1 &
+    fi
 
     notify-send -u normal -a "GameMode" "🚀 GameMode: DESATIVADO" "CPU Balanced • GPU Auto • Efeitos e Wallpaper Restaurados" 2>/dev/null || true
     exit 0
@@ -34,6 +37,7 @@ else
     fi
 
     pkill -x awww-daemon 2>/dev/null || true
+    pkill -STOP -x linux-wallpaperengine 2>/dev/null || true
 
     hyprctl eval "hl.config({
         animations = { enabled = false },
