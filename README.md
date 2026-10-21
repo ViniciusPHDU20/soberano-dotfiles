@@ -114,7 +114,8 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 | `Super + V` | Histórico da Área de Transferência (`cliphist` + `fuzzel`) |
 | `Super + G` / `Super + F1` | GameMode Competitivo (Max Clock GPU + CPU Performance) |
 | `Super + A` | Visão Geral de Workspaces (`quickshell` overview) |
-| `Super + M` / `Super + K` | Cheat-Sheet Visual de Atalhos e Teclas |
+| `Super + M` | Gerenciador de Displays, Resolução & Hz (Nativo em Rust) |
+| `Super + H` / `Super + K` | HUD Visual de Atalhos do Sistema (Soberano) |
 | `Super + C` | Fechar Janela Focada |
 | `Super + Shift + Q` | Menu de Encerramento / Logout |
 
