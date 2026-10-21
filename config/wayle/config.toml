@@ -80,7 +80,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Concept-Japanese house.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Beer-Girl.png"
 fit-mode = "fill"
 
 [osd]

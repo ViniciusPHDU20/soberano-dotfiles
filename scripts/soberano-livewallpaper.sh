@@ -257,6 +257,34 @@ select_interactive() {
     fi
 }
 
+set_live_volume() {
+    local vol="${1:-50}"
+    if [ -f "$CONFIG_FILE" ]; then
+        jq ".volume = $vol" "$CONFIG_FILE" > "$CONFIG_FILE.tmp" 2>/dev/null && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+    fi
+    pactl list sink-inputs 2>/dev/null | awk -v v="${vol}%" '
+        /^Sink Input #/ { id = substr($3, 2) }
+        /application.name = "(linux-wallpaperengine|mpv)"/ || /application.process.binary = "linux-wallpaperengine"/ {
+            if (id != "") system("pactl set-sink-input-volume " id " " v " 2>/dev/null")
+        }
+    '
+}
+
+set_live_mute() {
+    local mute_val="${1:-1}"
+    local bool_val="false"
+    [ "$mute_val" = "1" ] && bool_val="true"
+    if [ -f "$CONFIG_FILE" ]; then
+        jq ".silent = $bool_val" "$CONFIG_FILE" > "$CONFIG_FILE.tmp" 2>/dev/null && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+    fi
+    pactl list sink-inputs 2>/dev/null | awk -v m="$mute_val" '
+        /^Sink Input #/ { id = substr($3, 2) }
+        /application.name = "(linux-wallpaperengine|mpv)"/ || /application.process.binary = "linux-wallpaperengine"/ {
+            if (id != "") system("pactl set-sink-input-mute " id " " m " 2>/dev/null")
+        }
+    '
+}
+
 # CLI Argument Router
 case "${1:-}" in
     --stop)
@@ -264,6 +292,12 @@ case "${1:-}" in
         ;;
     --reload)
         reload_live
+        ;;
+    --volume)
+        set_live_volume "${2:-50}"
+        ;;
+    --mute)
+        set_live_mute "${2:-1}"
         ;;
     --status)
         if systemctl --user is-active --quiet soberano-livewallpaper || pgrep -x linux-wallpaperengine >/dev/null 2>&1; then

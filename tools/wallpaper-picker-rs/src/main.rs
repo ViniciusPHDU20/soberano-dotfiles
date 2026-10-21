@@ -174,7 +174,34 @@ fn save_live_config(cfg: &LiveWallpaperConfig) {
 fn reload_live_wallpaper() {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
     let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
-    let _ = Command::new(&script).arg("--reload").spawn();
+    let _ = Command::new(&script)
+        .arg("--reload")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+}
+
+fn set_live_volume_realtime(vol: u32) {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
+    let _ = Command::new(&script)
+        .args(["--volume", &vol.to_string()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+}
+
+fn set_live_mute_realtime(mute: bool) {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
+    let _ = Command::new(&script)
+        .args(["--mute", if mute { "1" } else { "0" }])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
 }
 
 fn get_cache_dir() -> PathBuf {
@@ -1482,6 +1509,7 @@ fn build_ui(app: &Application) {
         cfg_vol.borrow_mut().volume = v;
         vol_val_lbl_clone.set_text(&format!("{}%", v));
         save_live_config(&cfg_vol.borrow());
+        set_live_volume_realtime(v);
     });
 
     vol_box.append(&vol_header_row);
@@ -1505,8 +1533,10 @@ fn build_ui(app: &Application) {
     mute_switch.set_valign(gtk4::Align::Center);
     let cfg_mute = Rc::clone(&live_config);
     mute_switch.connect_active_notify(move |sw| {
-        cfg_mute.borrow_mut().silent = sw.is_active();
+        let active = sw.is_active();
+        cfg_mute.borrow_mut().silent = active;
         save_live_config(&cfg_mute.borrow());
+        set_live_mute_realtime(active);
     });
     mute_row.append(&mute_texts);
     mute_row.append(&mute_switch);
@@ -1531,6 +1561,9 @@ fn build_ui(app: &Application) {
     automute_switch.connect_active_notify(move |sw| {
         cfg_automute.borrow_mut().automute = sw.is_active();
         save_live_config(&cfg_automute.borrow());
+        if is_live_engine_running() {
+            reload_live_wallpaper();
+        }
     });
     automute_row.append(&automute_texts);
     automute_row.append(&automute_switch);
@@ -1555,6 +1588,9 @@ fn build_ui(app: &Application) {
     audioproc_switch.connect_active_notify(move |sw| {
         cfg_audioproc.borrow_mut().audio_processing = sw.is_active();
         save_live_config(&cfg_audioproc.borrow());
+        if is_live_engine_running() {
+            reload_live_wallpaper();
+        }
     });
     audioproc_row.append(&audioproc_texts);
     audioproc_row.append(&audioproc_switch);
@@ -1595,6 +1631,9 @@ fn build_ui(app: &Application) {
             }
             clicked.add_css_class("active");
             save_live_config(&cfg_fps.borrow());
+            if is_live_engine_running() {
+                reload_live_wallpaper();
+            }
         });
 
         fps_buttons.borrow_mut().push(btn.clone());
@@ -1622,6 +1661,9 @@ fn build_ui(app: &Application) {
     pause_switch.connect_active_notify(move |sw| {
         cfg_pause.borrow_mut().fullscreen_pause = sw.is_active();
         save_live_config(&cfg_pause.borrow());
+        if is_live_engine_running() {
+            reload_live_wallpaper();
+        }
     });
     pause_row.append(&pause_texts);
     pause_row.append(&pause_switch);
@@ -1654,6 +1696,9 @@ fn build_ui(app: &Application) {
             }
             clicked.add_css_class("active");
             save_live_config(&cfg_scale.borrow());
+            if is_live_engine_running() {
+                reload_live_wallpaper();
+            }
         });
 
         scale_buttons.borrow_mut().push(btn.clone());
@@ -1690,6 +1735,9 @@ fn build_ui(app: &Application) {
     mouse_switch.connect_active_notify(move |sw| {
         cfg_mouse.borrow_mut().mouse_interaction = sw.is_active();
         save_live_config(&cfg_mouse.borrow());
+        if is_live_engine_running() {
+            reload_live_wallpaper();
+        }
     });
     mouse_row.append(&mouse_texts);
     mouse_row.append(&mouse_switch);
@@ -1714,6 +1762,9 @@ fn build_ui(app: &Application) {
     parallax_switch.connect_active_notify(move |sw| {
         cfg_parallax.borrow_mut().parallax = sw.is_active();
         save_live_config(&cfg_parallax.borrow());
+        if is_live_engine_running() {
+            reload_live_wallpaper();
+        }
     });
     parallax_row.append(&parallax_texts);
     parallax_row.append(&parallax_switch);
@@ -1738,6 +1789,9 @@ fn build_ui(app: &Application) {
     part_switch.connect_active_notify(move |sw| {
         cfg_part.borrow_mut().particles = sw.is_active();
         save_live_config(&cfg_part.borrow());
+        if is_live_engine_running() {
+            reload_live_wallpaper();
+        }
     });
     part_row.append(&part_texts);
     part_row.append(&part_switch);
