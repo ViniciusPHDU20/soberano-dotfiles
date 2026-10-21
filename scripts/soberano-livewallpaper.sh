@@ -5,9 +5,38 @@
 # ==============================================================================
 set -euo pipefail
 
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/soberano/livewallpaper.json"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_livewallpaper.state"
 STATIC_RESTORE="${HOME}/dotfiles/scripts/WallpaperSelect.sh"
 SCHEME_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_matugen_scheme.txt"
+
+# Default fallback settings
+FPS=144
+VOLUME=20
+SILENT=false
+AUTOMUTE=true
+AUDIO_PROCESSING=true
+FULLSCREEN_PAUSE=true
+SCALING="fill"
+MOUSE_INTERACTION=true
+PARALLAX=true
+PARTICLES=true
+
+# Load persistent user configuration from JSON
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        FPS=$(jq -r '.fps // 144' "$CONFIG_FILE" 2>/dev/null || echo 144)
+        VOLUME=$(jq -r '.volume // 20' "$CONFIG_FILE" 2>/dev/null || echo 20)
+        SILENT=$(jq -r '.silent // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+        AUTOMUTE=$(jq -r '.automute // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+        AUDIO_PROCESSING=$(jq -r '.audio_processing // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+        FULLSCREEN_PAUSE=$(jq -r '.fullscreen_pause // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+        SCALING=$(jq -r '.scaling // "fill"' "$CONFIG_FILE" 2>/dev/null || echo "fill")
+        MOUSE_INTERACTION=$(jq -r '.mouse_interaction // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+        PARALLAX=$(jq -r '.parallax // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+        PARTICLES=$(jq -r '.particles // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+    fi
+}
 
 # Detect primary monitor via hyprctl
 get_monitor() {
@@ -28,15 +57,20 @@ find_workshop_dirs() {
     [ -d "$default_ws" ] && dirs+=("$default_ws")
 
     # 2. Secondary Steam libraries from libraryfolders.vdf
-    local vdf="$HOME/.local/share/Steam/steamapps/libraryfolders.vdf"
-    if [ -f "$vdf" ]; then
-        while IFS= read -r path; do
-            local extra_ws="${path}/steamapps/workshop/content/431960"
-            if [ -d "$extra_ws" ] && [[ ! " ${dirs[*]} " =~ " ${extra_ws} " ]]; then
-                dirs+=("$extra_ws")
-            fi
-        done < <(grep -oP '"path"\s*"\K[^"]+' "$vdf" 2>/dev/null || true)
-    fi
+    local vdf_candidates=(
+        "$HOME/.local/share/Steam/steamapps/libraryfolders.vdf"
+        "$HOME/.steam/steam/steamapps/libraryfolders.vdf"
+    )
+    for vdf in "${vdf_candidates[@]}"; do
+        if [ -f "$vdf" ]; then
+            while IFS= read -r path; do
+                local extra_ws="${path}/steamapps/workshop/content/431960"
+                if [ -d "$extra_ws" ] && [[ ! " ${dirs[*]} " =~ " ${extra_ws} " ]]; then
+                    dirs+=("$extra_ws")
+                fi
+            done < <(grep -oP '"path"\s*"\K[^"]+' "$vdf" 2>/dev/null || true)
+        fi
+    done
 
     # 3. User custom live wallpaper directory
     local user_live="$HOME/wallpapers/live"
@@ -68,6 +102,7 @@ apply_live() {
         exit 1
     fi
 
+    load_config
     local mon
     mon=$(get_monitor)
 
@@ -100,18 +135,66 @@ apply_live() {
         matugen image "$preview" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true
     fi
 
-    # 3. Launch linux-wallpaperengine
-    linux-wallpaperengine \
-        --screen-root "$mon" \
-        --silent \
-        --fps 144 \
-        --scaling fill \
-        --layer background \
-        --fullscreen-pause-only-active \
-        "$target" >/dev/null 2>&1 &
+    # 3. Assemble command flags based on user configuration
+    local cmd_args=(
+        --screen-root "$mon"
+        --fps "$FPS"
+        --scaling "$SCALING"
+        --layer background
+    )
+
+    if [ "$SILENT" = "true" ]; then
+        cmd_args+=(--silent)
+    else
+        cmd_args+=(--volume "$VOLUME")
+    fi
+
+    if [ "$AUTOMUTE" = "false" ]; then
+        cmd_args+=(--noautomute)
+    fi
+
+    if [ "$AUDIO_PROCESSING" = "false" ]; then
+        cmd_args+=(--no-audio-processing)
+    fi
+
+    if [ "$FULLSCREEN_PAUSE" = "true" ]; then
+        cmd_args+=(--fullscreen-pause-only-active)
+    else
+        cmd_args+=(--no-fullscreen-pause)
+    fi
+
+    if [ "$MOUSE_INTERACTION" = "false" ]; then
+        cmd_args+=(--disable-mouse)
+    fi
+
+    if [ "$PARALLAX" = "false" ]; then
+        cmd_args+=(--disable-parallax)
+    fi
+
+    if [ "$PARTICLES" = "false" ]; then
+        cmd_args+=(--disable-particles)
+    fi
+
+    cmd_args+=("$target")
+
+    # 4. Launch linux-wallpaperengine
+    linux-wallpaperengine "${cmd_args[@]}" >/dev/null 2>&1 &
 
     echo "$target" > "$STATE_FILE"
-    notify-send -u normal -a "Soberano Wallpapers" "󰸉 Live Wallpaper Ativo" "${title} (${mon} • 144 FPS)" 2>/dev/null || true
+    notify-send -u normal -a "Soberano Wallpapers" "󰸉 Live Wallpaper Ativo" "${title} (${mon} • ${FPS} FPS • Vol: ${VOLUME}%)" 2>/dev/null || true
+}
+
+# Reload currently active live wallpaper with updated settings
+reload_live() {
+    if [ -f "$STATE_FILE" ]; then
+        local current
+        current=$(cat "$STATE_FILE" 2>/dev/null || true)
+        if [ -n "$current" ] && { [ -d "$current" ] || [ -f "$current" ]; }; then
+            apply_live "$current"
+            return 0
+        fi
+    fi
+    notify-send -u low -a "Soberano Wallpapers" "Nenhum Live Wallpaper Ativo" "Inicie um wallpaper animado pela galeria antes de recarregar." 2>/dev/null || true
 }
 
 # Interactive Fuzzel selector
@@ -168,6 +251,9 @@ select_interactive() {
 case "${1:-}" in
     --stop)
         stop_live
+        ;;
+    --reload)
+        reload_live
         ;;
     --status)
         if pgrep -x linux-wallpaperengine >/dev/null 2>&1; then
