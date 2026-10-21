@@ -450,13 +450,6 @@ fn build_ui(app: &Application) {
         .decorated(false)
         .build();
 
-    // Close on click-outside (window loses focus)
-    window.connect_is_active_notify(|w| {
-        if !w.is_active() {
-            w.close();
-        }
-    });
-
     // Modal Card
     let card = GtkBox::new(Orientation::Vertical, 12);
     card.add_css_class("modal-card");

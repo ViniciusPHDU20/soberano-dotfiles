@@ -412,12 +412,12 @@ class HardwareDropdown(Gtk.Window):
         return True
 
     def on_res_clicked(self, widget):
-        Gtk.main_quit()
         picker = os.path.expanduser("~/dotfiles/scripts/display-picker-rs")
         if os.path.exists(picker):
-            subprocess.Popen([picker])
+            subprocess.Popen([picker], start_new_session=True)
         else:
-            subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/MonitorSelect.sh")])
+            subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/MonitorSelect.sh")], start_new_session=True)
+        Gtk.main_quit()
 
     def on_update_clicked(self, widget):
         subprocess.Popen(["bash", os.path.expanduser("~/dotfiles/scripts/soberano-update.sh")])
