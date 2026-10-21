@@ -9,14 +9,16 @@ WALL_DIR="${HOME}/dotfiles/wallpapers"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_wallpaper.txt"
 SCHEME_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_matugen_scheme.txt"
 MONITOR="DP-1"
+PICKER_BIN="${HOME}/dotfiles/scripts/wallpaper-picker-rs"
+
+# If interactive launch without arguments, exec native Rust studio directly
+if [ $# -eq 0 ]; then
+    if [ -x "$PICKER_BIN" ]; then
+        exec "$PICKER_BIN"
+    fi
+fi
 
 mkdir -p "$(dirname "$STATE_FILE")"
-
-# Ensure awww-daemon is alive
-if ! pgrep -x awww-daemon >/dev/null 2>&1; then
-    awww-daemon >/dev/null 2>&1 &
-    sleep 0.3
-fi
 
 apply_wallpaper() {
     local img="$1"
@@ -26,9 +28,15 @@ apply_wallpaper() {
 
     echo "$img" > "$STATE_FILE"
 
-    # Terminate any previous lagging matugen processes or live wallpaper engines
+    # Terminate any previous live wallpaper engines and matugen
+    killall -9 linux-wallpaperengine 2>/dev/null || true
     pkill -x matugen 2>/dev/null || true
-    pkill -x linux-wallpaperengine 2>/dev/null || true
+
+    # Ensure awww-daemon is alive for static rendering
+    if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+        awww-daemon >/dev/null 2>&1 &
+        sleep 0.15
+    fi
 
     # Update persistent wallpaper path in Wayle config.toml
     sed -i "s|^wallpaper = .*|wallpaper = \"$img\"|" "${HOME}/dotfiles/config/wayle/config.toml" 2>/dev/null || true
@@ -36,7 +44,7 @@ apply_wallpaper() {
     # 1. Wayle native wallpaper + awww transition in background
     (wayle wallpaper set "$img" --monitor "$MONITOR" >/dev/null 2>&1 || awww img "$img" --transition-type grow --transition-fps 144 >/dev/null 2>&1) &
 
-    # 2. Synchronous Matugen color extraction (guarantees fuzzel, hyprland, kitty are ready)
+    # 2. Synchronous Matugen color extraction
     local scheme
     scheme=$(cat "$SCHEME_FILE" 2>/dev/null || echo "vibrant")
     matugen image "$img" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true
@@ -63,7 +71,6 @@ if [[ "${1:-}" == "--restore" ]]; then
 fi
 
 if [[ "${1:-}" == "--fuzzel" ]]; then
-    # Fallback interactive Fuzzel selector
     current_img=$(cat "$STATE_FILE" 2>/dev/null || echo "")
     current_base=$(basename "$current_img" 2>/dev/null || echo "")
 
@@ -98,8 +105,6 @@ if [[ "${1:-}" == "--fuzzel" ]]; then
     exit 0
 fi
 
-# Launch native Rust Animated Wallpaper Picker (GTK4 Layer-Shell)
-PICKER_BIN="${HOME}/dotfiles/scripts/wallpaper-picker-rs"
 if [ -x "$PICKER_BIN" ]; then
     exec "$PICKER_BIN"
 fi

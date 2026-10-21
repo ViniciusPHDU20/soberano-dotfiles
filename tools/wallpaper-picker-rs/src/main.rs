@@ -1,6 +1,6 @@
 use gtk4::prelude::*;
 use gtk4::{
-    gdk, gdk::Texture, gdk_pixbuf::Pixbuf, glib, Application, ApplicationWindow, Box as GtkBox,
+    gdk, gdk_pixbuf::Pixbuf, glib, Application, ApplicationWindow, Box as GtkBox,
     Button, ContentFit, EventControllerKey, FlowBox, FlowBoxChild, GestureClick, Label, Orientation,
     Picture, Scale, ScrolledWindow, SearchEntry, Switch,
 };
@@ -19,13 +19,13 @@ const THUMB_H: i32 = 138;
 const HERO_W: i32 = 440;
 const HERO_H: i32 = 248;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum WallpaperKind {
     Static,
     Live { engine_type: String },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct WallpaperItem {
     path: PathBuf,
     name: String,
@@ -174,7 +174,7 @@ fn save_live_config(cfg: &LiveWallpaperConfig) {
 fn reload_live_wallpaper() {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
     let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
-    let _ = Command::new(&script).arg("--reload").status();
+    let _ = Command::new(&script).arg("--reload").spawn();
 }
 
 fn get_cache_dir() -> PathBuf {
@@ -299,6 +299,19 @@ fn find_workshop_dirs() -> Vec<PathBuf> {
 }
 
 fn scan_wallpapers() -> Vec<WallpaperItem> {
+    let manifest_file = dirs_or_home_cache().join("soberano_wallpapers_manifest.json");
+
+    // Fast-path: Instant load in ~1ms from cached manifest
+    if manifest_file.exists() {
+        if let Ok(content) = fs::read_to_string(&manifest_file) {
+            if let Ok(cached) = serde_json::from_str::<Vec<WallpaperItem>>(&content) {
+                if !cached.is_empty() {
+                    return cached;
+                }
+            }
+        }
+    }
+
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
     let wall_dir = PathBuf::from(&home).join("dotfiles/wallpapers");
     let cache_dir = get_cache_dir();
@@ -412,6 +425,10 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
         }
     });
 
+    if let Ok(json) = serde_json::to_string(&items) {
+        let _ = fs::write(manifest_file, json);
+    }
+
     items
 }
 
@@ -422,14 +439,14 @@ fn apply_wallpaper(item: &WallpaperItem) {
             let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
             let _ = Command::new(&script)
                 .arg(&item.path)
-                .status();
+                .spawn();
         }
         WallpaperKind::Static => {
             let script = PathBuf::from(&home).join("dotfiles/scripts/WallpaperSelect.sh");
             if script.exists() {
                 let _ = Command::new(&script)
                     .args(["--apply", item.path.to_string_lossy().as_ref()])
-                    .status();
+                    .spawn();
             } else {
                 let _ = Command::new("matugen")
                     .args([
@@ -444,7 +461,7 @@ fn apply_wallpaper(item: &WallpaperItem) {
                         "--contrast",
                         "-0.45",
                     ])
-                    .status();
+                    .spawn();
             }
         }
     }
@@ -455,7 +472,7 @@ fn stop_live_wallpaper() {
     let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
     let _ = Command::new(&script)
         .arg("--stop")
-        .status();
+        .spawn();
 }
 
 fn load_css() {
@@ -927,10 +944,7 @@ fn build_ui(app: &Application) {
     hero_picture.add_css_class("hero-image-frame");
 
     let update_hero_image = |pic_widget: &Picture, path: &Path| {
-        if let Ok(pixbuf) = Pixbuf::from_file_at_scale(path, HERO_W * 2, HERO_H * 2, true) {
-            let texture = Texture::for_pixbuf(&pixbuf);
-            pic_widget.set_paintable(Some(&texture));
-        }
+        pic_widget.set_filename(Some(path));
     };
     update_hero_image(&hero_picture, &selected_item.borrow().preview_path);
 
@@ -1162,15 +1176,12 @@ fn build_ui(app: &Application) {
         let (cur_wp_now, cur_is_live) = current_active_wallpaper();
         let is_active_now = cur_wp_now.as_ref() == Some(&item.path);
 
-        if let Ok(pixbuf) = Pixbuf::from_file(&item.thumbnail_path) {
-            let texture = Texture::for_pixbuf(&pixbuf);
-            let pic = Picture::for_paintable(&texture);
-            pic.set_content_fit(ContentFit::Cover);
-            pic.set_can_shrink(true);
-            pic.set_size_request(THUMB_W, THUMB_H);
-            pic.add_css_class("card-thumb-image");
-            card_item.append(&pic);
-        }
+        let pic = Picture::for_filename(&item.thumbnail_path);
+        pic.set_content_fit(ContentFit::Cover);
+        pic.set_can_shrink(true);
+        pic.set_size_request(THUMB_W, THUMB_H);
+        pic.add_css_class("card-thumb-image");
+        card_item.append(&pic);
 
         let label_row = GtkBox::new(Orientation::Horizontal, 6);
         let name_label = Label::new(Some(&item.name));

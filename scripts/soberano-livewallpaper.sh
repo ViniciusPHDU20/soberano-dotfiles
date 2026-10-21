@@ -2,6 +2,7 @@
 # ==============================================================================
 # Soberano Live Wallpaper Engine (Almamu linux-wallpaperengine + Matugen MD3)
 # Seamlessly integrates Steam Wallpaper Engine (431960) with Hyprland and Wayle
+# Managed via transient systemd user service for zero process drops and rock-solid audio
 # ==============================================================================
 set -euo pipefail
 
@@ -12,9 +13,9 @@ SCHEME_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_matugen_scheme.txt"
 
 # Default fallback settings
 FPS=144
-VOLUME=20
+VOLUME=50
 SILENT=false
-AUTOMUTE=true
+AUTOMUTE=false
 AUDIO_PROCESSING=true
 FULLSCREEN_PAUSE=true
 SCALING="fill"
@@ -26,9 +27,9 @@ PARTICLES=true
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
         FPS=$(jq -r '.fps // 144' "$CONFIG_FILE" 2>/dev/null || echo 144)
-        VOLUME=$(jq -r '.volume // 20' "$CONFIG_FILE" 2>/dev/null || echo 20)
+        VOLUME=$(jq -r '.volume // 50' "$CONFIG_FILE" 2>/dev/null || echo 50)
         SILENT=$(jq -r '.silent // false' "$CONFIG_FILE" 2>/dev/null || echo false)
-        AUTOMUTE=$(jq -r '.automute // true' "$CONFIG_FILE" 2>/dev/null || echo true)
+        AUTOMUTE=$(jq -r '.automute // false' "$CONFIG_FILE" 2>/dev/null || echo false)
         AUDIO_PROCESSING=$(jq -r '.audio_processing // true' "$CONFIG_FILE" 2>/dev/null || echo true)
         FULLSCREEN_PAUSE=$(jq -r '.fullscreen_pause // true' "$CONFIG_FILE" 2>/dev/null || echo true)
         SCALING=$(jq -r '.scaling // "fill"' "$CONFIG_FILE" 2>/dev/null || echo "fill")
@@ -82,7 +83,8 @@ find_workshop_dirs() {
 
 # Stop live wallpaper and restore static engine
 stop_live() {
-    pkill -x linux-wallpaperengine 2>/dev/null || true
+    systemctl --user stop soberano-livewallpaper 2>/dev/null || true
+    killall -9 linux-wallpaperengine 2>/dev/null || true
     rm -f "$STATE_FILE"
 
     # Restore awww + last static wallpaper
@@ -106,9 +108,10 @@ apply_live() {
     local mon
     mon=$(get_monitor)
 
-    # 1. Kill any running live wallpaper or awww-daemon to prevent duplicate rendering
-    pkill -x linux-wallpaperengine 2>/dev/null || true
-    pkill -x awww-daemon 2>/dev/null || true
+    # 1. Cleanly terminate any running live wallpaper or awww-daemon to prevent conflicts
+    systemctl --user stop soberano-livewallpaper 2>/dev/null || true
+    killall -9 linux-wallpaperengine 2>/dev/null || true
+    killall -9 awww-daemon 2>/dev/null || true
 
     # 2. Extract Matugen color scheme from preview image if present
     local preview=""
@@ -149,6 +152,7 @@ apply_live() {
         cmd_args+=(--volume "$VOLUME")
     fi
 
+    # Crucial: pass --noautomute so Discord / browser / CAVA doesn't silently mute wallpaper audio
     if [ "$AUTOMUTE" = "false" ]; then
         cmd_args+=(--noautomute)
     fi
@@ -177,8 +181,8 @@ apply_live() {
 
     cmd_args+=("$target")
 
-    # 4. Launch linux-wallpaperengine
-    linux-wallpaperengine "${cmd_args[@]}" >/dev/null 2>&1 &
+    # 4. Launch linux-wallpaperengine isolated as a systemd user unit
+    systemd-run --user --unit=soberano-livewallpaper linux-wallpaperengine "${cmd_args[@]}" >/dev/null 2>&1
 
     echo "$target" > "$STATE_FILE"
     notify-send -u normal -a "Soberano Wallpapers" "󰸉 Live Wallpaper Ativo" "${title} (${mon} • ${FPS} FPS • Vol: ${VOLUME}%)" 2>/dev/null || true
@@ -256,14 +260,14 @@ case "${1:-}" in
         reload_live
         ;;
     --status)
-        if pgrep -x linux-wallpaperengine >/dev/null 2>&1; then
+        if systemctl --user is-active --quiet soberano-livewallpaper || pgrep -x linux-wallpaperengine >/dev/null 2>&1; then
             echo "active: $(cat "$STATE_FILE" 2>/dev/null || echo "unknown")"
         else
             echo "inactive"
         fi
         ;;
     --toggle)
-        if pgrep -x linux-wallpaperengine >/dev/null 2>&1; then
+        if systemctl --user is-active --quiet soberano-livewallpaper || pgrep -x linux-wallpaperengine >/dev/null 2>&1; then
             stop_live
         else
             select_interactive
