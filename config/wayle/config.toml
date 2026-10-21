@@ -11,12 +11,12 @@ padding = 0.3
 padding-ends = 0.5
 module-gap = 0.4
 bg = "bg-surface"
-background-opacity = 85
+background-opacity = 88
 border-location = "all"
 border-width = 1
 border-color = "border-subtle"
-rounding = "full"
-button-variant = "basic"
+rounding = "lg"
+button-variant = "block-prefix"
 button-opacity = 100
 button-bg-opacity = 90
 button-icon-size = 0.95
@@ -24,7 +24,7 @@ button-icon-padding = 0.85
 button-label-size = 0.92
 button-label-weight = "semibold"
 button-label-padding = 0.85
-button-rounding = "full"
+button-rounding = "sm"
 button-gap = 0.75
 button-border-location = "all"
 button-border-width = 1
@@ -60,7 +60,7 @@ scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
 theming-monitor = "DP-1"
-matugen-scheme = "tonal-spot"
+matugen-scheme = "neutral"
 matugen-contrast = -0.45
 matugen-source-color = 0
 matugen-light = false
@@ -89,7 +89,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Lofi - Chill Room.png"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Mountain_dark.dynamic.png"
 fit-mode = "fill"
 
 [osd]

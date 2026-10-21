@@ -106,16 +106,16 @@ SCHEME_STATE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_matugen_scheme.txt"
 echo "$MATUGEN_SCHEME" > "$SCHEME_STATE" 2>/dev/null || true
 sed -i "s/^matugen-scheme = .*/matugen-scheme = \"${MATUGEN_SCHEME}\"/" "$DOTFILES_DIR/config/wayle/config.toml" 2>/dev/null || true
 
-# 2. Apply Wallpaper & Trigger Matugen Extraction
+# 2. Apply Wayle Bar Layout Geometry & Restart Bar
+"$DOTFILES_DIR/scripts/WayleBarPresetSelect.sh" "$WAYLE_PRESET" >/dev/null 2>&1 || true
+
+# 3. Apply Wallpaper, awww 144Hz Transition & Synchronous Matugen Extraction
 if [ -f "$WALLPAPER" ]; then
     "$DOTFILES_DIR/scripts/WallpaperSelect.sh" --apply "$WALLPAPER" >/dev/null 2>&1 || true
 fi
 
-# 3. Apply Wayle Bar Layout Geometry
-"$DOTFILES_DIR/scripts/WayleBarPresetSelect.sh" "$WAYLE_PRESET" >/dev/null 2>&1 || true
-
 # 4. Apply GLSL Screen Shaders if Hyprland is active
-if [ -f "$SHADER_SCRIPT" ] && command -v hyprctl >/dev/null 2>&1 && [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+if [ -f "$SHADER_SCRIPT" ] && command -v hyprctl >/dev/null 2>&1; then
     bash "$SHADER_SCRIPT" "$SHADER" >/dev/null 2>&1 || true
 fi
 

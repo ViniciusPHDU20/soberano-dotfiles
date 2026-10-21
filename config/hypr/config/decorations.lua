@@ -11,6 +11,22 @@ local d_gaps_out = DYNAMIC_GAPS_OUT or 8
 local d_rounding = DYNAMIC_ROUNDING or 10
 local d_border   = DYNAMIC_BORDER_SIZE or 2
 
+-- Restore active screen shader if configured
+local active_shader = ""
+local shader_file = io.open(os.getenv("HOME") .. "/.config/hypr/.current_shader", "r")
+if shader_file then
+    local s = shader_file:read("*l")
+    shader_file:close()
+    if s and s ~= "off" and s ~= "" then
+        local p = os.getenv("HOME") .. "/.config/hypr/shaders/" .. s .. ".frag"
+        local check = io.open(p, "r")
+        if check then
+            check:close()
+            active_shader = p
+        end
+    end
+end
+
 hl.config({
     general = {
         gaps_in = d_gaps_in,
@@ -43,6 +59,7 @@ hl.config({
         },
     },
     decoration = {
+        screen_shader = active_shader,
         dim_special = 0.3,
         rounding = d_rounding,
         active_opacity = 0.95,

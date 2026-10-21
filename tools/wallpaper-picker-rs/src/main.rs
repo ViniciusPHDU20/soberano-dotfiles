@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::rc::Rc;
 use walkdir::WalkDir;
 
@@ -440,6 +440,9 @@ fn apply_wallpaper(item: &WallpaperItem) {
             let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
             let _ = Command::new(&script)
                 .arg(&item.path)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .spawn();
         }
         WallpaperKind::Static => {
@@ -447,6 +450,9 @@ fn apply_wallpaper(item: &WallpaperItem) {
             if script.exists() {
                 let _ = Command::new(&script)
                     .args(["--apply", item.path.to_string_lossy().as_ref()])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .spawn();
             } else {
                 let _ = Command::new("matugen")
@@ -462,6 +468,9 @@ fn apply_wallpaper(item: &WallpaperItem) {
                         "--contrast",
                         "-0.45",
                     ])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .spawn();
             }
         }
@@ -473,6 +482,9 @@ fn stop_live_wallpaper() {
     let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
     let _ = Command::new(&script)
         .arg("--stop")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn();
 }
 
@@ -1040,6 +1052,7 @@ fn build_ui(app: &Application) {
         let item = sel_for_apply.borrow();
         apply_wallpaper(&item);
         win_apply.close();
+        std::thread::sleep(std::time::Duration::from_millis(60));
         std::process::exit(0);
     });
 
@@ -1058,6 +1071,7 @@ fn build_ui(app: &Application) {
             let idx = (seed as usize) % all_static_rand.len();
             apply_wallpaper(&all_static_rand[idx]);
             win_rand.close();
+            std::thread::sleep(std::time::Duration::from_millis(60));
             std::process::exit(0);
         }
     });
@@ -1247,6 +1261,7 @@ fn build_ui(app: &Application) {
             if n_press >= 2 {
                 apply_wallpaper(&item_click);
                 win_apply_quick.close();
+                std::thread::sleep(std::time::Duration::from_millis(60));
                 std::process::exit(0);
             }
         });
@@ -1335,6 +1350,7 @@ fn build_ui(app: &Application) {
             if n_press >= 2 {
                 apply_wallpaper(&item_click);
                 win_apply_quick.close();
+                std::thread::sleep(std::time::Duration::from_millis(60));
                 std::process::exit(0);
             }
         });
@@ -1896,6 +1912,7 @@ fn build_ui(app: &Application) {
             let item = sel_for_key.borrow();
             apply_wallpaper(&item);
             win_key.close();
+            std::thread::sleep(std::time::Duration::from_millis(60));
             std::process::exit(0);
         } else {
             glib::Propagation::Proceed

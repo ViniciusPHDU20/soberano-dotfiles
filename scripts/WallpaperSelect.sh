@@ -8,8 +8,16 @@ set -euo pipefail
 WALL_DIR="${HOME}/dotfiles/wallpapers"
 STATE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_wallpaper.txt"
 SCHEME_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_matugen_scheme.txt"
-MONITOR="DP-1"
 PICKER_BIN="${HOME}/dotfiles/scripts/wallpaper-picker-rs"
+
+get_monitor() {
+    local mon
+    mon=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused == true) | .name' 2>/dev/null || true)
+    if [ -z "$mon" ] || [ "$mon" = "null" ]; then
+        mon=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name' 2>/dev/null || echo "DP-1")
+    fi
+    echo "$mon"
+}
 
 # If interactive launch without arguments, exec native Rust studio directly
 if [ $# -eq 0 ]; then
@@ -29,7 +37,9 @@ apply_wallpaper() {
     echo "$img" > "$STATE_FILE"
 
     # Terminate any previous live wallpaper engines and matugen
+    systemctl --user stop soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
+    rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/soberano_livewallpaper.state"
     pkill -x matugen 2>/dev/null || true
 
     # Ensure awww-daemon is alive for static rendering
@@ -41,10 +51,11 @@ apply_wallpaper() {
     # Update persistent wallpaper path in Wayle config.toml
     sed -i "s|^wallpaper = .*|wallpaper = \"$img\"|" "${HOME}/dotfiles/config/wayle/config.toml" 2>/dev/null || true
 
-    # 1. Wayle native wallpaper + awww transition in background
-    (wayle wallpaper set "$img" --monitor "$MONITOR" >/dev/null 2>&1 || awww img "$img" --transition-type grow --transition-fps 144 >/dev/null 2>&1) &
+    # Update Wayle shell state and apply smooth 144 FPS transition to awww
+    wayle wallpaper set "$img" >/dev/null 2>&1 || true
+    awww img "$img" --transition-type grow --transition-fps 144 >/dev/null 2>&1 || true
 
-    # 2. Synchronous Matugen color extraction
+    # Synchronous Matugen color extraction
     local scheme
     scheme=$(cat "$SCHEME_FILE" 2>/dev/null || echo "vibrant")
     matugen image "$img" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true

@@ -655,7 +655,7 @@ ln -sfn "$DOTFILES_DIR/scripts/wallpaper-picker-rs" "$HOME/.local/bin/wallpaper-
 ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/soberano-livewallpaper" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/livewallpaper" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-hardware-menu.py" "$HOME/.local/bin/soberano-hardware-menu" 2>/dev/null || true
-cp -f "$DOTFILES_DIR"/config/systemd/user/soberano-autoupdate.* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
+cp -f "$DOTFILES_DIR"/config/systemd/user/* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
 
 CONFIGS=(
     hypr
@@ -688,6 +688,7 @@ info "Configurando serviços systemd do usuário..."
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service >/dev/null 2>&1 || true
 systemctl --user enable --now wayle.service >/dev/null 2>&1 || true
+systemctl --user enable --now awww-daemon.service >/dev/null 2>&1 || true
 if [ "$INSTALL_AUTOUPDATE" = true ]; then
     systemctl --user enable --now soberano-autoupdate.timer >/dev/null 2>&1 || true
     success "Auto-atualizador periódico ativado (soberano-autoupdate.timer)!"
