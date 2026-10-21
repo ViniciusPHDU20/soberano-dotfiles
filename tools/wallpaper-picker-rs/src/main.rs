@@ -19,10 +19,20 @@ const THUMB_H: i32 = 138;
 const HERO_W: i32 = 440;
 const HERO_H: i32 = 248;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+enum LiveSubtype {
+    Video,
+    AudioReactive,
+    Scene3D,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum WallpaperKind {
     Static,
-    Live { engine_type: String },
+    Live {
+        engine_type: String,
+        subtype: LiveSubtype,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -453,9 +463,12 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                     let mut title = p.file_name().and_then(|s| s.to_str()).unwrap_or("Workshop Item").to_string();
                     let mut engine_type = "Scene".to_string();
                     let mut detected_cat = "Geral".to_string();
+                    let mut is_video = false;
+                    let mut is_audio = false;
 
                     if project_file.is_file() {
                         if let Ok(content) = fs::read_to_string(&project_file) {
+                            let content_lower = content.to_lowercase();
                             if let Ok(meta) = serde_json::from_str::<ProjectJson>(&content) {
                                 if let Some(t) = meta.title {
                                     if !t.trim().is_empty() {
@@ -467,6 +480,12 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                                         engine_type = t.trim().to_string();
                                     }
                                 }
+                                if let Some(f) = meta.file {
+                                    let fl = f.to_lowercase();
+                                    if fl.ends_with(".mp4") || fl.ends_with(".webm") {
+                                        is_video = true;
+                                    }
+                                }
                                 if let Some(tags) = meta.tags {
                                     let tag_str = tags.join(" ").to_lowercase();
                                     let det = detect_category(&tag_str);
@@ -475,8 +494,52 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                                     }
                                 }
                             }
+                            if engine_type.to_lowercase() == "video" {
+                                is_video = true;
+                            }
+                            for ak in ["audioresponsive", "audiovisualiser", "visualizer", "audiobars", "audiospectrum", "audioprocessing"] {
+                                if content_lower.contains(ak) {
+                                    is_audio = true;
+                                    break;
+                                }
+                            }
                         }
                     }
+
+                    let has_scene = p.join("scene.pkg").exists() || p.join("scene.json").exists();
+
+                    if !is_audio && p.join("scene.pkg").is_file() {
+                        if let Ok(bytes) = fs::read(p.join("scene.pkg")) {
+                            if bytes.windows(14).any(|w| w.eq_ignore_ascii_case(b"audiospectrum"))
+                                || bytes.windows(15).any(|w| w.eq_ignore_ascii_case(b"audioprocessing"))
+                            {
+                                is_audio = true;
+                            }
+                        }
+                    }
+
+                    if !has_scene {
+                        if let Ok(entries) = fs::read_dir(&p) {
+                            for e in entries.filter_map(|e| e.ok()) {
+                                let ep = e.path();
+                                if let Some(ext) = ep.extension().and_then(|s| s.to_str()) {
+                                    let ext_l = ext.to_lowercase();
+                                    if ext_l == "mp4" || ext_l == "webm" {
+                                        is_video = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let subtype = if is_video && !has_scene {
+                        LiveSubtype::Video
+                    } else if is_audio && has_scene {
+                        LiveSubtype::AudioReactive
+                    } else {
+                        LiveSubtype::Scene3D
+                    };
 
                     let thumb = get_thumbnail_path(&p, &cache_dir);
                     let crisp_preview = ensure_workshop_thumbnail(&p, &thumb);
@@ -487,7 +550,7 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                         category: detected_cat,
                         thumbnail_path: crisp_preview.clone(),
                         preview_path: crisp_preview,
-                        kind: WallpaperKind::Live { engine_type },
+                        kind: WallpaperKind::Live { engine_type, subtype },
                     });
                 }
             }
@@ -861,7 +924,29 @@ fn load_css() {
             letter-spacing: 0.5px;
         }}
 
-        .card-badge-live {{
+        .card-badge-audio {{
+            font-size: 9px;
+            font-weight: 800;
+            color: #ffffff;
+            background-color: #00bcd4;
+            box-shadow: 0 0 8px rgba(0, 188, 212, 0.45);
+            border-radius: 5px;
+            padding: 2px 6px;
+            letter-spacing: 0.5px;
+        }}
+
+        .card-badge-scene {{
+            font-size: 9px;
+            font-weight: 800;
+            color: #ffffff;
+            background-color: #9c27b0;
+            box-shadow: 0 0 8px rgba(156, 39, 176, 0.45);
+            border-radius: 5px;
+            padding: 2px 6px;
+            letter-spacing: 0.5px;
+        }}
+
+        .card-badge-video {{
             font-size: 9px;
             font-weight: 800;
             color: #ffffff;
@@ -1064,8 +1149,18 @@ fn build_ui(app: &Application) {
     let cur_active_path_rc = current_active_path.clone();
     let update_meta_labels = move |cat_widget: &Label, status_widget: &Label, item: &WallpaperItem| {
         match &item.kind {
-            WallpaperKind::Live { engine_type } => {
-                cat_widget.set_text(&format!("󰑋 VÍDEO • {}", engine_type.to_uppercase()));
+            WallpaperKind::Live { engine_type, subtype } => {
+                match subtype {
+                    LiveSubtype::AudioReactive => {
+                        cat_widget.set_text("󰎈 CENA • ÁUDIO REATIVO");
+                    }
+                    LiveSubtype::Scene3D => {
+                        cat_widget.set_text(&format!("󰍽 CENA 3D & FÍSICA • {}", engine_type.to_uppercase()));
+                    }
+                    LiveSubtype::Video => {
+                        cat_widget.set_text("🎬 VÍDEO PRÉ-GRAVADO (MP4)");
+                    }
+                }
             }
             WallpaperKind::Static => {
                 cat_widget.set_text(&format!("󰸉 {}", item.category));
@@ -1106,8 +1201,18 @@ fn build_ui(app: &Application) {
 
     let update_apply_btn_label = |btn: &Button, item: &WallpaperItem| {
         match &item.kind {
-            WallpaperKind::Live { engine_type } => {
-                btn.set_label(&format!("󰑋  Iniciar Vídeo ({})", engine_type.to_uppercase()));
+            WallpaperKind::Live { subtype, .. } => {
+                match subtype {
+                    LiveSubtype::AudioReactive => {
+                        btn.set_label("󰎈  Iniciar Cena Áudio Reativa");
+                    }
+                    LiveSubtype::Scene3D => {
+                        btn.set_label("󰍽  Iniciar Cena 3D Interativa");
+                    }
+                    LiveSubtype::Video => {
+                        btn.set_label("🎬  Reproduzir Vídeo (MP4)");
+                    }
+                }
             }
             WallpaperKind::Static => {
                 btn.set_label("󰸉  Aplicar Wallpaper");
@@ -1367,6 +1472,11 @@ fn build_ui(app: &Application) {
     live_view.set_vexpand(true);
     live_view.set_visible(is_live_active);
 
+    let live_chips_bar = GtkBox::new(Orientation::Horizontal, 8);
+    let live_categories = ["Todos", "󰎈 Áudio Reativo", "󰍽 Cenas 3D", "🎬 Vídeos MP4"];
+    let live_active_category = Rc::new(RefCell::new("Todos".to_string()));
+    let live_category_buttons = Rc::new(RefCell::new(Vec::<Button>::new()));
+
     let live_flowbox = FlowBox::new();
     live_flowbox.set_valign(gtk4::Align::Start);
     live_flowbox.set_max_children_per_line(3);
@@ -1400,9 +1510,29 @@ fn build_ui(app: &Application) {
         name_label.set_halign(gtk4::Align::Start);
         label_row.append(&name_label);
 
-        let live_tag = Label::new(Some("󰑋 VÍDEO"));
-        live_tag.add_css_class("card-badge-live");
-        label_row.append(&live_tag);
+        let subtype = match &item.kind {
+            WallpaperKind::Live { subtype, .. } => *subtype,
+            _ => LiveSubtype::Scene3D,
+        };
+
+        let type_tag = match subtype {
+            LiveSubtype::AudioReactive => {
+                let lbl = Label::new(Some("󰎈 ÁUDIO"));
+                lbl.add_css_class("card-badge-audio");
+                lbl
+            }
+            LiveSubtype::Scene3D => {
+                let lbl = Label::new(Some("󰍽 3D/CENA"));
+                lbl.add_css_class("card-badge-scene");
+                lbl
+            }
+            LiveSubtype::Video => {
+                let lbl = Label::new(Some("🎬 VÍDEO"));
+                lbl.add_css_class("card-badge-video");
+                lbl
+            }
+        };
+        label_row.append(&type_tag);
 
         if is_active_now {
             let badge = Label::new(Some("✓ LIVE"));
@@ -1446,6 +1576,7 @@ fn build_ui(app: &Application) {
         .vexpand(true)
         .build();
 
+    live_view.append(&live_chips_bar);
     live_view.append(&live_scroll);
 
     // Search and Filtering across active section
@@ -1455,6 +1586,7 @@ fn build_ui(app: &Application) {
     let live_reg_filter = Rc::clone(&live_registry);
     let search_rc = search_entry.clone();
     let static_cat_rc = Rc::clone(&static_active_category);
+    let live_cat_rc = Rc::clone(&live_active_category);
     let tab_state_filter = Rc::clone(&active_tab_state);
 
     let recompute_filter = Rc::new(move || {
@@ -1469,9 +1601,16 @@ fn build_ui(app: &Application) {
                 meta.child.set_visible(matches_q && matches_c);
             }
         } else if tab == "live" {
+            let cat = live_cat_rc.borrow().clone();
             for meta in live_reg_filter.borrow().iter() {
                 let matches_q = query.is_empty() || meta.name_lower.contains(&query);
-                meta.child.set_visible(matches_q);
+                let matches_c = match cat.as_str() {
+                    "󰎈 Áudio Reativo" => matches!(meta.item.kind, WallpaperKind::Live { subtype: LiveSubtype::AudioReactive, .. }),
+                    "󰍽 Cenas 3D" => matches!(meta.item.kind, WallpaperKind::Live { subtype: LiveSubtype::Scene3D, .. }),
+                    "🎬 Vídeos MP4" => matches!(meta.item.kind, WallpaperKind::Live { subtype: LiveSubtype::Video, .. }),
+                    _ => true,
+                };
+                meta.child.set_visible(matches_q && matches_c);
             }
         }
     });
@@ -1504,6 +1643,31 @@ fn build_ui(app: &Application) {
 
         static_category_buttons.borrow_mut().push(btn.clone());
         static_chips_bar.append(&btn);
+    }
+
+    for cat_name in live_categories {
+        let btn = Button::with_label(cat_name);
+        btn.add_css_class("category-chip");
+        if cat_name == "Todos" {
+            btn.add_css_class("active");
+        }
+
+        let cat_val = cat_name.to_string();
+        let act_cat_set = Rc::clone(&live_active_category);
+        let btn_list = Rc::clone(&live_category_buttons);
+        let recomp_cat = Rc::clone(&recompute_filter);
+
+        btn.connect_clicked(move |clicked_btn| {
+            *act_cat_set.borrow_mut() = cat_val.clone();
+            for b in btn_list.borrow().iter() {
+                b.remove_css_class("active");
+            }
+            clicked_btn.add_css_class("active");
+            recomp_cat();
+        });
+
+        live_category_buttons.borrow_mut().push(btn.clone());
+        live_chips_bar.append(&btn);
     }
 
     // -------------------------------------------------------------------------
@@ -1905,6 +2069,7 @@ fn build_ui(app: &Application) {
     let search_c1 = search_rc_tab.clone();
     let count_c1 = count_rc_tab.clone();
     let tab_state_c1 = Rc::clone(&tab_state_1);
+    let recomp_t1 = Rc::clone(&recompute_filter);
     tab_static_btn.connect_clicked(move |_| {
         *tab_state_c1.borrow_mut() = "static";
         t_stat_c1.add_css_class("active");
@@ -1918,6 +2083,7 @@ fn build_ui(app: &Application) {
         search_c1.set_visible(true);
         count_c1.set_visible(true);
         count_c1.set_text(&format!("{} Wallpapers", static_len));
+        recomp_t1();
     });
 
     // Tab 2: Vídeos & Steam Engine
@@ -1930,6 +2096,7 @@ fn build_ui(app: &Application) {
     let search_c2 = search_rc_tab.clone();
     let count_c2 = count_rc_tab.clone();
     let tab_state_c2 = Rc::clone(&tab_state_1);
+    let recomp_t2 = Rc::clone(&recompute_filter);
     tab_live_btn.connect_clicked(move |_| {
         *tab_state_c2.borrow_mut() = "live";
         t_live_c2.add_css_class("active");
@@ -1942,7 +2109,8 @@ fn build_ui(app: &Application) {
 
         search_c2.set_visible(true);
         count_c2.set_visible(true);
-        count_c2.set_text(&format!("{} Vídeos Steam", live_len));
+        count_c2.set_text(&format!("{} Vídeos & Cenas", live_len));
+        recomp_t2();
     });
 
     // Tab 3: Configurar Áudio & Motor

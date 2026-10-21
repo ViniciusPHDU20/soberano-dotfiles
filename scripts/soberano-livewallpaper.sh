@@ -168,7 +168,24 @@ apply_live() {
     fi
 
     if [ "$AUDIO_PROCESSING" = "false" ]; then
-        cmd_args+=(--no-audio-processing)
+        cmd_args+=(
+            --no-audio-processing
+            --set-property audioresponsive=0
+            --set-property glitchaudioresponsive=0
+            --set-property visualizer=0
+            --set-property audiobars1=0
+            --set-property audiovisualiser=0
+            --set-property rain=0
+        )
+    else
+        cmd_args+=(
+            --set-property audioresponsive=1
+            --set-property glitchaudioresponsive=1
+            --set-property visualizer=1
+            --set-property audiobars1=1
+            --set-property audiovisualiser=1
+            --set-property rain=1
+        )
     fi
 
     if [ "$FULLSCREEN_PAUSE" = "true" ]; then
@@ -178,7 +195,9 @@ apply_live() {
     fi
 
     if [ "$MOUSE_INTERACTION" = "false" ]; then
-        cmd_args+=(--disable-mouse)
+        cmd_args+=(--disable-mouse --set-property mouseinfluence=0)
+    else
+        cmd_args+=(--set-property mouseinfluence=1)
     fi
 
     if [ "$PARALLAX" = "false" ]; then
@@ -186,7 +205,9 @@ apply_live() {
     fi
 
     if [ "$PARTICLES" = "false" ]; then
-        cmd_args+=(--disable-particles)
+        cmd_args+=(--disable-particles --set-property particles=0)
+    else
+        cmd_args+=(--set-property particles=1)
     fi
 
     cmd_args+=("$target")
