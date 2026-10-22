@@ -185,11 +185,12 @@ L_COCKPIT_TOP = """[[bar.layout]]
 monitor = "*"
 show = true
 left = [
-    { name = "block-ws", modules = ["dashboard", "hyprland-workspaces"] },
-    { name = "block-apps", modules = ["window-title", "systray"] }
+    { name = "block-ws", modules = ["dashboard", "hyprland-workspaces"] }
 ]
 center = []
-right = []"""
+right = [
+    { name = "block-apps", modules = ["window-title", "systray"] }
+]"""
 
 M_STANDARD = {
     "hyprland-workspaces": {"app-icons-show": "true"},

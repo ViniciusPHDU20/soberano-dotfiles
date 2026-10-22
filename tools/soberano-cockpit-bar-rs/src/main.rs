@@ -125,15 +125,11 @@ fn build_ui(app: &Application) {
     let root = CenterBox::new();
     root.add_css_class("cockpit-container");
 
-    // Left empty spacer
-    let left_spacer = GtkBox::new(Orientation::Horizontal, 0);
-    root.set_start_widget(Some(&left_spacer));
-
     // -------------------------------------------------------------------------
-    // BLOCO 3 (Centro): Relógio & Cronômetro Tático
+    // BLOCO 3 (Ponta Inferior Esquerda): Relógio & Cronômetro Tático
     // -------------------------------------------------------------------------
-    let center_island = GtkBox::new(Orientation::Horizontal, 8);
-    center_island.add_css_class("cockpit-island");
+    let left_island = GtkBox::new(Orientation::Horizontal, 8);
+    left_island.add_css_class("cockpit-island");
 
     let clock_icon = Label::new(Some("󰃰"));
     clock_icon.add_css_class("cockpit-accent");
@@ -141,8 +137,8 @@ fn build_ui(app: &Application) {
     let clock_label = Label::new(None);
     clock_label.add_css_class("cockpit-label");
 
-    center_island.append(&clock_icon);
-    center_island.append(&clock_label);
+    left_island.append(&clock_icon);
+    left_island.append(&clock_label);
 
     let format_24h = Arc::new(AtomicBool::new(true));
     let f24_click = Arc::clone(&format_24h);
@@ -152,7 +148,7 @@ fn build_ui(app: &Application) {
         let cur = f24_click.load(Ordering::Relaxed);
         f24_click.store(!cur, Ordering::Relaxed);
     });
-    center_island.add_controller(click_clock);
+    left_island.add_controller(click_clock);
 
     let clock_lbl_clone = clock_label.clone();
     let f24_timer = Arc::clone(&format_24h);
@@ -169,10 +165,11 @@ fn build_ui(app: &Application) {
     update_time();
     glib::timeout_add_local(std::time::Duration::from_millis(1000), update_time);
 
-    root.set_center_widget(Some(&center_island));
+    root.set_start_widget(Some(&left_island));
+    root.set_center_widget(None::<&GtkBox>);
 
     // -------------------------------------------------------------------------
-    // BLOCO 4 (Direita): Status Vital (Volume + Rede + Notificações)
+    // BLOCO 4 (Ponta Inferior Direita): Status Vital (Volume + Rede + Notificações)
     // -------------------------------------------------------------------------
     let right_island = GtkBox::new(Orientation::Horizontal, 8);
     right_island.add_css_class("cockpit-island");

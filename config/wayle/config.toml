@@ -2,50 +2,55 @@
 tearing-mode = false
 
 [bar]
-scale = 0.88
+scale = 0.94
 location = "top"
 exclusive = true
-inset-edge = 0.2
-inset-ends = 0.8
-padding = 0.22
-padding-ends = 0.45
-module-gap = 0.35
-bg = "bg-surface"
-background-opacity = 92
-border-location = "all"
-border-width = 1
-border-color = "border-subtle"
-rounding = "full"
+inset-edge = 0.3
+inset-ends = 0.4
+padding = 0.15
+padding-ends = 0.3
+module-gap = 0.45
+bg = "transparent"
+background-opacity = 0
+border-location = "none"
+border-width = 0
+border-color = "border-accent"
+rounding = "none"
 button-variant = "basic"
 button-opacity = 100
 button-bg-opacity = 90
-button-icon-size = 0.95
-button-icon-padding = 0.85
-button-label-size = 0.92
+button-icon-size = 1.0
+button-icon-padding = 0.5
+button-label-size = 0.95
 button-label-weight = "semibold"
-button-label-padding = 0.85
-button-rounding = "full"
+button-label-padding = 0.7
+button-rounding = "none"
 button-gap = 0.75
 button-border-location = "none"
 button-border-width = 0
-button-group-padding = 0.15
-button-group-module-gap = 0.25
-button-group-background = "bg-elevated"
-button-group-opacity = 92
-button-group-rounding = "full"
-button-group-border-location = "none"
+button-group-padding = 0.18
+button-group-module-gap = 0.3
+button-group-background = "bg-surface"
+button-group-opacity = 98
+button-group-rounding = "none"
+button-group-border-location = "all"
 dropdown-shadow = true
 dropdown-opacity = 96
 dropdown-autohide = true
 
 shadow = "none"
 button-group-border-color = "border-accent"
+button-group-border-width = 1
 [[bar.layout]]
 monitor = "*"
 show = true
-left = []
-center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
-right = []
+left = [
+    { name = "block-ws", modules = ["dashboard", "hyprland-workspaces"] }
+]
+center = []
+right = [
+    { name = "block-apps", modules = ["window-title", "systray"] }
+]
 [styling]
 scale = 1.0
 rounding = "md"
@@ -80,7 +85,7 @@ cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
 name = "DP-1"
-wallpaper = "/home/viniciusphdu/.cache/soberano_thumbnails/hires_1216445106.jpg"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Concept-Japanese house.png"
 fit-mode = "fill"
 
 [osd]
@@ -109,20 +114,19 @@ numbering = "absolute"
 display-mode = "label"
 urgent-show = true
 app-icons-show = true
-
 [modules.window-title]
 format = "{{ title }}"
 label-max-length = 40
 icon-show = true
 
 [modules.clock]
-format = "%H:%M  •  %a %d %b"
+format = "%H:%M:%S  •  %d/%m"
 icon-show = true
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
 dropdown-show-seconds = true
-
+label-show = true
 [modules.media]
 format = "{{ title }} - {{ artist }}"
 label-max-length = 30
@@ -182,7 +186,7 @@ format = "{{ percent }}%"
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-
+label-show = true
 [modules.microphone]
 icon-show = true
 label-show = false
@@ -192,11 +196,10 @@ label-color = "accent"
 
 [modules.network]
 icon-show = true
-label-show = false
+label-show = true
 icon-color = "auto"
 icon-bg-color = "accent"
 label-color = "accent"
-
 [modules.notifications]
 icon-show = true
 label-show = true
@@ -206,7 +209,6 @@ label-color = "accent"
 popup-position = "top-right"
 popup-duration = 4500
 popup-shadow = true
-
 [modules.systray]
 icon-scale = 0.9
 item-gap = 0.25
