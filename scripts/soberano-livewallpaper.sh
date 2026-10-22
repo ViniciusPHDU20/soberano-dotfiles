@@ -125,15 +125,23 @@ apply_live() {
     systemctl --user stop awww-daemon.service 2>/dev/null || true
     killall -9 awww-daemon 2>/dev/null || true
 
-    # 2. Extract Matugen color scheme from preview image if present
+    # 2. Extract Matugen color scheme from high-resolution preview frame or target
     local preview=""
-    if [ -d "$target" ]; then
-        for p in "$target/preview.jpg" "$target/preview.png" "$target/preview.gif" "$target/preview.webp"; do
+    local item_id
+    item_id=$(basename "$target")
+    local hires_preview="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_thumbnails/hires_${item_id}.jpg"
+
+    if [ -f "$hires_preview" ]; then
+        preview="$hires_preview"
+    elif [ -d "$target" ]; then
+        for p in "$target/preview.jpg" "$target/preview.png" "$target/preview.webp" "$target/preview.gif"; do
             if [ -f "$p" ]; then
                 preview="$p"
                 break
             fi
         done
+    elif [ -f "$target" ]; then
+        preview="$target"
     fi
 
     local title
@@ -147,7 +155,10 @@ apply_live() {
     if [ -n "$preview" ] && [ -f "$preview" ]; then
         local scheme
         scheme=$(cat "$SCHEME_FILE" 2>/dev/null || echo "vibrant")
+        pkill -x matugen 2>/dev/null || true
         matugen image "$preview" -t "scheme-${scheme}" -m dark --prefer saturation --contrast -0.45 >/dev/null 2>&1 || true
+        sed -i "s|^wallpaper = .*|wallpaper = \"$preview\"|" "${HOME}/dotfiles/config/wayle/config.toml" 2>/dev/null || true
+        wayle wallpaper set "$preview" >/dev/null 2>&1 || true
     fi
 
     # 3. Assemble command flags based on user configuration
