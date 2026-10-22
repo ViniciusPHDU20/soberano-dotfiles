@@ -221,6 +221,14 @@ fn get_cache_dir() -> PathBuf {
     dir
 }
 
+fn is_live_engine_installed() -> bool {
+    Command::new("which")
+        .arg("linux-wallpaperengine")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
 fn is_live_engine_running() -> bool {
     let output = Command::new("systemctl")
         .args(["--user", "is-active", "--quiet", "soberano-livewallpaper"])
@@ -460,8 +468,9 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
         }
     }
 
-    // 2. Scan Steam Workshop & Live Wallpapers (Separate Collection)
-    for ws_dir in find_workshop_dirs() {
+    // 2. Scan Steam Workshop & Live Wallpapers (Only if Wallpaper Engine is installed)
+    if is_live_engine_installed() {
+        for ws_dir in find_workshop_dirs() {
         if let Ok(entries) = fs::read_dir(&ws_dir) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let p = entry.path();
@@ -562,6 +571,7 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
                 }
             }
         }
+    }
     }
 
     items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -1088,7 +1098,9 @@ fn build_ui(app: &Application) {
     }
 
     // Single check of current active wallpaper (Eliminates the 105 pgrep subprocesses bottleneck!)
-    let (current_active_path, is_live_active) = current_active_wallpaper();
+    let has_live_support = is_live_engine_installed() && !live_wallpapers.is_empty();
+    let (current_active_path, raw_live_active) = current_active_wallpaper();
+    let is_live_active = raw_live_active && has_live_support;
 
     // Default selected item
     let initial_item = if let Some(ref cur) = current_active_path {
@@ -1260,6 +1272,7 @@ fn build_ui(app: &Application) {
 
     let stop_btn = Button::with_label("⏹  Parar Live Wallpaper");
     stop_btn.add_css_class("hero-btn-stop");
+    stop_btn.set_visible(has_live_support);
     let win_stop = window.clone();
     stop_btn.connect_clicked(move |_| {
         stop_live_wallpaper();
@@ -1293,7 +1306,11 @@ fn build_ui(app: &Application) {
     top_bar.set_valign(gtk4::Align::Center);
 
     let tabs_box = GtkBox::new(Orientation::Horizontal, 6);
-    let tab_static_btn = Button::with_label("󰸉  Nossos Wallpapers");
+    let tab_static_btn = Button::with_label(if has_live_support {
+        "󰸉  Nossos Wallpapers"
+    } else {
+        "󰸉  Coleção Soberano"
+    });
     tab_static_btn.add_css_class("tab-btn");
 
     let tab_live_btn = Button::with_label("󰑋  Vídeos & Steam Engine");
@@ -1309,8 +1326,10 @@ fn build_ui(app: &Application) {
     }
 
     tabs_box.append(&tab_static_btn);
-    tabs_box.append(&tab_live_btn);
-    tabs_box.append(&tab_settings_btn);
+    if has_live_support {
+        tabs_box.append(&tab_live_btn);
+        tabs_box.append(&tab_settings_btn);
+    }
 
     let search_entry = SearchEntry::new();
     search_entry.set_placeholder_text(Some("Pesquisar nesta seção..."));
@@ -2146,8 +2165,10 @@ fn build_ui(app: &Application) {
 
     vault_stage.append(&top_bar);
     vault_stage.append(&static_view);
-    vault_stage.append(&live_view);
-    vault_stage.append(&settings_view);
+    if has_live_support {
+        vault_stage.append(&live_view);
+        vault_stage.append(&settings_view);
+    }
 
     studio_deck.append(&hero_stage);
     studio_deck.append(&vault_stage);

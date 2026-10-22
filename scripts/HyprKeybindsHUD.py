@@ -64,6 +64,13 @@ class KeybindsHUDWindow(QtWidgets.QMainWindow):
         # Load index.html
         if os.path.exists(HTML_PATH):
             self.view.setUrl(QtCore.QUrl.fromLocalFile(HTML_PATH))
+            import shutil
+            if not shutil.which("linux-wallpaperengine"):
+                self.view.loadFinished.connect(
+                    lambda ok: self.view.page().runJavaScript(
+                        "document.querySelectorAll('[data-search*=\"live wallpaper\"]').forEach(e => e.remove());"
+                    )
+                )
         else:
             self.view.setHtml("<h1>Erro: index.html não encontrado</h1>")
 
