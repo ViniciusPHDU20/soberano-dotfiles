@@ -58,15 +58,15 @@ fn build_ui(app: &Application) {
     // Layer shell setup
     window.init_layer_shell();
     window.set_layer(Layer::Top);
-    window.set_exclusive_zone(36);
+    window.set_exclusive_zone(26);
     window.set_anchor(Edge::Bottom, true);
     window.set_anchor(Edge::Left, true);
     window.set_anchor(Edge::Right, true);
     window.set_anchor(Edge::Top, false);
 
-    window.set_margin(Edge::Bottom, 10);
-    window.set_margin(Edge::Left, 14);
-    window.set_margin(Edge::Right, 14);
+    window.set_margin(Edge::Bottom, 3);
+    window.set_margin(Edge::Left, 6);
+    window.set_margin(Edge::Right, 6);
 
     // Apply CSS
     let provider = gtk4::CssProvider::new();
@@ -86,28 +86,29 @@ fn build_ui(app: &Application) {
             background-color: rgba(22, 23, 30, 0.96);
             border: 1px solid alpha(@accent_color, 0.85);
             border-radius: 0px;
-            padding: 4px 14px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.40);
+            padding: 2px 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
         }}
         .cockpit-island:hover {{
             background-color: rgba(28, 29, 38, 0.98);
             border-color: @accent_color;
         }}
         .cockpit-label {{
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             color: @window_fg_color;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }}
         .cockpit-accent {{
             color: @accent_color;
             font-weight: 800;
+            font-size: 12px;
         }}
         .cockpit-chip {{
             background-color: rgba(255, 255, 255, 0.06);
             border-radius: 0px;
-            padding: 3px 8px;
-            margin: 0 2px;
+            padding: 2px 6px;
+            margin: 0 1px;
         }}
         ",
         gtk_css
