@@ -23,6 +23,11 @@ declare -a presets=(
     "8   — Audiophile Soundstage (Foco CAVA & Player Musical • Gaps 10px • Rounding 12px)"
     "9   — Glassmorphism Frost (Vidro Fosco 50% • Gaps 8px • Rounding 10px)"
     "10  — Stealth Zen Minimalist (Workspaces • App Ativo • Bandeja • Relógio • Gaps 2px)"
+    "11  — Lateral Vertical Blade (Barra Vertical Esquerda • Espaço 100% Livre • Gaps 8px)"
+    "12  — ROG Telemetry Cyber-HUD (Aero Cyber-Militar • Telemetria Viva • Gaps 4px • 0px Sharp)"
+    "13  — Dynamic Top Notch (Cápsula Flutuante no Topo • Rounding 14px • Gaps 10px)"
+    "14  — Swiss Editorial Typographic (Design Editorial Suíço Inferior • Gaps 6px • Rounding 6px)"
+    "15  — Retro-Terminal Synth (Mainframe Monospace • Blocos Retro • Gaps 6px • Rounding 2px)"
 )
 
 options=()
@@ -38,7 +43,7 @@ done
 if [[ $# -ge 1 && -n "$1" ]]; then
     chosen="$1"
 else
-    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 76 -l 10 || true)
+    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 84 -l 15 || true)
 fi
 [ -z "$chosen" ] && exit 0
 
@@ -116,6 +121,41 @@ show = true
 left = []
 center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
 right = []"""
+
+L_VERTICAL_LEFT = """[[bar.layout]]
+monitor = "*"
+show = true
+left = ["dashboard", "hyprland-workspaces"]
+center = ["clock", "media"]
+right = ["volume", "custom-updates", "systray", "notifications"]"""
+
+L_TELEMETRY = """[[bar.layout]]
+monitor = "*"
+show = true
+left = ["dashboard", "hyprland-workspaces", { name = "telemetry", modules = ["custom-cpu", "custom-ram", "custom-storage"] }]
+center = ["window-title"]
+right = ["cava", "volume", "microphone", "network", "clock", "notifications"]"""
+
+L_NOTCH = """[[bar.layout]]
+monitor = "*"
+show = true
+left = []
+center = ["dashboard", "hyprland-workspaces", "clock", "media", "volume", "notifications"]
+right = []"""
+
+L_SWISS = """[[bar.layout]]
+monitor = "*"
+show = true
+left = ["dashboard", "window-title"]
+center = ["hyprland-workspaces"]
+right = ["weather", "volume", "custom-updates", "clock", "notifications"]"""
+
+L_RETRO = """[[bar.layout]]
+monitor = "*"
+show = true
+left = ["dashboard", "hyprland-workspaces", "window-title"]
+center = ["clock", "cava"]
+right = [{ name = "sys", modules = ["custom-cpu", "custom-ram"] }, "volume", "network", "custom-updates", "notifications"]"""
 
 presets = {
     # 1. Floating Pill Top (Pílula Flutuante)
@@ -440,6 +480,168 @@ presets = {
             "gaps_out": "{ top = 2, right = 2, bottom = 2, left = 2 }",
             "rounding": 4,
             "border_size": 1,
+        },
+    },
+    # 11. Lateral Vertical Blade (Barra Vertical Esquerda • Espaço 100% Livre)
+    "11": {
+        "bar": {
+            "location": '"left"',
+            "scale": "0.94",
+            "inset-edge": "0.35",
+            "inset-ends": "0.5",
+            "padding": "0.3",
+            "padding-ends": "0.4",
+            "module-gap": "0.4",
+            "bg": '"bg-surface"',
+            "background-opacity": "92",
+            "rounding": '"lg"',
+            "border-location": '"all"',
+            "border-width": "1",
+            "border-color": '"border-subtle"',
+            "shadow": '"none"',
+            "button-variant": '"icon-square"',
+            "button-rounding": '"md"',
+            "button-border-location": '"all"',
+            "button-border-width": "1",
+            "button-group-border-location": '"none"',
+            "button-group-rounding": '"md"',
+        },
+        "layout": L_VERTICAL_LEFT,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 8, right = 8, bottom = 8, left = 8 }",
+            "rounding": 10,
+            "border_size": 2,
+        },
+    },
+    # 12. ROG Telemetry Cyber-HUD (Aero Cyber-Militar • Telemetria Viva • 0px Sharp)
+    "12": {
+        "bar": {
+            "location": '"top"',
+            "scale": "0.98",
+            "inset-edge": "0.0",
+            "inset-ends": "0.0",
+            "padding": "0.22",
+            "padding-ends": "0.5",
+            "module-gap": "0.3",
+            "bg": '"bg-surface"',
+            "background-opacity": "98",
+            "rounding": '"none"',
+            "border-location": '"bottom"',
+            "border-width": "2",
+            "border-color": '"border-accent"',
+            "shadow": '"none"',
+            "button-variant": '"icon-square"',
+            "button-rounding": '"none"',
+            "button-border-location": '"all"',
+            "button-border-width": "1",
+            "button-group-border-location": '"all"',
+            "button-group-border-width": "1",
+            "button-group-rounding": '"none"',
+        },
+        "layout": L_TELEMETRY,
+        "hypr": {
+            "gaps_in": 2,
+            "gaps_out": "{ top = 4, right = 4, bottom = 4, left = 4 }",
+            "rounding": 0,
+            "border_size": 2,
+        },
+    },
+    # 13. Dynamic Top Notch (Cápsula Flutuante no Topo • Rounding 14px)
+    "13": {
+        "bar": {
+            "location": '"top"',
+            "scale": "0.96",
+            "inset-edge": "0.0",
+            "inset-ends": "1.8",
+            "padding": "0.32",
+            "padding-ends": "0.6",
+            "module-gap": "0.4",
+            "bg": '"bg-surface"',
+            "background-opacity": "95",
+            "rounding": '"lg"',
+            "border-location": '"all"',
+            "border-width": "1",
+            "border-color": '"border-accent"',
+            "shadow": '"drop"',
+            "button-variant": '"basic"',
+            "button-rounding": '"full"',
+            "button-border-location": '"none"',
+            "button-border-width": "0",
+            "button-group-border-location": '"none"',
+            "button-group-rounding": '"full"',
+        },
+        "layout": L_NOTCH,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 10, right = 8, bottom = 8, left = 8 }",
+            "rounding": 14,
+            "border_size": 2,
+        },
+    },
+    # 14. Swiss Editorial Typographic (Design Editorial Suíço Inferior • Gaps 6px)
+    "14": {
+        "bar": {
+            "location": '"bottom"',
+            "scale": "0.90",
+            "inset-edge": "0.0",
+            "inset-ends": "0.0",
+            "padding": "0.18",
+            "padding-ends": "0.8",
+            "module-gap": "0.6",
+            "bg": '"bg-surface"',
+            "background-opacity": "95",
+            "rounding": '"none"',
+            "border-location": '"top"',
+            "border-width": "1",
+            "border-color": '"border-subtle"',
+            "shadow": '"none"',
+            "button-variant": '"basic"',
+            "button-rounding": '"none"',
+            "button-border-location": '"none"',
+            "button-border-width": "0",
+            "button-group-border-location": '"none"',
+            "button-group-rounding": '"none"',
+        },
+        "layout": L_SWISS,
+        "hypr": {
+            "gaps_in": 3,
+            "gaps_out": "{ top = 6, right = 6, bottom = 8, left = 6 }",
+            "rounding": 6,
+            "border_size": 1,
+        },
+    },
+    # 15. Retro-Terminal Synth (Mainframe Monospace • Blocos Retro)
+    "15": {
+        "bar": {
+            "location": '"top"',
+            "scale": "0.94",
+            "inset-edge": "0.25",
+            "inset-ends": "0.35",
+            "padding": "0.25",
+            "padding-ends": "0.5",
+            "module-gap": "0.5",
+            "bg": '"bg-surface"',
+            "background-opacity": "96",
+            "rounding": '"sm"',
+            "border-location": '"all"',
+            "border-width": "2",
+            "border-color": '"border-accent"',
+            "shadow": '"drop"',
+            "button-variant": '"block-prefix"',
+            "button-rounding": '"sm"',
+            "button-border-location": '"all"',
+            "button-border-width": "1",
+            "button-group-border-location": '"all"',
+            "button-group-border-width": "1",
+            "button-group-rounding": '"sm"',
+        },
+        "layout": L_RETRO,
+        "hypr": {
+            "gaps_in": 3,
+            "gaps_out": "{ top = 8, right = 6, bottom = 6, left = 6 }",
+            "rounding": 2,
+            "border_size": 2,
         },
     },
 }

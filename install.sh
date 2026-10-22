@@ -324,6 +324,11 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         "7"  "Island Floating Clusters (Ilhas Transparentes)" "off"
         "8"  "Audiophile Soundstage (Foco CAVA & Player Musical)" "off"
         "9"  "Glassmorphism Frost (Vidro Fosco Translúcido 50%)" "off"
+        "11" "Lateral Vertical Blade (Barra Vertical Esquerda • Espaço Livre)" "off"
+        "12" "ROG Telemetry Cyber-HUD (Aero Cyber-Militar • 0px Sharp)" "off"
+        "13" "Dynamic Top Notch (Cápsula Flutuante no Topo • Round 14px)" "off"
+        "14" "Swiss Editorial Typographic (Design Editorial Suíço Inferior)" "off"
+        "15" "Retro-Terminal Synth (Mainframe Monospace • Blocos Retro)" "off"
     )
 
     CHOSEN_PRESET=$(dialog --colors \
@@ -331,7 +336,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --title "\Zb\Z3 Layout Inicial da Barra Wayle \ZB\Zn" \
         --radiolist \
 "Escolha o layout e geometria visual da barra para iniciar seu desktop:\n(Você poderá trocar a qualquer momento usando Super + Ctrl + B)" \
-        18 74 10 \
+        20 76 12 \
         "${PRESET_CHOICES[@]}" \
         3>&1 1>&2 2>&3) || CHOSEN_PRESET="10"
 
