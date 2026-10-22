@@ -28,6 +28,7 @@ declare -a presets=(
     "13  — Dynamic Top Notch (Cápsula Flutuante no Topo • Rounding 14px • Gaps 10px)"
     "14  — Swiss Editorial Typographic (Design Editorial Suíço Inferior • Gaps 6px • Rounding 6px)"
     "15  — Retro-Terminal Synth (Mainframe Monospace • Blocos Retro • Gaps 6px • Rounding 2px)"
+    "16  — Floating Archipelago (Trio de Ilhas Flutuantes • 3 Barras Independentes • Gaps 10px)"
 )
 
 options=()
@@ -43,7 +44,7 @@ done
 if [[ $# -ge 1 && -n "$1" ]]; then
     chosen="$1"
 else
-    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 84 -l 15 || true)
+    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 86 -l 16 || true)
 fi
 [ -z "$chosen" ] && exit 0
 
@@ -157,10 +158,18 @@ left = ["dashboard", "hyprland-workspaces", "window-title"]
 center = ["clock", "cava"]
 right = [{ name = "sys", modules = ["custom-cpu", "custom-ram"] }, "volume", "network", "custom-updates", "notifications"]"""
 
+L_ARCHIPELAGO = """[[bar.layout]]
+monitor = "*"
+show = true
+left = [{ name = "nav-island", modules = ["dashboard", "hyprland-workspaces"] }]
+center = [{ name = "focus-island", modules = ["clock"] }]
+right = [{ name = "status-island", modules = ["volume", "network", "notifications"] }]"""
+
 M_STANDARD = {
     "hyprland-workspaces": {"app-icons-show": "true"},
     "clock": {"format": '"%H:%M  •  %a %d %b"', "icon-show": "true", "label-show": "true"},
     "volume": {"label-show": "true"},
+    "network": {"label-show": "true"},
     "notifications": {"label-show": "true"},
 }
 
@@ -168,7 +177,16 @@ M_SLIM_VERTICAL = {
     "hyprland-workspaces": {"app-icons-show": "false"},
     "clock": {"format": '"%H:%M"', "icon-show": "false", "label-show": "true"},
     "volume": {"label-show": "false"},
+    "network": {"label-show": "false"},
     "notifications": {"label-show": "false"},
+}
+
+M_ARCHIPELAGO = {
+    "hyprland-workspaces": {"app-icons-show": "false"},
+    "clock": {"format": '"%H:%M  •  %a %d"', "icon-show": "true", "label-show": "true"},
+    "volume": {"label-show": "true"},
+    "network": {"label-show": "false"},
+    "notifications": {"label-show": "true"},
 }
 
 def update_module_table(toml_text, module_name, key_values):
@@ -685,6 +703,48 @@ presets = {
             "gaps_in": 3,
             "gaps_out": "{ top = 8, right = 6, bottom = 6, left = 6 }",
             "rounding": 2,
+            "border_size": 2,
+        },
+    },
+    # 16. Floating Archipelago (Trio de Ilhas Flutuantes • 3 Barras Independentes)
+    "16": {
+        "bar": {
+            "location": '"top"',
+            "scale": "0.94",
+            "inset-edge": "0.35",
+            "inset-ends": "0.5",
+            "padding": "0.15",
+            "padding-ends": "0.3",
+            "module-gap": "0.5",
+            "bg": '"transparent"',
+            "background-opacity": "0",
+            "rounding": '"none"',
+            "border-location": '"none"',
+            "border-width": "0",
+            "shadow": '"none"',
+            "button-variant": '"basic"',
+            "button-rounding": '"full"',
+            "button-border-location": '"none"',
+            "button-border-width": "0",
+            "button-group-background": '"bg-surface"',
+            "button-group-opacity": "95",
+            "button-group-border-location": '"all"',
+            "button-group-border-width": "1",
+            "button-group-border-color": '"border-accent"',
+            "button-group-rounding": '"full"',
+            "button-group-padding": "0.22",
+            "button-group-module-gap": "0.35",
+            "button-icon-size": "1.0",
+            "button-icon-padding": "0.6",
+            "button-label-size": "0.95",
+            "button-label-padding": "0.8",
+        },
+        "layout": L_ARCHIPELAGO,
+        "modules": M_ARCHIPELAGO,
+        "hypr": {
+            "gaps_in": 4,
+            "gaps_out": "{ top = 12, right = 10, bottom = 10, left = 10 }",
+            "rounding": 14,
             "border_size": 2,
         },
     },
