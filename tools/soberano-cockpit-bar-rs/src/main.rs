@@ -49,26 +49,59 @@ fn toggle_mute() {
         .spawn();
 }
 
+fn get_network_info() -> (&'static str, String) {
+    if let Ok(out) = Command::new("nmcli").args(["-t", "-f", "TYPE,STATE,CONNECTION", "dev"]).output() {
+        let s = String::from_utf8_lossy(&out.stdout);
+        for line in s.lines() {
+            let parts: Vec<&str> = line.split(':').collect();
+            if parts.len() >= 3 && parts[1] == "connected" {
+                if parts[0] == "ethernet" {
+                    return ("󰈀", "ETH".to_string());
+                } else if parts[0] == "wifi" {
+                    return ("󰤨", parts[2].to_string());
+                }
+            }
+        }
+    }
+    ("󰤭", "OFF".to_string())
+}
+
+fn get_notification_count() -> u32 {
+    if let Ok(out) = Command::new("wayle").args(["notify", "status"]).output() {
+        let s = String::from_utf8_lossy(&out.stdout);
+        for line in s.lines() {
+            if line.starts_with("Notifications:") {
+                if let Some(cnt) = line.split(':').nth(1) {
+                    if let Ok(num) = cnt.trim().parse::<u32>() {
+                        return num;
+                    }
+                }
+            }
+        }
+    }
+    0
+}
+
 fn build_ui(app: &Application) {
     let window = gtk4::ApplicationWindow::builder()
         .application(app)
         .title("Soberano Cockpit Bottom Bar")
         .build();
 
-    // Layer shell setup
+    // Layer shell setup - exactly aligned with top bar margins
     window.init_layer_shell();
     window.set_layer(Layer::Top);
-    window.set_exclusive_zone(30);
+    window.set_exclusive_zone(32);
     window.set_anchor(Edge::Bottom, true);
     window.set_anchor(Edge::Left, true);
     window.set_anchor(Edge::Right, true);
     window.set_anchor(Edge::Top, false);
 
-    window.set_margin(Edge::Bottom, 4);
-    window.set_margin(Edge::Left, 8);
-    window.set_margin(Edge::Right, 8);
+    window.set_margin(Edge::Bottom, 5);
+    window.set_margin(Edge::Left, 9);
+    window.set_margin(Edge::Right, 9);
 
-    // Apply CSS
+    // Apply CSS directly from Matugen GTK theme
     let provider = gtk4::CssProvider::new();
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
     let gtk_css = format!("{}/.config/gtk-4.0/gtk.css", home);
@@ -83,14 +116,13 @@ fn build_ui(app: &Application) {
             padding: 0;
         }}
         .cockpit-island {{
-            background-color: rgba(22, 23, 30, 0.96);
-            border: 1px solid alpha(@accent_color, 0.85);
+            background-color: @card_bg_color;
+            border: 1px solid @accent_color;
             border-radius: 0px;
             padding: 3px 12px;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.38);
+            box-shadow: none;
         }}
         .cockpit-island:hover {{
-            background-color: rgba(28, 29, 38, 0.98);
             border-color: @accent_color;
         }}
         .cockpit-label {{
@@ -105,9 +137,18 @@ fn build_ui(app: &Application) {
             font-size: 13px;
         }}
         .cockpit-chip {{
-            background-color: rgba(255, 255, 255, 0.06);
+            background-color: transparent;
             border-radius: 0px;
-            padding: 2.5px 7px;
+            padding: 2px 6px;
+            margin: 0;
+            transition: background 150ms ease;
+        }}
+        .cockpit-chip:hover {{
+            background-color: alpha(@accent_color, 0.15);
+        }}
+        .cockpit-sep {{
+            color: alpha(@window_fg_color, 0.22);
+            font-size: 11px;
             margin: 0 2px;
         }}
         ",
@@ -172,11 +213,11 @@ fn build_ui(app: &Application) {
     // -------------------------------------------------------------------------
     // BLOCO 4 (Ponta Inferior Direita): Status Vital (Volume + Rede + Notificações)
     // -------------------------------------------------------------------------
-    let right_island = GtkBox::new(Orientation::Horizontal, 8);
+    let right_island = GtkBox::new(Orientation::Horizontal, 4);
     right_island.add_css_class("cockpit-island");
 
-    // Volume Widget with scroll to change and click for mute / pavucontrol
-    let vol_box = GtkBox::new(Orientation::Horizontal, 4);
+    // 1. Volume Widget with scroll to change and click for mute / pavucontrol
+    let vol_box = GtkBox::new(Orientation::Horizontal, 5);
     vol_box.add_css_class("cockpit-chip");
 
     let vol_icon = Label::new(Some("󰕾"));
@@ -239,21 +280,39 @@ fn build_ui(app: &Application) {
         }
     });
     vol_box.add_controller(click_vol);
-
     glib::timeout_add_local(std::time::Duration::from_millis(2500), update_vol_ui);
 
-    // Network Widget
-    let net_box = GtkBox::new(Orientation::Horizontal, 4);
+    // Separator 1
+    let sep1 = Label::new(Some("│"));
+    sep1.add_css_class("cockpit-sep");
+
+    // 2. Network Widget
+    let net_box = GtkBox::new(Orientation::Horizontal, 5);
     net_box.add_css_class("cockpit-chip");
-    let net_icon = Label::new(Some("󰤨"));
+    let net_icon = Label::new(Some("󰈀"));
     net_icon.add_css_class("cockpit-accent");
-    let net_label = Label::new(Some("ONLINE"));
+    let net_label = Label::new(Some("ETH"));
     net_label.add_css_class("cockpit-label");
     net_box.append(&net_icon);
     net_box.append(&net_label);
 
-    // Notifications Button
-    let notif_box = GtkBox::new(Orientation::Horizontal, 4);
+    let net_ico_clone = net_icon.clone();
+    let net_lbl_clone = net_label.clone();
+    let update_net_ui = move || {
+        let (ico, text) = get_network_info();
+        net_ico_clone.set_text(ico);
+        net_lbl_clone.set_text(&text);
+        ControlFlow::Continue
+    };
+    update_net_ui();
+    glib::timeout_add_local(std::time::Duration::from_millis(5000), update_net_ui);
+
+    // Separator 2
+    let sep2 = Label::new(Some("│"));
+    sep2.add_css_class("cockpit-sep");
+
+    // 3. Notifications Button
+    let notif_box = GtkBox::new(Orientation::Horizontal, 5);
     notif_box.add_css_class("cockpit-chip");
     let notif_icon = Label::new(Some("󰂚"));
     notif_icon.add_css_class("cockpit-accent");
@@ -262,14 +321,25 @@ fn build_ui(app: &Application) {
     notif_box.append(&notif_icon);
     notif_box.append(&notif_label);
 
+    let notif_lbl_clone = notif_label.clone();
+    let update_notif_ui = move || {
+        let count = get_notification_count();
+        notif_lbl_clone.set_text(&count.to_string());
+        ControlFlow::Continue
+    };
+    update_notif_ui();
+    glib::timeout_add_local(std::time::Duration::from_millis(3000), update_notif_ui);
+
     let click_notif = GestureClick::new();
     click_notif.connect_released(move |_, _, _, _| {
-        let _ = Command::new("swaync-client").arg("-t").spawn();
+        let _ = Command::new("wayle").args(["notify", "dnd"]).spawn();
     });
     notif_box.add_controller(click_notif);
 
     right_island.append(&vol_box);
+    right_island.append(&sep1);
     right_island.append(&net_box);
+    right_island.append(&sep2);
     right_island.append(&notif_box);
 
     root.set_end_widget(Some(&right_island));
