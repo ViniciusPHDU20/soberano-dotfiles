@@ -30,6 +30,7 @@ declare -a presets=(
     "15  — Retro-Terminal Synth (Mainframe Monospace • Blocos Retro • Gaps 6px • Rounding 2px)"
     "16  — Floating Archipelago (Trio de Ilhas Flutuantes • 3 Barras Independentes • Gaps 10px)"
     "17  — Tactical Cyber-Blocks (4 Ilhas Quadradas • 0px Sharp • Apps & Systray • Gaps 10px)"
+    "18  — Cockpit Split Dual-Surface (Topo: WS+Apps • Base: Relógio+Status • 4 Blocos)"
 )
 
 options=()
@@ -45,7 +46,7 @@ done
 if [[ $# -ge 1 && -n "$1" ]]; then
     chosen="$1"
 else
-    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 88 -l 17 || true)
+    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 90 -l 18 || true)
 fi
 [ -z "$chosen" ] && exit 0
 
@@ -179,6 +180,16 @@ center = [
 right = [
     { name = "block-status", modules = ["volume", "network", "custom-updates", "notifications"] }
 ]"""
+
+L_COCKPIT_TOP = """[[bar.layout]]
+monitor = "*"
+show = true
+left = [
+    { name = "block-ws", modules = ["dashboard", "hyprland-workspaces"] },
+    { name = "block-apps", modules = ["window-title", "systray"] }
+]
+center = []
+right = []"""
 
 M_STANDARD = {
     "hyprland-workspaces": {"app-icons-show": "true"},
@@ -813,6 +824,48 @@ presets = {
             "border_size": 2,
         },
     },
+    # 18. Cockpit Split Dual-Surface (Bloco 1 & 2 no Topo • Bloco 3 & 4 na Base)
+    "18": {
+        "bar": {
+            "location": '"top"',
+            "scale": "0.94",
+            "inset-edge": "0.3",
+            "inset-ends": "0.4",
+            "padding": "0.15",
+            "padding-ends": "0.3",
+            "module-gap": "0.45",
+            "bg": '"transparent"',
+            "background-opacity": "0",
+            "rounding": '"none"',
+            "border-location": '"none"',
+            "border-width": "0",
+            "shadow": '"none"',
+            "button-variant": '"basic"',
+            "button-rounding": '"none"',
+            "button-border-location": '"none"',
+            "button-border-width": "0",
+            "button-group-background": '"bg-surface"',
+            "button-group-opacity": "98",
+            "button-group-border-location": '"all"',
+            "button-group-border-width": "1",
+            "button-group-border-color": '"border-accent"',
+            "button-group-rounding": '"none"',
+            "button-group-padding": "0.18",
+            "button-group-module-gap": "0.3",
+            "button-icon-size": "1.0",
+            "button-icon-padding": "0.5",
+            "button-label-size": "0.95",
+            "button-label-padding": "0.7",
+        },
+        "layout": L_COCKPIT_TOP,
+        "modules": M_TACTICAL_BLOCKS,
+        "hypr": {
+            "gaps_in": 3,
+            "gaps_out": "{ top = 8, right = 6, bottom = 12, left = 6 }",
+            "rounding": 0,
+            "border_size": 2,
+        },
+    },
 }
 
 p = presets.get(preset_id, presets["2"])
@@ -881,6 +934,15 @@ rnd = p_hypr['rounding']
 eval_str = f"hl.config({{ general = {{ gaps_in = {gin}, gaps_out = {gout}, border_size = {bsz} }}, decoration = {{ rounding = {rnd} }} }})"
 subprocess.run(["hyprctl", "eval", eval_str], capture_output=True)
 PY
+
+# Manage secondary bottom cockpit bar (Preset 18)
+systemctl --user stop soberano-cockpit-bar 2>/dev/null || true
+systemctl --user reset-failed soberano-cockpit-bar 2>/dev/null || true
+pkill -x soberano-cockpit-bar-rs 2>/dev/null || true
+
+if [[ "$id" == "18" ]]; then
+    systemd-run --user --unit=soberano-cockpit-bar "$HOME/.local/bin/soberano-cockpit-bar-rs" >/dev/null 2>&1 || true
+fi
 
 # Instant reload of Wayle service (takes ~150ms)
 systemctl --user restart wayle.service >/dev/null 2>&1 || true

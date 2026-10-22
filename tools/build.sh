@@ -92,5 +92,18 @@ if [ -d "$SCRIPT_DIR/display-picker-rs" ]; then
     log_success "display-picker-rs compilado e instalado com sucesso."
 fi
 
+# 5. Compile Cockpit Dual-Surface Bottom Bar (GTK4 Layer-Shell)
+if [ -d "$SCRIPT_DIR/soberano-cockpit-bar-rs" ]; then
+    log_info "Compilando soberano-cockpit-bar-rs (Barra Inferior Nativa)..."
+    (
+        cd "$SCRIPT_DIR/soberano-cockpit-bar-rs"
+        cargo build --release --quiet
+    )
+    cp -f "$SCRIPT_DIR/soberano-cockpit-bar-rs/target/release/soberano-cockpit-bar-rs" "$DOTFILES_DIR/scripts/soberano-cockpit-bar-rs"
+    ln -sf "$DOTFILES_DIR/scripts/soberano-cockpit-bar-rs" "$HOME/.local/bin/soberano-cockpit-bar-rs"
+    chmod +x "$DOTFILES_DIR/scripts/soberano-cockpit-bar-rs"
+    log_success "soberano-cockpit-bar-rs compilado e instalado com sucesso."
+fi
+
 printf "\n"
 log_success "Todas as ferramentas nativas foram construídas para a máquina do cliente!"
