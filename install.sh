@@ -49,21 +49,28 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 
-# Check dry-run / test mode
+# Check dry-run / test mode & options
 DRY_RUN=false
+CLI_LIVEWALLPAPER=""
+INTERACTIVE=true
+[ ! -t 0 ] && INTERACTIVE=false
+
 for arg in "$@"; do
     case "$arg" in
         --dry-run|--test|-t)
             DRY_RUN=true
             ;;
+        --auto|-y|--non-interactive)
+            INTERACTIVE=false
+            ;;
+        --no-wallpaper-engine|--no-live)
+            CLI_LIVEWALLPAPER="off"
+            ;;
+        --with-wallpaper-engine|--live)
+            CLI_LIVEWALLPAPER="on"
+            ;;
     esac
 done
-
-# Check interactive mode
-INTERACTIVE=true
-if [ ! -t 0 ] || [ "${1:-}" = "--auto" ] || [ "${1:-}" = "-y" ] || [ "${1:-}" = "--non-interactive" ]; then
-    INTERACTIVE=false
-fi
 
 if [ "$DRY_RUN" = true ]; then
     BACKTITLE="Soberano Edition — Modo de Simulação / Teste (Dry-Run)"
@@ -178,6 +185,10 @@ INSTALL_GAMING=false
 INSTALL_SHADERS=true
 INSTALL_OPTIMIZE=true
 INSTALL_AUTOUPDATE=true
+INSTALL_LIVEWALLPAPER=true
+if [ "$CLI_LIVEWALLPAPER" = "off" ]; then
+    INSTALL_LIVEWALLPAPER=false
+fi
 ENABLE_TOUCHPAD="$IS_LAPTOP"
 CHOSEN_PRESET="10"
 
@@ -283,18 +294,20 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --title "\Zb\Z3 Componentes e Módulos do Sistema \ZB\Zn" \
         --checklist \
 "Escolha os pacotes e recursos que deseja instalar no seu sistema:\nUse [Espaço] para marcar/desmarcar e [Enter] para confirmar." \
-        18 76 8 \
-        "CORE"       "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
-        "AUDIO"      "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
-        "FONTS"      "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
-        "TOOLS"      "Kitty + Btop + Fastfetch + Fish + Grim/Slurp" "on" \
-        "OPTIMIZE"   "Otimizar Makepkg com CFLAGS nativos (-march=native -j$CPU_CORES)" "on" \
-        "AUTOUPDATE" "Sincronização Contínua Git (Atualização automática de dotfiles)" "on" \
-        "SHADERS"    "Shaders GLSL para Hyprland (Super + Alt + S)" "$([ "$INSTALL_SHADERS" = true ] && echo "on" || echo "off")" \
-        "GAMING"     "Stack Gamer (Steam, Gamemode, MangoHud, Wine)" "$([ "$INSTALL_GAMING" = true ] && echo "on" || echo "off")" \
+        19 76 9 \
+        "CORE"          "Hyprland Lua + Wayle Shell + Matugen Engine" "on" \
+        "AUDIO"         "Pipewire + PulseAudio + Wireplumber + Pavucontrol" "on" \
+        "FONTS"         "Nerd Fonts (JetBrainsMono, Meslo) + Emojis" "on" \
+        "TOOLS"         "Kitty + Btop + Fastfetch + Fish + Grim/Slurp" "on" \
+        "OPTIMIZE"      "Otimizar Makepkg com CFLAGS nativos (-march=native -j$CPU_CORES)" "on" \
+        "AUTOUPDATE"    "Sincronização Contínua Git (Atualização automática de dotfiles)" "on" \
+        "LIVEWALLPAPER" "Wallpaper Engine (Vídeos e cenas animadas da Steam)" "$([ "$INSTALL_LIVEWALLPAPER" = true ] && echo "on" || echo "off")" \
+        "SHADERS"       "Shaders GLSL para Hyprland (Super + Alt + S)" "$([ "$INSTALL_SHADERS" = true ] && echo "on" || echo "off")" \
+        "GAMING"        "Stack Gamer (Steam, Gamemode, MangoHud, Wine)" "$([ "$INSTALL_GAMING" = true ] && echo "on" || echo "off")" \
         3>&1 1>&2 2>&3) || true
 
     if echo "$COMPONENTS" | grep -qw "GAMING"; then INSTALL_GAMING=true; fi
+    if echo "$COMPONENTS" | grep -qw "LIVEWALLPAPER"; then INSTALL_LIVEWALLPAPER=true; else INSTALL_LIVEWALLPAPER=false; fi
     if echo "$COMPONENTS" | grep -qw "SHADERS"; then INSTALL_SHADERS=true; else INSTALL_SHADERS=false; fi
     if echo "$COMPONENTS" | grep -qw "OPTIMIZE"; then INSTALL_OPTIMIZE=true; else INSTALL_OPTIMIZE=false; fi
     if echo "$COMPONENTS" | grep -qw "AUTOUPDATE"; then INSTALL_AUTOUPDATE=true; else INSTALL_AUTOUPDATE=false; fi
@@ -328,6 +341,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
     CONFIRM_MSG+=" • \Zb\Z7Preset Wayle:\Zn      Preset $CHOSEN_PRESET\n"
     CONFIRM_MSG+=" • \Zb\Z7Otimização Makepkg:\Zn $([ "$INSTALL_OPTIMIZE" = true ] && echo "CFLAGS/MAKEFLAGS Nativos ($CPU_ARCH • -j$CPU_CORES)" || echo "Padrão Arch Linux")\n"
     CONFIRM_MSG+=" • \Zb\Z7Auto-Atualização:\Zn  $([ "$INSTALL_AUTOUPDATE" = true ] && echo "Ativo (Sincronização contínua via Git)" || echo "Manual")\n"
+    CONFIRM_MSG+=" • \Zb\Z7Wallpaper Engine:\Zn  $([ "$INSTALL_LIVEWALLPAPER" = true ] && echo "Sim (Vídeos e cenas animadas)" || echo "Não (Apenas estáticos awww)")\n"
     CONFIRM_MSG+=" • \Zb\Z7Stack Gamer:\Zn       $([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")\n"
     CONFIRM_MSG+=" • \Zb\Z7Shaders GLSL:\Zn      $([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")\n"
     CONFIRM_MSG+=" • \Zb\Z7Gestos Touchpad:\Zn   $([ "$ENABLE_TOUCHPAD" = true ] && echo "Ativo" || echo "Desativado")\n\n"
@@ -359,6 +373,7 @@ if [ "$DRY_RUN" = true ]; then
         REPORT_MSG+=" • \Zb\Z7Auto-Atualização:\Zn  $([ "$INSTALL_AUTOUPDATE" = true ] && echo "systemd timer ativado (soberano-autoupdate.timer)" || echo "Manual")\n"
         REPORT_MSG+=" • \Zb\Z7Stack Gráfica:\Zn       Hyprland + Wayle + Matugen + Pipewire + Fontes\n"
         REPORT_MSG+=" • \Zb\Z7Layout da Barra:\Zn     Preset $CHOSEN_PRESET\n"
+        REPORT_MSG+=" • \Zb\Z7Wallpaper Engine:\Zn    $([ "$INSTALL_LIVEWALLPAPER" = true ] && echo "linux-wallpaperengine (Vídeos Steam)" || echo "Ignorado (Apenas estáticos awww)")\n"
         REPORT_MSG+=" • \Zb\Z7Stack Gamer:\Zn         $([ "$INSTALL_GAMING" = true ] && echo "Steam, Gamemode, Mangohud, Wine" || echo "Ignorado")\n"
         REPORT_MSG+=" • \Zb\Z7Shaders Hyprland:\Zn    $([ "$INSTALL_SHADERS" = true ] && echo "Ativados (Super + Alt + S)" || echo "Ignorado")\n"
         REPORT_MSG+=" • \Zb\Z7Vinculação Dotfiles:\Zn 9 diretórios em ~/.config (com backup preventivo)\n\n"
@@ -381,6 +396,7 @@ if [ "$DRY_RUN" = true ]; then
         printf " • Perfil de GPU:     %s\n" "$CHOSEN_GPU"
         printf " • Flags Makepkg:     %s\n" "$([ "$INSTALL_OPTIMIZE" = true ] && echo "$OPTIMIZED_CFLAGS ($CPU_ARCH) -j$CPU_CORES" || echo "Padrão")"
         printf " • Auto-Atualização:  %s\n" "$([ "$INSTALL_AUTOUPDATE" = true ] && echo "Ativo (Timer Git)" || echo "Manual")"
+        printf " • Wallpaper Engine:  %s\n" "$([ "$INSTALL_LIVEWALLPAPER" = true ] && echo "Sim (linux-wallpaperengine)" || echo "Não (Apenas estáticos)")"
         printf " • Preset Wayle:      Preset %s\n" "$CHOSEN_PRESET"
         printf " • Stack Gamer:       %s\n" "$([ "$INSTALL_GAMING" = true ] && echo "Sim" || echo "Não")"
         printf " • Shaders GLSL:      %s\n" "$([ "$INSTALL_SHADERS" = true ] && echo "Sim" || echo "Não")"
@@ -541,13 +557,19 @@ fi
 sudo pacman -S --needed --noconfirm "${SYSTEM_STACK[@]}"
 
 # 8. AUR Packages (Wayle, Matugen & Live Wallpaper Engine)
-info "[5/6] Instalando Wayle Shell, Matugen e Wallpaper Engine (AUR)..."
+info "[5/6] Instalando Wayle Shell e Matugen (AUR)..."
 AUR_PKGS=(
     wayle-bin
     matugen-bin
-    linux-wallpaperengine-v3-bin
 )
-$AUR_CMD -S --needed --noconfirm "${AUR_PKGS[@]}" || $AUR_CMD -S --needed --noconfirm wayle-bin matugen-bin linux-wallpaperengine-bin
+
+if [ "$INSTALL_LIVEWALLPAPER" = true ]; then
+    info "Adicionando Wallpaper Engine à fila de instalação..."
+    AUR_PKGS+=(linux-wallpaperengine-v3-bin)
+    $AUR_CMD -S --needed --noconfirm "${AUR_PKGS[@]}" || $AUR_CMD -S --needed --noconfirm wayle-bin matugen-bin linux-wallpaperengine-bin
+else
+    $AUR_CMD -S --needed --noconfirm "${AUR_PKGS[@]}"
+fi
 
 # 9. Hardware Configuration Layer (`config/hardware.lua`)
 info "[6/6] Gerando diretivas de hardware personalizadas..."

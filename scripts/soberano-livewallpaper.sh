@@ -106,6 +106,12 @@ stop_live() {
 apply_live() {
     local target="$1"
 
+    if ! command -v linux-wallpaperengine >/dev/null 2>&1; then
+        notify-send -u normal -a "Soberano Wallpapers" "Wallpaper Engine Ausente" "O linux-wallpaperengine não está instalado. Ative pelo instalador ou instale 'linux-wallpaperengine-v3-bin'." 2>/dev/null || true
+        echo "Aviso: linux-wallpaperengine não está instalado no sistema." >&2
+        return 1
+    fi
+
     if [ ! -d "$target" ] && [ ! -f "$target" ]; then
         notify-send -u critical -a "Soberano Wallpapers" "Erro ao Carregar Wallpaper" "Caminho ou ID inválido: $target" 2>/dev/null || true
         exit 1
@@ -254,6 +260,11 @@ reload_live() {
 
 # Interactive Fuzzel selector
 select_interactive() {
+    if ! command -v linux-wallpaperengine >/dev/null 2>&1; then
+        notify-send -u normal -a "Soberano Wallpapers" "Wallpaper Engine Ausente" "O linux-wallpaperengine não está instalado. Ative pelo instalador ou instale 'linux-wallpaperengine-v3-bin'." 2>/dev/null || true
+        return 1
+    fi
+
     local items=()
     local paths=()
 
