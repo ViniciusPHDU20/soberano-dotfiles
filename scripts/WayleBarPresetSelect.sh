@@ -126,8 +126,8 @@ L_VERTICAL_LEFT = """[[bar.layout]]
 monitor = "*"
 show = true
 left = ["dashboard", "hyprland-workspaces"]
-center = ["clock", "media"]
-right = ["volume", "custom-updates", "systray", "notifications"]"""
+center = ["clock"]
+right = ["volume", "custom-updates", "notifications"]"""
 
 L_TELEMETRY = """[[bar.layout]]
 monitor = "*"
@@ -156,6 +156,46 @@ show = true
 left = ["dashboard", "hyprland-workspaces", "window-title"]
 center = ["clock", "cava"]
 right = [{ name = "sys", modules = ["custom-cpu", "custom-ram"] }, "volume", "network", "custom-updates", "notifications"]"""
+
+M_STANDARD = {
+    "hyprland-workspaces": {"app-icons-show": "true"},
+    "clock": {"format": '"%H:%M  •  %a %d %b"', "icon-show": "true", "label-show": "true"},
+    "volume": {"label-show": "true"},
+    "notifications": {"label-show": "true"},
+}
+
+M_SLIM_VERTICAL = {
+    "hyprland-workspaces": {"app-icons-show": "false"},
+    "clock": {"format": '"%H:%M"', "icon-show": "false", "label-show": "true"},
+    "volume": {"label-show": "false"},
+    "notifications": {"label-show": "false"},
+}
+
+def update_module_table(toml_text, module_name, key_values):
+    pattern = rf"(?s)(\[modules\.{re.escape(module_name)}\]\n)(.*?)((?=\n\[)|\Z)"
+    match = re.search(pattern, toml_text)
+    if not match:
+        return toml_text
+    header = match.group(1)
+    body = match.group(2)
+    lines = body.splitlines()
+    new_lines = []
+    found_keys = set()
+    for l in lines:
+        matched = False
+        for k, v in key_values.items():
+            if l.strip().startswith(f"{k} ") or l.strip().startswith(f"{k}="):
+                new_lines.append(f"{k} = {v}")
+                found_keys.add(k)
+                matched = True
+                break
+        if not matched:
+            new_lines.append(l)
+    for k, v in key_values.items():
+        if k not in found_keys:
+            new_lines.append(f"{k} = {v}")
+    new_body = "\n".join(new_lines)
+    return toml_text[:match.start()] + header + new_body + toml_text[match.end():]
 
 presets = {
     # 1. Floating Pill Top (Pílula Flutuante)
@@ -482,35 +522,39 @@ presets = {
             "border_size": 1,
         },
     },
-    # 11. Lateral Vertical Blade (Barra Vertical Esquerda • Espaço 100% Livre)
+    # 11. Lateral Vertical Blade (Barra Vertical Esquerda • Slim Icon-Dock)
     "11": {
         "bar": {
             "location": '"left"',
-            "scale": "0.94",
-            "inset-edge": "0.35",
-            "inset-ends": "0.5",
-            "padding": "0.3",
-            "padding-ends": "0.4",
-            "module-gap": "0.4",
+            "scale": "0.78",
+            "inset-edge": "0.15",
+            "inset-ends": "0.35",
+            "padding": "0.12",
+            "padding-ends": "0.3",
+            "module-gap": "0.25",
             "bg": '"bg-surface"',
-            "background-opacity": "92",
-            "rounding": '"lg"',
+            "background-opacity": "94",
+            "rounding": '"md"',
             "border-location": '"all"',
             "border-width": "1",
             "border-color": '"border-subtle"',
-            "shadow": '"none"',
-            "button-variant": '"icon-square"',
-            "button-rounding": '"md"',
-            "button-border-location": '"all"',
-            "button-border-width": "1",
+            "shadow": '"drop"',
+            "button-variant": '"basic"',
+            "button-rounding": '"sm"',
+            "button-border-location": '"none"',
+            "button-border-width": "0",
             "button-group-border-location": '"none"',
-            "button-group-rounding": '"md"',
+            "button-group-rounding": '"sm"',
+            "button-icon-size": "1.05",
+            "button-icon-padding": "0.4",
+            "button-label-size": "0.75",
         },
         "layout": L_VERTICAL_LEFT,
+        "modules": M_SLIM_VERTICAL,
         "hypr": {
-            "gaps_in": 4,
-            "gaps_out": "{ top = 8, right = 8, bottom = 8, left = 8 }",
-            "rounding": 10,
+            "gaps_in": 3,
+            "gaps_out": "{ top = 6, right = 6, bottom = 6, left = 6 }",
+            "rounding": 8,
             "border_size": 2,
         },
     },
@@ -684,6 +728,11 @@ new_cfg = "\n".join(new_lines)
 # Replace the [[bar.layout]] block
 pattern = r"(?s)\[\[bar\.layout\]\].*?(?=\n\[styling\])"
 new_cfg = re.sub(pattern, p_layout.strip(), new_cfg)
+
+# Update per-preset module overrides (e.g. icon-only for vertical blade)
+p_modules = p.get("modules", M_STANDARD)
+for mod_name, mod_kv in p_modules.items():
+    new_cfg = update_module_table(new_cfg, mod_name, mod_kv)
 
 with open(cfg_path, "w") as f:
     f.write(new_cfg + "\n")
