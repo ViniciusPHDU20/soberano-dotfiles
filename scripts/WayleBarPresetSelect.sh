@@ -29,6 +29,7 @@ declare -a presets=(
     "14  — Swiss Editorial Typographic (Design Editorial Suíço Inferior • Gaps 6px • Rounding 6px)"
     "15  — Retro-Terminal Synth (Mainframe Monospace • Blocos Retro • Gaps 6px • Rounding 2px)"
     "16  — Floating Archipelago (Trio de Ilhas Flutuantes • 3 Barras Independentes • Gaps 10px)"
+    "17  — Tactical Cyber-Blocks (4 Ilhas Quadradas • 0px Sharp • Apps & Systray • Gaps 10px)"
 )
 
 options=()
@@ -44,7 +45,7 @@ done
 if [[ $# -ge 1 && -n "$1" ]]; then
     chosen="$1"
 else
-    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 86 -l 16 || true)
+    chosen=$(printf '%s\n' "${options[@]}" | fuzzel --dmenu -p "󰕮 Wayle & Hyprland Layout ❯ " -w 88 -l 17 || true)
 fi
 [ -z "$chosen" ] && exit 0
 
@@ -165,6 +166,20 @@ left = [{ name = "nav-island", modules = ["dashboard", "hyprland-workspaces"] }]
 center = [{ name = "focus-island", modules = ["clock"] }]
 right = [{ name = "status-island", modules = ["volume", "network", "notifications"] }]"""
 
+L_TACTICAL_BLOCKS = """[[bar.layout]]
+monitor = "*"
+show = true
+left = [
+    { name = "block-ws", modules = ["dashboard", "hyprland-workspaces"] },
+    { name = "block-apps", modules = ["window-title", "systray"] }
+]
+center = [
+    { name = "block-clock", modules = ["clock"] }
+]
+right = [
+    { name = "block-status", modules = ["volume", "network", "custom-updates", "notifications"] }
+]"""
+
 M_STANDARD = {
     "hyprland-workspaces": {"app-icons-show": "true"},
     "clock": {"format": '"%H:%M  •  %a %d %b"', "icon-show": "true", "label-show": "true"},
@@ -186,6 +201,14 @@ M_ARCHIPELAGO = {
     "clock": {"format": '"%H:%M  •  %a %d"', "icon-show": "true", "label-show": "true"},
     "volume": {"label-show": "true"},
     "network": {"label-show": "false"},
+    "notifications": {"label-show": "true"},
+}
+
+M_TACTICAL_BLOCKS = {
+    "hyprland-workspaces": {"app-icons-show": "true"},
+    "clock": {"format": '"%H:%M:%S  •  %d/%m"', "icon-show": "true", "label-show": "true"},
+    "volume": {"label-show": "true"},
+    "network": {"label-show": "true"},
     "notifications": {"label-show": "true"},
 }
 
@@ -745,6 +768,48 @@ presets = {
             "gaps_in": 4,
             "gaps_out": "{ top = 12, right = 10, bottom = 10, left = 10 }",
             "rounding": 14,
+            "border_size": 2,
+        },
+    },
+    # 17. Tactical Cyber-Blocks (4 Ilhas Quadradas • 0px Sharp • Apps & Systray)
+    "17": {
+        "bar": {
+            "location": '"top"',
+            "scale": "0.94",
+            "inset-edge": "0.3",
+            "inset-ends": "0.4",
+            "padding": "0.15",
+            "padding-ends": "0.3",
+            "module-gap": "0.45",
+            "bg": '"transparent"',
+            "background-opacity": "0",
+            "rounding": '"none"',
+            "border-location": '"none"',
+            "border-width": "0",
+            "shadow": '"none"',
+            "button-variant": '"basic"',
+            "button-rounding": '"none"',
+            "button-border-location": '"none"',
+            "button-border-width": "0",
+            "button-group-background": '"bg-surface"',
+            "button-group-opacity": "98",
+            "button-group-border-location": '"all"',
+            "button-group-border-width": "1",
+            "button-group-border-color": '"border-accent"',
+            "button-group-rounding": '"none"',
+            "button-group-padding": "0.18",
+            "button-group-module-gap": "0.3",
+            "button-icon-size": "1.0",
+            "button-icon-padding": "0.5",
+            "button-label-size": "0.95",
+            "button-label-padding": "0.7",
+        },
+        "layout": L_TACTICAL_BLOCKS,
+        "modules": M_TACTICAL_BLOCKS,
+        "hypr": {
+            "gaps_in": 3,
+            "gaps_out": "{ top = 10, right = 6, bottom = 6, left = 6 }",
+            "rounding": 0,
             "border_size": 2,
         },
     },

@@ -330,6 +330,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         "14" "Swiss Editorial Typographic (Design Editorial Suíço Inferior)" "off"
         "15" "Retro-Terminal Synth (Mainframe Monospace • Blocos Retro)" "off"
         "16" "Floating Archipelago (Trio de Ilhas Flutuantes • 3 Barras)" "off"
+        "17" "Tactical Cyber-Blocks (4 Ilhas Quadradas • 0px Sharp)" "off"
     )
 
     CHOSEN_PRESET=$(dialog --colors \
@@ -337,7 +338,7 @@ if [ "$INTERACTIVE" = true ] && command -v dialog >/dev/null 2>&1; then
         --title "\Zb\Z3 Layout Inicial da Barra Wayle \ZB\Zn" \
         --radiolist \
 "Escolha o layout e geometria visual da barra para iniciar seu desktop:\n(Você poderá trocar a qualquer momento usando Super + Ctrl + B)" \
-        20 76 13 \
+        20 76 14 \
         "${PRESET_CHOICES[@]}" \
         3>&1 1>&2 2>&3) || CHOSEN_PRESET="10"
 
