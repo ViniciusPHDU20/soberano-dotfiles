@@ -3,7 +3,7 @@ use gtk4::{
     gdk, glib, Application, ApplicationWindow, Box as GtkBox, Button, EventControllerKey,
     FlowBox, FlowBoxChild, Label, Orientation, ScrolledWindow,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::cell::RefCell;
 use std::fs;
 use std::path::PathBuf;
@@ -11,6 +11,22 @@ use std::process::Command;
 use std::rc::Rc;
 
 const APP_ID: &str = "org.soberano.displaypicker";
+
+fn deserialize_vrr<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val = serde_json::Value::deserialize(deserializer)?;
+    match val {
+        serde_json::Value::Bool(b) => Ok(if b { 1 } else { 0 }),
+        serde_json::Value::Number(n) => Ok(n.as_i64().unwrap_or(0) as i32),
+        _ => Ok(0),
+    }
+}
+
+fn default_scale() -> f64 {
+    1.0
+}
 
 #[derive(Debug, Deserialize, Clone)]
 struct MonitorRaw {
@@ -24,7 +40,14 @@ struct MonitorRaw {
     x: i32,
     #[serde(default)]
     y: i32,
+    #[serde(default = "default_scale")]
     scale: f64,
+    #[serde(default)]
+    transform: i32,
+    #[serde(default)]
+    disabled: bool,
+    #[serde(default, deserialize_with = "deserialize_vrr")]
+    vrr: i32,
     #[serde(rename = "availableModes", default)]
     available_modes: Vec<String>,
 }
@@ -46,6 +69,9 @@ struct MonitorState {
     x: i32,
     y: i32,
     pos_preset: String,
+    transform: i32,
+    disabled: bool,
+    vrr: i32,
 }
 
 struct SystemColors {
@@ -108,12 +134,21 @@ fn load_system_colors() -> SystemColors {
 }
 
 fn parse_modes(raw_modes: &[String]) -> Vec<DisplayMode> {
+    let mut raw = raw_modes.to_vec();
+    if raw.is_empty() {
+        raw.push("1920x1080@60.00Hz".to_string());
+        raw.push("1920x1080@144.00Hz".to_string());
+        raw.push("1920x1080@165.00Hz".to_string());
+        raw.push("2560x1440@60.00Hz".to_string());
+        raw.push("3840x2160@60.00Hz".to_string());
+    }
+
     let mut parsed = Vec::new();
     let re = regex_lite::Regex::new(r"(\d+)x(\d+)@([0-9.]+)Hz").unwrap_or_else(|_| {
         regex_lite::Regex::new(r"(\d+)x(\d+)@([0-9.]+)").unwrap()
     });
 
-    for m in raw_modes {
+    for m in &raw {
         if let Some(caps) = re.captures(m) {
             let w: i32 = caps[1].parse().unwrap_or(0);
             let h: i32 = caps[2].parse().unwrap_or(0);
@@ -141,7 +176,6 @@ fn parse_modes(raw_modes: &[String]) -> Vec<DisplayMode> {
         }
     }
 
-    // Sort: width desc, height desc, refresh_rate desc
     parsed.sort_by(|a, b| {
         b.width
             .cmp(&a.width)
@@ -149,7 +183,6 @@ fn parse_modes(raw_modes: &[String]) -> Vec<DisplayMode> {
             .then(b.refresh_rate.partial_cmp(&a.refresh_rate).unwrap())
     });
 
-    // Deduplicate
     let mut unique = Vec::new();
     for mode in parsed {
         if !unique.iter().any(|u: &DisplayMode| {
@@ -164,6 +197,16 @@ fn parse_modes(raw_modes: &[String]) -> Vec<DisplayMode> {
 }
 
 fn get_monitors() -> Vec<MonitorRaw> {
+    if let Ok(out) = Command::new("hyprctl").args(["monitors", "all", "-j"]).output() {
+        if out.status.success() {
+            if let Ok(monitors) = serde_json::from_slice::<Vec<MonitorRaw>>(&out.stdout) {
+                if !monitors.is_empty() {
+                    return monitors;
+                }
+            }
+        }
+    }
+
     if let Ok(out) = Command::new("hyprctl").args(["monitors", "-j"]).output() {
         if out.status.success() {
             if let Ok(monitors) = serde_json::from_slice::<Vec<MonitorRaw>>(&out.stdout) {
@@ -178,31 +221,56 @@ fn apply_all_monitors_config(states: &[MonitorState]) {
     let mut lua_blocks = Vec::new();
 
     for state in states {
-        // Execute real-time via hyprctl eval (native Lua dispatcher in Hyprland)
-        let eval_cmd = format!(
-            "hl.monitor({{ output = \"{}\", mode = \"{}\", position = \"{}x{}\", scale = \"{}\" }})",
-            state.name, state.mode_str, state.x, state.y, state.scale
-        );
-        let _ = Command::new("hyprctl").args(["eval", &eval_cmd]).output();
+        if state.disabled {
+            // Real-time dispatch via hyprctl eval
+            let eval_cmd = format!(
+                "hl.monitor({{ output = \"{}\", disabled = true }})",
+                state.name
+            );
+            let _ = Command::new("hyprctl").args(["eval", &eval_cmd]).output();
 
-        // Also send legacy keyword if running with legacy parser
-        let legacy_cmd = format!(
-            "{},{},{}x{},{}",
-            state.name, state.mode_str, state.x, state.y, state.scale
-        );
-        let _ = Command::new("hyprctl")
-            .args(["keyword", "monitor", &legacy_cmd])
-            .output();
+            // Legacy keyword
+            let legacy_cmd = format!("{},disable", state.name);
+            let _ = Command::new("hyprctl")
+                .args(["keyword", "monitor", &legacy_cmd])
+                .output();
 
-        lua_blocks.push(format!(
-            r#"hl.monitor({{
+            lua_blocks.push(format!(
+                r#"hl.monitor({{
     output   = "{}",
-    mode     = "{}",
-    position = "{}x{}",
-    scale    = "{}",
+    disabled = true,
 }})"#,
-            state.name, state.mode_str, state.x, state.y, state.scale
-        ));
+                state.name
+            ));
+        } else {
+            // Real-time dispatch via hyprctl eval
+            let eval_cmd = format!(
+                "hl.monitor({{ output = \"{}\", mode = \"{}\", position = \"{}x{}\", scale = \"{}\", transform = {}, vrr = {} }})",
+                state.name, state.mode_str, state.x, state.y, state.scale, state.transform, state.vrr
+            );
+            let _ = Command::new("hyprctl").args(["eval", &eval_cmd]).output();
+
+            // Legacy keyword
+            let legacy_cmd = format!(
+                "{},{},{}x{},{},transform,{},vrr,{}",
+                state.name, state.mode_str, state.x, state.y, state.scale, state.transform, state.vrr
+            );
+            let _ = Command::new("hyprctl")
+                .args(["keyword", "monitor", &legacy_cmd])
+                .output();
+
+            lua_blocks.push(format!(
+                r#"hl.monitor({{
+    output    = "{}",
+    mode      = "{}",
+    position  = "{}x{}",
+    scale     = "{}",
+    transform = {},
+    vrr       = {},
+}})"#,
+                state.name, state.mode_str, state.x, state.y, state.scale, state.transform, state.vrr
+            ));
+        }
     }
 
     // Persist all monitors cleanly to monitors.lua
@@ -230,7 +298,24 @@ hl.monitor({{
 
     let summary = states
         .iter()
-        .map(|s| format!("{}: {} ({}x{})", s.name, s.mode_str, s.x, s.y))
+        .map(|s| {
+            if s.disabled {
+                format!("{}: Desativado", s.name)
+            } else {
+                let rot_label = match s.transform {
+                    1 => " [90°]",
+                    2 => " [180°]",
+                    3 => " [270°]",
+                    _ => "",
+                };
+                let vrr_label = match s.vrr {
+                    1 => " [VRR On]",
+                    2 => " [VRR Full]",
+                    _ => "",
+                };
+                format!("{}: {} ({}x{}){}{}", s.name, s.mode_str, s.x, s.y, rot_label, vrr_label)
+            }
+        })
         .collect::<Vec<_>>()
         .join("  |  ");
 
@@ -274,7 +359,7 @@ fn setup_css(colors: &SystemColors) {
         }}
 
         .draggable-header {{
-            padding-bottom: 4px;
+            padding-bottom: 2px;
         }}
 
         .header-title {{
@@ -313,8 +398,8 @@ fn setup_css(colors: &SystemColors) {
             color: {accent};
             text-transform: uppercase;
             letter-spacing: 0.8px;
-            margin-top: 10px;
-            margin-bottom: 6px;
+            margin-top: 6px;
+            margin-bottom: 4px;
         }}
 
         .display-tab-btn {{
@@ -334,13 +419,18 @@ fn setup_css(colors: &SystemColors) {
             color: #140c0b;
         }}
 
+        .display-tab-btn.tab-disabled {{
+            border-color: alpha(#ff5450, 0.4);
+            color: alpha({window_fg}, 0.65);
+        }}
+
         .mode-card {{
             background-color: {card_bg_rgba};
             border: 1px solid alpha({accent}, 0.20);
             border-radius: 16px;
-            padding: 12px 16px;
-            margin: 4px;
-            min-width: 170px;
+            padding: 10px 14px;
+            margin: 3px;
+            min-width: 160px;
             transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
         }}
 
@@ -368,14 +458,14 @@ fn setup_css(colors: &SystemColors) {
             color: {accent};
             background-color: alpha({accent}, 0.15);
             border-radius: 6px;
-            padding: 3px 8px;
+            padding: 2px 7px;
         }}
 
         .tag-text {{
             font-size: 11px;
             font-weight: 600;
             color: alpha({window_fg}, 0.55);
-            margin-top: 4px;
+            margin-top: 2px;
         }}
 
         .chip-btn {{
@@ -398,6 +488,24 @@ fn setup_css(colors: &SystemColors) {
             background-color: {accent};
             border-color: {accent};
             color: #140c0b;
+        }}
+
+        .chip-status-active {{
+            background-color: alpha(#73d18a, 0.15);
+            border: 1px solid #73d18a;
+            color: #73d18a;
+        }}
+        .chip-status-active:hover {{
+            background-color: alpha(#73d18a, 0.28);
+        }}
+
+        .chip-status-disabled {{
+            background-color: alpha(#ff5450, 0.15);
+            border: 1px solid #ff5450;
+            color: #ff5450;
+        }}
+        .chip-status-disabled:hover {{
+            background-color: alpha(#ff5450, 0.28);
         }}
 
         .action-btn-primary {{
@@ -473,11 +581,18 @@ fn build_ui(app: &Application) {
     for m in &monitors {
         initial_states.push(MonitorState {
             name: m.name.clone(),
-            mode_str: format!("{}x{}@{:.2}", m.width, m.height, m.refresh_rate),
-            scale: m.scale,
+            mode_str: if m.width > 0 && m.height > 0 {
+                format!("{}x{}@{:.2}", m.width, m.height, m.refresh_rate)
+            } else {
+                "preferred".to_string()
+            },
+            scale: if m.scale <= 0.0 { 1.0 } else { m.scale },
             x: m.x,
             y: m.y,
             pos_preset: "current".to_string(),
+            transform: m.transform,
+            disabled: m.disabled,
+            vrr: m.vrr,
         });
     }
     let states = Rc::new(RefCell::new(initial_states));
@@ -485,16 +600,16 @@ fn build_ui(app: &Application) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Soberano Display Manager")
-        .default_width(860)
-        .default_height(640)
+        .default_width(900)
+        .default_height(730)
         .resizable(false)
         .decorated(false)
         .build();
 
-    let card = GtkBox::new(Orientation::Vertical, 10);
+    let card = GtkBox::new(Orientation::Vertical, 8);
     card.add_css_class("modal-card");
-    card.set_width_request(840);
-    card.set_height_request(600);
+    card.set_width_request(880);
+    card.set_height_request(700);
     window.set_child(Some(&card));
 
     // Header
@@ -505,14 +620,14 @@ fn build_ui(app: &Application) {
     handle.set_child(Some(&header));
     card.append(&handle);
 
-    let header_texts = GtkBox::new(Orientation::Vertical, 3);
+    let header_texts = GtkBox::new(Orientation::Vertical, 2);
     let title = Label::new(Some("󰍹  Soberano Displays & Taxa de Atualização"));
     title.add_css_class("header-title");
     title.set_halign(gtk4::Align::Start);
     header_texts.append(&title);
 
     let subtitle = Label::new(Some(
-        "Controle independente de taxa de atualização, resolução e posição para múltiplos monitores.",
+        "Controle independente de taxa, rotação, posição e status de energia para múltiplos monitores.",
     ));
     subtitle.add_css_class("header-subtitle");
     subtitle.set_halign(gtk4::Align::Start);
@@ -535,11 +650,18 @@ fn build_ui(app: &Application) {
     let mon_chips_box = GtkBox::new(Orientation::Horizontal, 8);
     card.append(&mon_chips_box);
 
+    // Quick Status Bar for Current Monitor (Status Toggle + VRR)
+    let status_row = GtkBox::new(Orientation::Horizontal, 10);
+    status_row.set_margin_top(4);
+    card.append(&status_row);
+
+    // Dynamic containers
     let modes_container = GtkBox::new(Orientation::Vertical, 0);
     modes_container.set_vexpand(true);
 
-    let scale_btn_box = GtkBox::new(Orientation::Horizontal, 6);
+    let rotation_btn_box = GtkBox::new(Orientation::Horizontal, 6);
     let pos_btn_box = GtkBox::new(Orientation::Horizontal, 6);
+    let scale_btn_box = GtkBox::new(Orientation::Horizontal, 6);
 
     let rebuild_view: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
 
@@ -548,14 +670,117 @@ fn build_ui(app: &Application) {
         let monitors_clone = monitors.clone();
         let active_mon_idx_c = active_mon_idx.clone();
         let states_c = states.clone();
+        let mon_chips_box_c = mon_chips_box.clone();
+        let status_row_c = status_row.clone();
         let modes_container_c = modes_container.clone();
-        let scale_btn_box_c = scale_btn_box.clone();
+        let rotation_btn_box_c = rotation_btn_box.clone();
         let pos_btn_box_c = pos_btn_box.clone();
+        let scale_btn_box_c = scale_btn_box.clone();
+        let rebuild_view_outer = rebuild_view.clone();
 
         *rebuild_view.borrow_mut() = Some(Box::new(move || {
             let idx = *active_mon_idx_c.borrow();
             let mon = &monitors_clone[idx];
             let current_state = states_c.borrow()[idx].clone();
+
+            // Refresh Tabs styling
+            let mut tab_child = mon_chips_box_c.first_child();
+            let mut cur_t = 0;
+            while let Some(tc) = tab_child {
+                let st = &states_c.borrow()[cur_t];
+                if cur_t == idx {
+                    tc.add_css_class("active");
+                } else {
+                    tc.remove_css_class("active");
+                }
+                if st.disabled {
+                    tc.add_css_class("tab-disabled");
+                } else {
+                    tc.remove_css_class("tab-disabled");
+                }
+                tab_child = tc.next_sibling();
+                cur_t += 1;
+            }
+
+            // 0. Rebuild Status & VRR Row
+            while let Some(child) = status_row_c.first_child() {
+                status_row_c.remove(&child);
+            }
+
+            let lbl_status = Label::new(Some("Status do Monitor:"));
+            lbl_status.add_css_class("section-label");
+            lbl_status.set_margin_top(0);
+            lbl_status.set_margin_bottom(0);
+            status_row_c.append(&lbl_status);
+
+            let btn_status = Button::new();
+            btn_status.add_css_class("chip-btn");
+            if current_state.disabled {
+                btn_status.set_label("🔴 Desativado (Clique p/ Ativar)");
+                btn_status.add_css_class("chip-status-disabled");
+            } else {
+                btn_status.set_label("🟢 Ativo (Clique p/ Desativar)");
+                btn_status.add_css_class("chip-status-active");
+            }
+
+            let states_toggle_ref = states_c.clone();
+            let active_idx_toggle_ref = active_mon_idx_c.clone();
+            let rebuild_toggle_ref = rebuild_view_outer.clone();
+            btn_status.connect_clicked(move |_| {
+                let cur = *active_idx_toggle_ref.borrow();
+                {
+                    let mut st = states_toggle_ref.borrow_mut();
+                    st[cur].disabled = !st[cur].disabled;
+                }
+                if let Some(ref f) = *rebuild_toggle_ref.borrow() {
+                    f();
+                }
+            });
+            status_row_c.append(&btn_status);
+
+            let vrr_sep = GtkBox::new(Orientation::Horizontal, 0);
+            vrr_sep.set_hexpand(true);
+            status_row_c.append(&vrr_sep);
+
+            let lbl_vrr = Label::new(Some("VRR (Adaptive Sync):"));
+            lbl_vrr.add_css_class("section-label");
+            lbl_vrr.set_margin_top(0);
+            lbl_vrr.set_margin_bottom(0);
+            status_row_c.append(&lbl_vrr);
+
+            let vrr_chips_box = GtkBox::new(Orientation::Horizontal, 4);
+            let vrr_options = [
+                (0, "Desligado"),
+                (1, "Ativado"),
+                (2, "Tela Cheia"),
+            ];
+
+            for (v_val, v_lbl) in vrr_options {
+                let v_btn = Button::with_label(v_lbl);
+                v_btn.add_css_class("chip-btn");
+                if current_state.vrr == v_val {
+                    v_btn.add_css_class("selected");
+                }
+
+                let states_vrr_ref = states_c.clone();
+                let active_idx_vrr_ref = active_mon_idx_c.clone();
+                let vrr_box_ref = vrr_chips_box.clone();
+                let v_btn_c = v_btn.clone();
+
+                v_btn.connect_clicked(move |_| {
+                    let cur = *active_idx_vrr_ref.borrow();
+                    states_vrr_ref.borrow_mut()[cur].vrr = v_val;
+
+                    let mut c = vrr_box_ref.first_child();
+                    while let Some(child) = c {
+                        child.remove_css_class("selected");
+                        c = child.next_sibling();
+                    }
+                    v_btn_c.add_css_class("selected");
+                });
+                vrr_chips_box.append(&v_btn);
+            }
+            status_row_c.append(&vrr_chips_box);
 
             // 1. Rebuild Modes FlowBox
             while let Some(child) = modes_container_c.first_child() {
@@ -572,13 +797,13 @@ fn build_ui(app: &Application) {
             flow.set_valign(gtk4::Align::Start);
             flow.set_max_children_per_line(4);
             flow.set_selection_mode(gtk4::SelectionMode::None);
-            flow.set_row_spacing(6);
-            flow.set_column_spacing(6);
+            flow.set_row_spacing(5);
+            flow.set_column_spacing(5);
 
             let parsed_modes = parse_modes(&mon.available_modes);
 
             for m in parsed_modes {
-                let card_box = GtkBox::new(Orientation::Vertical, 4);
+                let card_box = GtkBox::new(Orientation::Vertical, 3);
                 card_box.add_css_class("mode-card");
 
                 if m.raw_str == current_state.mode_str {
@@ -635,13 +860,51 @@ fn build_ui(app: &Application) {
             scroll.set_child(Some(&flow));
             modes_container_c.append(&scroll);
 
-            // 2. Rebuild Scale Chips
+            // 2. Rebuild Rotation / Transform Chips
+            while let Some(child) = rotation_btn_box_c.first_child() {
+                rotation_btn_box_c.remove(&child);
+            }
+
+            let rotations = [
+                (0, "󰹑 Padrão (0°)"),
+                (1, "󰹒 90° Vertical"),
+                (2, "󰹑 180° Invertido"),
+                (3, "󰹒 270° Vertical"),
+            ];
+
+            for (rot_val, label) in rotations {
+                let btn = Button::with_label(label);
+                btn.add_css_class("chip-btn");
+                if current_state.transform == rot_val {
+                    btn.add_css_class("selected");
+                }
+
+                let states_rot_ref = states_c.clone();
+                let active_idx_rot_ref = active_mon_idx_c.clone();
+                let rot_box_ref = rotation_btn_box_c.clone();
+                let btn_c = btn.clone();
+
+                btn.connect_clicked(move |_| {
+                    let cur_idx = *active_idx_rot_ref.borrow();
+                    states_rot_ref.borrow_mut()[cur_idx].transform = rot_val;
+
+                    let mut c = rot_box_ref.first_child();
+                    while let Some(child) = c {
+                        child.remove_css_class("selected");
+                        c = child.next_sibling();
+                    }
+                    btn_c.add_css_class("selected");
+                });
+                rotation_btn_box_c.append(&btn);
+            }
+
+            // 3. Rebuild Scale Chips
             while let Some(child) = scale_btn_box_c.first_child() {
                 scale_btn_box_c.remove(&child);
             }
 
             let scales = [
-                (1.0, "100% (1.0x Padrão)"),
+                (1.0, "100% (1.0x)"),
                 (1.25, "125% (1.25x)"),
                 (1.5, "150% (1.5x)"),
                 (1.75, "175% (1.75x)"),
@@ -675,14 +938,14 @@ fn build_ui(app: &Application) {
                 scale_btn_box_c.append(&btn);
             }
 
-            // 3. Rebuild Position Chips (if > 1 monitor)
+            // 4. Rebuild Position Chips (if > 1 monitor)
             while let Some(child) = pos_btn_box_c.first_child() {
                 pos_btn_box_c.remove(&child);
             }
 
             if monitors_clone.len() > 1 {
-                let h = mon.height;
-                let w = mon.width;
+                let h = if mon.height > 0 { mon.height } else { 1080 };
+                let w = if mon.width > 0 { mon.width } else { 1920 };
 
                 let pos_presets = [
                     ("current", format!("Atual ({}x{})", current_state.x, current_state.y), current_state.x, current_state.y),
@@ -767,16 +1030,26 @@ fn build_ui(app: &Application) {
     }
 
     // Modes section header
-    let lbl_modes = Label::new(Some("Taxa de Atualização e Resoluções Disponíveis"));
+    let lbl_modes = Label::new(Some("Taxa de Atualização e Resoluções"));
     lbl_modes.add_css_class("section-label");
     lbl_modes.set_halign(gtk4::Align::Start);
     card.append(&lbl_modes);
     card.append(&modes_container);
 
+    // Orientation / Rotation Row
+    let rot_row = GtkBox::new(Orientation::Horizontal, 8);
+    let lbl_rot = Label::new(Some("Orientação:"));
+    lbl_rot.add_css_class("section-label");
+    lbl_rot.set_margin_top(0);
+    lbl_rot.set_margin_bottom(0);
+    rot_row.append(&lbl_rot);
+    rot_row.append(&rotation_btn_box);
+    card.append(&rot_row);
+
     // Position Section (if multiple displays)
     if monitors.len() > 1 {
         let pos_box = GtkBox::new(Orientation::Horizontal, 8);
-        let lbl_pos = Label::new(Some("Posição do Monitor:"));
+        let lbl_pos = Label::new(Some("Posição:"));
         lbl_pos.add_css_class("section-label");
         lbl_pos.set_margin_top(0);
         lbl_pos.set_margin_bottom(0);
@@ -787,7 +1060,7 @@ fn build_ui(app: &Application) {
 
     // Scale Section
     let scale_box = GtkBox::new(Orientation::Horizontal, 8);
-    let lbl_scale = Label::new(Some("Escala HiDPI:"));
+    let lbl_scale = Label::new(Some("Escala:"));
     lbl_scale.add_css_class("section-label");
     lbl_scale.set_margin_top(0);
     lbl_scale.set_margin_bottom(0);
@@ -797,7 +1070,7 @@ fn build_ui(app: &Application) {
 
     // Footer Action Buttons
     let footer = GtkBox::new(Orientation::Horizontal, 10);
-    footer.set_margin_top(6);
+    footer.set_margin_top(4);
     card.append(&footer);
 
     let btn_preferred = Button::with_label("⚡ Recomendado Automático");
