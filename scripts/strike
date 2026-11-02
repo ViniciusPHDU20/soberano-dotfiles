@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+# language: Python, file: strike, target: CachyOS / Linux
+# Orchestrator: Qwen3-Coder (30B MoE) Planner + DeepHat (7B) Operator
+
+import sys
+import os
+import re
+import json
+import subprocess
+import urllib.request
+
+OLLAMA_API = "http://127.0.0.1:11434/api/generate"
+PLANNER_MODEL = "qwen3-coder:30b"
+OPERATOR_MODEL = "deephat"
+
+# ANSI Colors
+CLR_RESET = "\033[0m"
+CLR_BOLD = "\033[1m"
+CLR_CYAN = "\033[36m"
+CLR_GREEN = "\033[32m"
+CLR_YELLOW = "\033[33m"
+CLR_RED = "\033[31m"
+CLR_MAGENTA = "\033[35m"
+
+def query_ollama(model: str, prompt: str, system: str = "", stream: bool = False, temperature: float = 0.2):
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": stream,
+        "options": {"temperature": temperature}
+    }
+    if system:
+        payload["system"] = system
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(OLLAMA_API, data=data, headers={"Content-Type": "application/json"})
+    return urllib.request.urlopen(req)
+
+def extract_bash_command(text: str) -> str:
+    # Check for markdown code blocks first
+    code_match = re.search(r"```(?:bash|sh)?\s*\n(.*?)\n```", text, re.DOTALL)
+    if code_match:
+        lines = [l.strip() for l in code_match.group(1).strip().splitlines() if l.strip() and not l.strip().startswith("#")]
+        if lines:
+            return lines[0]
+    # Check lines for common cli commands
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    for line in lines:
+        cleaned = re.sub(r"^[`'\"]+|[`'\"]+$", "", line).strip()
+        if any(cleaned.startswith(tool) for tool in ["dig", "host", "nslookup", "nmap", "curl", "ping", "whois", "traceroute", "netstat", "ss", "ip", "cat", "find"]):
+            return cleaned
+    if lines:
+        return lines[0].strip("`'\"")
+    return ""
+
+def execute_strike(user_task: str):
+    print(f"\n{CLR_MAGENTA}{CLR_BOLD}[AI STRIKE // DUAL AGENT]{CLR_RESET} Tarefa: {CLR_BOLD}{user_task}{CLR_RESET}")
+    
+    # Check if task is recon / network / inspection / extraction
+    recon_keywords = ["ip", "dns", "porta", "port", "scan", "varr", "extra", "host", "ping", "whois", "nmap", "rede", "servico", "curl"]
+    is_tactical = any(kw in user_task.lower() for kw in recon_keywords)
+    
+    if is_tactical:
+        print(f"{CLR_CYAN}>> [1/3] DeepHat acionado: gerando comando tatica...{CLR_RESET}")
+        
+        deep_system = (
+            "You are DeepHat offensive engine. Return ONLY the exact, safe single-line bash command "
+            "needed to execute the reconnaissance, DNS resolution, port scan, or inspection requested. "
+            "Zero explanations, zero conversational fluff, zero placeholders like TARGET_URL or IP_ADDRESS. "
+            "Use the exact target provided by the operator. Example: dig +short example.com"
+        )
+        
+        try:
+            res = query_ollama(OPERATOR_MODEL, user_task, system=deep_system, stream=False, temperature=0.1)
+            raw_response = json.loads(res.read().decode("utf-8"))["response"]
+            cmd = extract_bash_command(raw_response)
+        except Exception as e:
+            print(f"{CLR_RED}[!] Erro ao chamar DeepHat: {e}{CLR_RESET}")
+            cmd = ""
+
+        if cmd:
+            print(f"{CLR_GREEN}>> [2/3] Executando no Linux:{CLR_RESET} {CLR_BOLD}{cmd}{CLR_RESET}")
+            try:
+                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+                stdout = proc.stdout.strip()
+                stderr = proc.stderr.strip()
+                output = stdout if stdout else stderr
+                if not output:
+                    output = "[Sem saida do comando / OK]"
+            except subprocess.TimeoutExpired:
+                output = "[Erro: Tempo limite de execucao expirado (30s)]"
+            except Exception as e:
+                output = f"[Erro de execucao: {e}]"
+            
+            # Print brief preview of real output
+            preview = output[:300] + ("..." if len(output) > 300 else "")
+            print(f"{CLR_YELLOW}>> [Dados Reais Capturados]:{CLR_RESET}\n{preview}\n")
+            
+            # Phase 3: Qwen3-Coder synthesis
+            print(f"{CLR_CYAN}>> [3/3] Qwen3-Coder sintetizando analise...{CLR_RESET}\n")
+            qwen_prompt = (
+                f"O operador solicitou: {user_task}\n"
+                f"O DeepHat executou o comando: {cmd}\n"
+                f"Saida real obtida no sistema:\n{output}\n\n"
+                "Sintetize e explique os dados reais de forma direta, tecnica e precisa para o operador. "
+                "Nunca use placeholders ficticios (como TARGET_URL ou IP_ADDRESS); use os dados reais obtidos acima."
+            )
+        else:
+            qwen_prompt = user_task
+    else:
+        qwen_prompt = user_task
+
+    # Stream Qwen response
+    try:
+        response_stream = query_ollama(PLANNER_MODEL, qwen_prompt, stream=True, temperature=0.3)
+        print(f"{CLR_BOLD}", end="")
+        for line in response_stream:
+            if line:
+                chunk = json.loads(line.decode("utf-8"))
+                sys.stdout.write(chunk.get("response", ""))
+                sys.stdout.flush()
+        print(f"{CLR_RESET}\n")
+    except Exception as e:
+        print(f"\n{CLR_RED}[!] Erro no Qwen3-Coder: {e}{CLR_RESET}")
+
+def main():
+    if len(sys.argv) > 1:
+        task = " ".join(sys.argv[1:])
+        execute_strike(task)
+    else:
+        print(f"{CLR_MAGENTA}{CLR_BOLD}=== STRIKE: Qwen3-Coder (30B) + DeepHat (7B) Dual Agent ==={CLR_RESET}")
+        print("Digite sua ordem ou 'sair' para encerrar.\n")
+        while True:
+            try:
+                task = input(f"{CLR_GREEN}strike >> {CLR_RESET}").strip()
+                if not task:
+                    continue
+                if task.lower() in ["exit", "sair", "quit", "q"]:
+                    break
+                execute_strike(task)
+            except KeyboardInterrupt:
+                print("\nEncerrando.")
+                break
+
+if __name__ == "__main__":
+    main()
