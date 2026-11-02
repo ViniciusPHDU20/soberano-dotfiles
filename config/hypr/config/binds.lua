@@ -205,6 +205,11 @@ hl.bind(mainMod .. " + SHIFT + G",   hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh
 hl.bind(mainMod .. " + G",           hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))
 hl.bind(mainMod .. " + F1",          hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))
 
+-- Power & Performance Profiles (Eco 0.61GHz / Balanced / Compute / Game)
+hl.bind(mainMod .. " + F2",          hl.dsp.exec_cmd(scriptsDir .. "/soberano-power-profile.sh --menu"))
+hl.bind(mainMod .. " + P",           hl.dsp.exec_cmd(scriptsDir .. "/soberano-power-profile.sh --menu"))
+hl.bind(mainMod .. " + SHIFT + E",   hl.dsp.exec_cmd(scriptsDir .. "/soberano-power-profile.sh --toggle-eco"))
+
 -- Clipboard History (Cliphist + Fuzzel)
 hl.bind(mainMod .. " + V",           hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu -p '󰅌 Clipboard ❯ ' -w 60 -l 12 | cliphist decode | wl-copy"))
 
