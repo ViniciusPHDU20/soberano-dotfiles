@@ -22,6 +22,6 @@ hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
 hl.env("NVD_BACKEND", "direct")
 hl.config({
     cursor = {
-        no_hardware_cursors = false,
+        no_hardware_cursors = true,
     }
 })

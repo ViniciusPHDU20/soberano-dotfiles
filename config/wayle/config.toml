@@ -2,13 +2,13 @@
 tearing-mode = false
 
 [bar]
-scale = 0.94
+scale = 0.95
 location = "top"
 exclusive = true
-inset-edge = 0.22
-inset-ends = 0.35
-padding = 0.12
-padding-ends = 0.25
+inset-edge = 0.35
+inset-ends = 0.5
+padding = 0.25
+padding-ends = 0.4
 module-gap = 0.4
 bg = "transparent"
 background-opacity = 0
@@ -16,7 +16,7 @@ border-location = "none"
 border-width = 0
 border-color = "border-accent"
 rounding = "none"
-button-variant = "basic"
+button-variant = "block-prefix"
 button-opacity = 100
 button-bg-opacity = 90
 button-icon-size = 0.95
@@ -24,15 +24,15 @@ button-icon-padding = 0.45
 button-label-size = 0.9
 button-label-weight = "semibold"
 button-label-padding = 0.6
-button-rounding = "none"
+button-rounding = "lg"
 button-gap = 0.75
 button-border-location = "none"
 button-border-width = 0
 button-group-padding = 0.15
 button-group-module-gap = 0.25
-button-group-background = "bg-surface"
-button-group-opacity = 98
-button-group-rounding = "none"
+button-group-background = "bg-elevated"
+button-group-opacity = 92
+button-group-rounding = "lg"
 button-group-border-location = "all"
 dropdown-shadow = true
 dropdown-opacity = 96
@@ -44,18 +44,21 @@ button-group-border-width = 1
 [[bar.layout]]
 monitor = "*"
 show = true
-left = [
-    { name = "block-ws", modules = ["dashboard", "hyprland-workspaces"] }
-]
+left = ["dashboard", "hyprland-workspaces", "window-title"]
 center = []
 right = [
-    { name = "block-apps", modules = ["window-title", "systray"] }
+    { name = "hardware", modules = ["custom-cpu", "custom-ram", "custom-storage"] },
+    "weather",
+    "volume",
+    "custom-updates",
+    "clock",
+    "notifications"
 ]
 [styling]
 scale = 1.0
 rounding = "md"
 theme-provider = "matugen"
-theming-monitor = "DP-1"
+theming-monitor = "DP-2"
 matugen-scheme = "fidelity"
 matugen-contrast = -0.45
 matugen-source-color = 0
@@ -84,8 +87,8 @@ cycling-mode = "shuffle"
 cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
-name = "DP-1"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Concept-Japanese house.png"
+name = "DP-2"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Backyard.png"
 fit-mode = "fill"
 
 [osd]
@@ -107,8 +110,8 @@ dropdown-reboot-command = "systemctl reboot"
 dropdown-poweroff-command = "systemctl poweroff"
 
 [modules.hyprland-workspaces]
-min-workspace-count = 5
-monitor-specific = true
+min-workspace-count = 9
+monitor-specific = false
 show-special = false
 numbering = "absolute"
 display-mode = "label"
@@ -120,7 +123,7 @@ label-max-length = 40
 icon-show = true
 
 [modules.clock]
-format = "%H:%M:%S  •  %d/%m"
+format = "%H:%M  •  %a %d %b"
 icon-show = true
 icon-color = "auto"
 icon-bg-color = "accent"

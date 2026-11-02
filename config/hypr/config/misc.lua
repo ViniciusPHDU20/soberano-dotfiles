@@ -7,16 +7,20 @@ hl.config({
         no_donation_nag = true,
     },
     misc = {
+        disable_hyprland_logo = true,
+        disable_splash_rendering = true,
+        force_default_wallpaper = 0,
+        background_color = 0x000000,
         col = {
             splash = CACHYLGREEN,
         },
         middle_click_paste = false,
         enable_swallow = true,
         swallow_regex = "(kitty|ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)",
-        vrr = 3,
+        vrr = 0,
     },
     render = {
-        direct_scanout = 2,
+        direct_scanout = 0,
     },
     xwayland = {
         force_zero_scaling = true,

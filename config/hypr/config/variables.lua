@@ -8,7 +8,7 @@ CALCULATOR   = "gnome-calculator"
 LAUNCHER     = "fuzzel"
 
 -- Monitors
-MONITOR1 = "DP-1"
+MONITOR1 = "DP-2"
 MONITOR2 = ""
 MONITOR3 = ""
 PRIMARY_MONITOR = MONITOR1
