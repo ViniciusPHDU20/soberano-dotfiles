@@ -1,7 +1,7 @@
 -- Soberano Default Apps & Hardware Variables
 
 TERMINAL     = "kitty"
-FILE_MANAGER = "thunar"
+FILE_MANAGER = "nemo"
 BROWSER      = "firefox"
 EDITOR       = "gnome-text-editor --new-window"
 CALCULATOR   = "gnome-calculator"
