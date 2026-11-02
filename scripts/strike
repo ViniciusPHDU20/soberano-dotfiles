@@ -28,7 +28,7 @@ def query_ollama(model: str, prompt: str, system: str = "", stream: bool = False
         "model": model,
         "prompt": prompt,
         "stream": stream,
-        "options": {"temperature": temperature}
+        "options": {"temperature": temperature, "num_predict": 1024, "repeat_penalty": 1.15}
     }
     if system:
         payload["system"] = system
@@ -153,7 +153,8 @@ def execute_strike(raw_task: str):
 
     # Stream Qwen response
     try:
-        response_stream = query_ollama(PLANNER_MODEL, qwen_prompt, stream=True, temperature=0.3)
+        synthesizer = OPERATOR_MODEL if is_tactical else PLANNER_MODEL
+        response_stream = query_ollama(synthesizer, qwen_prompt, stream=True, temperature=0.3)
         print(f"{CLR_BOLD}", end="")
         for line in response_stream:
             if line:
