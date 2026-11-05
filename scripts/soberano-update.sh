@@ -47,7 +47,6 @@ cd "$DOTFILES_DIR"
 git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || true
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-LOCAL=$(git rev-parse HEAD 2>/dev/null)
 REMOTE=$(git rev-parse "origin/$BRANCH" 2>/dev/null || true)
 
 if [ -z "$REMOTE" ]; then
@@ -55,26 +54,31 @@ if [ -z "$REMOTE" ]; then
     exit 0
 fi
 
-if [ "$LOCAL" = "$REMOTE" ]; then
+BEHIND=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo "0")
+
+if [ "$BEHIND" -eq 0 ]; then
     SHORT_LOCAL=$(git rev-parse --short HEAD 2>/dev/null || echo "ok")
     notify "Soberano Dotfiles" "✓ Seu sistema já está na versão mais recente (${SHORT_LOCAL})." "normal"
     exit 0
 fi
 
-# 4. Pull Updates
-notify "Atualização Detectada" "Baixando novas configurações do Soberano Dotfiles..." "normal"
+# 4. Pull Updates (only when remote genuinely has newer commits)
+notify "Atualização Detectada" "Baixando ${BEHIND} nova(s) configuração(ões) do Soberano Dotfiles..." "normal"
 
-# Stash local uncommitted changes to avoid conflict
-HAS_CHANGES=false
+# Stash local uncommitted changes ONLY if dirty
+STASHED=false
+BEFORE_STASH=$(git rev-parse -q --verify refs/stash 2>/dev/null || echo "")
 if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-    HAS_CHANGES=true
-    git stash --quiet 2>/dev/null || true
+    git stash push -m "soberano-auto-update" --quiet 2>/dev/null || true
+    AFTER_STASH=$(git rev-parse -q --verify refs/stash 2>/dev/null || echo "")
+    if [ "$BEFORE_STASH" != "$AFTER_STASH" ]; then
+        STASHED=true
+    fi
 fi
 
-# Fast-forward pull
-if git pull --ff-only origin "$BRANCH" --quiet 2>/dev/null; then
-    # Re-apply stash if any
-    if [ "$HAS_CHANGES" = true ]; then
+# Fast-forward or rebase pull
+if git pull --rebase origin "$BRANCH" --quiet 2>/dev/null; then
+    if [ "$STASHED" = true ]; then
         git stash pop --quiet 2>/dev/null || true
     fi
 
@@ -99,8 +103,8 @@ if git pull --ff-only origin "$BRANCH" --quiet 2>/dev/null; then
     NEW_REV=$(git rev-parse --short HEAD 2>/dev/null || echo "revisão recente")
     notify "Soberano Dotfiles Atualizado" "Seu desktop foi sincronizado com sucesso para ($NEW_REV)!" "normal"
 else
-    # Pull failed (non-fast-forward)
-    if [ "$HAS_CHANGES" = true ]; then
+    git rebase --abort 2>/dev/null || true
+    if [ "$STASHED" = true ]; then
         git stash pop --quiet 2>/dev/null || true
     fi
     notify "Falha na Sincronização" "Houve conflito local de versões. Verifique git status em $DOTFILES_DIR." "critical"
