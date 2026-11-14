@@ -16,6 +16,7 @@ end
 
 hl.bind(mainMod .. " + Escape",      hl.dsp.exec_cmd("hyprctl kill"))
 hl.bind(mainMod .. " + Q",           hl.dsp.window.close())
+hl.bind(mainMod .. " + SHIFT + Q",   hl.dsp.exec_cmd(scriptsDir .. "/KillActiveProcess.sh"))
 hl.bind(mainMod .. " + Space",       hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + ALT + Space", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F",           hl.dsp.window.fullscreen())
