@@ -81,6 +81,36 @@ find_workshop_dirs() {
     printf "%s\n" "${dirs[@]}"
 }
 
+# Launch Wallpaper Animator Studio with seamless auto-restore lifecycle
+launch_wallpaper_animator_studio() {
+    local wa_run="$HOME/.local/share/Steam/steamapps/common/Wallpaper Animator/AppRun"
+    if [ ! -x "$wa_run" ]; then
+        notify-send -u normal -a "Soberano Wallpapers" "Wallpaper Animator Ausente" "O aplicativo não foi encontrado na biblioteca Steam." 2>/dev/null || true
+        return 1
+    fi
+
+    # 1. Stop any currently active live wallpaper to free GPU
+    systemctl --user stop soberano-wallpaper-watcher 2>/dev/null || true
+    systemctl --user stop soberano-livewallpaper 2>/dev/null || true
+    killall -9 linux-wallpaperengine 2>/dev/null || true
+    rm -f "$STATE_FILE"
+
+    # 2. Notify user
+    notify-send -u normal -a "Soberano Wallpapers" "✨ Wallpaper Animator Studio" "Iniciando estúdio de IA... Ao fechar, o wallpaper estático será restaurado." 2>/dev/null || true
+
+    # 3. Launch Wallpaper Animator in a dedicated supervisor subshell
+    (
+        "$wa_run" >/dev/null 2>&1
+        # When user closes the GUI, automatically restore awww static wallpaper!
+        pkill -f "/usr/bin/mpvpaper" 2>/dev/null || true
+        systemctl --user start awww-daemon.service 2>/dev/null || true
+        if [ -f "$STATIC_RESTORE" ]; then
+            "$STATIC_RESTORE" --restore >/dev/null 2>&1
+        fi
+        notify-send -u low -a "Soberano Wallpapers" "󰸉 Wallpaper Restaurado" "Wallpaper Animator encerrado • awww restaurado com sucesso." 2>/dev/null || true
+    ) &
+}
+
 # Stop live wallpaper and restore static engine
 stop_live() {
     systemctl --user stop soberano-wallpaper-watcher 2>/dev/null || true
@@ -89,6 +119,7 @@ stop_live() {
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
     systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
+    pkill -f mpvpaper 2>/dev/null || true
     rm -f "$STATE_FILE"
 
     # Ensure awww service is restored
@@ -106,7 +137,22 @@ stop_live() {
 apply_live() {
     local target="$1"
 
-    if ! command -v linux-wallpaperengine >/dev/null 2>&1; then
+    # Detect if target is a video file or a Wallpaper Animator folder containing video
+    local is_wa_video=false
+    local video_file=""
+
+    if [ -d "$target" ] && [ -f "$target/video.mp4" ]; then
+        is_wa_video=true
+        video_file="$target/video.mp4"
+    elif [ -d "$target" ] && [ -f "$target/video.webm" ]; then
+        is_wa_video=true
+        video_file="$target/video.webm"
+    elif [ -f "$target" ] && [[ "$target" =~ \.(mp4|webm|mkv)$ ]] && [ ! -f "$(dirname "$target")/project.json" ]; then
+        is_wa_video=true
+        video_file="$target"
+    fi
+
+    if [ "$is_wa_video" = "false" ] && ! command -v linux-wallpaperengine >/dev/null 2>&1; then
         notify-send -u normal -a "Soberano Wallpapers" "Wallpaper Engine Ausente" "O linux-wallpaperengine não está instalado. Ative pelo instalador ou instale 'linux-wallpaperengine-v3-bin'." 2>/dev/null || true
         echo "Aviso: linux-wallpaperengine não está instalado no sistema." >&2
         return 1
@@ -128,6 +174,7 @@ apply_live() {
     systemctl --user stop soberano-livewallpaper 2>/dev/null || true
     systemctl --user reset-failed soberano-livewallpaper 2>/dev/null || true
     killall -9 linux-wallpaperengine 2>/dev/null || true
+    pkill -f mpvpaper 2>/dev/null || true
     systemctl --user stop awww-daemon.service 2>/dev/null || true
     killall -9 awww-daemon 2>/dev/null || true
 
@@ -140,14 +187,20 @@ apply_live() {
     if [ -f "$hires_preview" ]; then
         preview="$hires_preview"
     elif [ -d "$target" ]; then
-        for p in "$target/preview.jpg" "$target/preview.png" "$target/preview.webp" "$target/preview.gif"; do
+        for p in "$target/thumb.jpg" "$target/image.png" "$target/preview.jpg" "$target/preview.png" "$target/preview.webp" "$target/preview.gif"; do
             if [ -f "$p" ]; then
                 preview="$p"
                 break
             fi
         done
     elif [ -f "$target" ]; then
-        preview="$target"
+        if [ -f "$(dirname "$target")/thumb.jpg" ]; then
+            preview="$(dirname "$target")/thumb.jpg"
+        elif [ -f "$(dirname "$target")/image.png" ]; then
+            preview="$(dirname "$target")/image.png"
+        else
+            preview="$target"
+        fi
     fi
 
     local title
@@ -155,6 +208,14 @@ apply_live() {
     if [ -d "$target" ] && [ -f "$target/project.json" ]; then
         local parsed_title
         parsed_title=$(jq -r '.title // empty' "$target/project.json" 2>/dev/null || true)
+        [ -n "$parsed_title" ] && title="$parsed_title"
+    elif [ -d "$target" ] && [ -f "$target/meta.json" ]; then
+        local parsed_title
+        parsed_title=$(jq -r '.title // empty' "$target/meta.json" 2>/dev/null || true)
+        [ -n "$parsed_title" ] && title="$parsed_title"
+    elif [ -f "$target" ] && [ -f "$(dirname "$target")/meta.json" ]; then
+        local parsed_title
+        parsed_title=$(jq -r '.title // empty' "$(dirname "$target")/meta.json" 2>/dev/null || true)
         [ -n "$parsed_title" ] && title="$parsed_title"
     fi
 
@@ -167,7 +228,34 @@ apply_live() {
         wayle wallpaper set "$preview" >/dev/null 2>&1 || true
     fi
 
-    # 3. Assemble command flags based on user configuration
+    # 3. If target is a standalone video or Wallpaper Animator animation, launch via mpvpaper
+    if [ "$is_wa_video" = "true" ]; then
+        local mpvpaper_cmd="mpvpaper"
+        if ! command -v mpvpaper >/dev/null 2>&1; then
+            local bundled_mpvpaper="$HOME/.local/share/Steam/steamapps/common/Wallpaper Animator/usr/bin/mpvpaper"
+            if [ -x "$bundled_mpvpaper" ]; then
+                mpvpaper_cmd="$bundled_mpvpaper"
+            fi
+        fi
+
+        local audio_opts="loop"
+        if [ "$SILENT" = "true" ]; then
+            audio_opts="loop no-audio"
+        else
+            local eff_vol="$VOLUME"
+            if [ "$eff_vol" -gt 0 ]; then
+                eff_vol=$(python3 -c "import sys; v=int(sys.argv[1]); print(min(100, int(round((v/100.0)**0.6 * 100))))" "$VOLUME" 2>/dev/null || echo "$VOLUME")
+            fi
+            audio_opts="loop volume=${eff_vol}"
+        fi
+
+        systemd-run --user --unit=soberano-livewallpaper "$mpvpaper_cmd" -p -o "$audio_opts" "$mon" "$video_file" >/dev/null 2>&1
+        echo "$target" > "$STATE_FILE"
+        notify-send -u normal -a "Soberano Wallpapers" "🎬 Live Wallpaper IA Ativo" "${title} (${mon} • mpvpaper • Vol: ${VOLUME}%)" 2>/dev/null || true
+        return 0
+    fi
+
+    # 4. Assemble command flags based on user configuration for linux-wallpaperengine
     local cmd_args=(
         --screen-root "$mon"
         --fps "$FPS"
@@ -235,10 +323,10 @@ apply_live() {
 
     cmd_args+=("$target")
 
-    # 4. Launch linux-wallpaperengine isolated as a systemd user unit
+    # Launch linux-wallpaperengine isolated as a systemd user unit
     systemd-run --user --unit=soberano-livewallpaper linux-wallpaperengine "${cmd_args[@]}" >/dev/null 2>&1
 
-    # 5. Spawn dynamic focus & workspace audio watcher as a systemd user unit
+    # Spawn dynamic focus & workspace audio watcher as a systemd user unit
     systemd-run --user --unit=soberano-wallpaper-watcher python3 "$HOME/dotfiles/scripts/soberano-wallpaper-watcher.py" >/dev/null 2>&1
 
     echo "$target" > "$STATE_FILE"
@@ -271,6 +359,13 @@ select_interactive() {
     # First option: Stop / return to static
     items+=("⏹ [Parar Wallpaper Animado / Voltar ao Estático]")
     paths+=("__STOP__")
+
+    # Conditional Steam Wallpaper Animator option (only if installed)
+    local wa_run="$HOME/.local/share/Steam/steamapps/common/Wallpaper Animator/AppRun"
+    if [ -x "$wa_run" ]; then
+        items+=("✨ [Abrir Wallpaper Animator Studio (Steam AI)]")
+        paths+=("__WALLPAPER_ANIMATOR_STUDIO__")
+    fi
 
     while IFS= read -r ws_dir; do
         [ -d "$ws_dir" ] || continue
@@ -308,6 +403,8 @@ select_interactive() {
     local chosen_path="${paths[$selected_idx]}"
     if [ "$chosen_path" = "__STOP__" ]; then
         stop_live
+    elif [ "$chosen_path" = "__WALLPAPER_ANIMATOR_STUDIO__" ]; then
+        launch_wallpaper_animator_studio
     else
         apply_live "$chosen_path"
     fi
@@ -348,6 +445,9 @@ set_runtime_mute() {
 
 # CLI Argument Router
 case "${1:-}" in
+    --launch-wa-studio)
+        launch_wallpaper_animator_studio
+        ;;
     --stop)
         stop_live
         ;;

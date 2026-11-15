@@ -56,6 +56,15 @@ struct ProjectJson {
     tags: Option<Vec<String>>,
 }
 
+#[derive(Deserialize, Default)]
+#[allow(dead_code)]
+struct WaMetaJson {
+    title: Option<String>,
+    description: Option<String>,
+    origin: Option<String>,
+    created_at: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct LiveWallpaperConfig {
     fps: u32,
@@ -227,6 +236,22 @@ fn is_live_engine_installed() -> bool {
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
+}
+
+fn is_wallpaper_animator_installed() -> bool {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    PathBuf::from(home)
+        .join(".local/share/Steam/steamapps/common/Wallpaper Animator/AppRun")
+        .is_file()
+}
+
+fn launch_wallpaper_animator_studio() {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
+    let script = PathBuf::from(home).join("dotfiles/scripts/soberano-livewallpaper.sh");
+    let _ = Command::new("bash")
+        .arg(script)
+        .arg("--launch-wa-studio")
+        .spawn();
 }
 
 fn is_live_engine_running() -> bool {
@@ -418,6 +443,18 @@ fn find_workshop_dirs() -> Vec<PathBuf> {
         dirs.push(user_live);
     }
 
+    // 4. Wallpaper Animator custom/downloaded directories (if installed)
+    let wa_dirs = [
+        PathBuf::from(&home).join(".local/share/wallpaper-animator/wallpapers"),
+        PathBuf::from(&home).join(".local/share/wallpaper-animator/downloads"),
+        PathBuf::from(&home).join(".local/share/wallpaper-animator/library"),
+    ];
+    for d in wa_dirs {
+        if d.is_dir() && !dirs.contains(&d) {
+            dirs.push(d);
+        }
+    }
+
     dirs
 }
 
@@ -574,6 +611,83 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
     }
     }
 
+    // 3. Scan Wallpaper Animator AI-generated wallpapers (if installed)
+    if is_wallpaper_animator_installed() {
+        let wa_dir = PathBuf::from(&home).join(".wallpaper-animator/wallpapers");
+        if wa_dir.is_dir() {
+            if let Ok(entries) = fs::read_dir(&wa_dir) {
+                for entry in entries.filter_map(|e| e.ok()) {
+                    let p = entry.path();
+                    if !p.is_dir() {
+                        continue;
+                    }
+
+                    let image_file = p.join("image.png");
+                    let thumb_file = p.join("thumb.jpg");
+                    let video_file = p.join("video.mp4");
+                    let meta_file = p.join("meta.json");
+
+                    // Must have at least image.png to be valid
+                    if !image_file.exists() {
+                        continue;
+                    }
+
+                    // Parse title from meta.json
+                    let mut title = p.file_name().and_then(|s| s.to_str()).unwrap_or("IA Wallpaper").to_string();
+                    if meta_file.is_file() {
+                        if let Ok(content) = fs::read_to_string(&meta_file) {
+                            if let Ok(meta) = serde_json::from_str::<WaMetaJson>(&content) {
+                                if let Some(t) = meta.title {
+                                    if !t.trim().is_empty() {
+                                        title = t.trim().to_string();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // thumb.jpg exists for all items (87/87), use it directly as thumbnail
+                    // For the cache key, use thumb.jpg path so it doesn't re-encode unnecessarily
+                    let thumbnail_path = if thumb_file.exists() {
+                        thumb_file.clone()
+                    } else {
+                        // fallback: generate from image.png
+                        let cache_thumb = get_thumbnail_path(&image_file, &cache_dir);
+                        ensure_thumbnail(&image_file, &cache_thumb);
+                        cache_thumb
+                    };
+
+                    let preview_path = image_file.clone();
+
+                    if video_file.exists() {
+                        // Animated: video.mp4 present — apply via mpvpaper through soberano-livewallpaper.sh
+                        items.push(WallpaperItem {
+                            path: p.clone(),
+                            name: title,
+                            category: "Wallpaper Animator".to_string(),
+                            thumbnail_path,
+                            preview_path,
+                            kind: WallpaperKind::Live {
+                                engine_type: "WA-Video".to_string(),
+                                subtype: LiveSubtype::Video,
+                            },
+                        });
+                    } else {
+                        // Static: only image.png — apply via WallpaperSelect.sh (matugen + awww)
+                        items.push(WallpaperItem {
+                            path: image_file.clone(),
+                            name: title,
+                            category: "Wallpaper Animator".to_string(),
+                            thumbnail_path,
+                            preview_path,
+                            kind: WallpaperKind::Static,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
     if let Ok(json) = serde_json::to_string(&items) {
@@ -586,10 +700,13 @@ fn scan_wallpapers() -> Vec<WallpaperItem> {
 fn apply_wallpaper(item: &WallpaperItem) {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/viniciusphdu".to_string());
     match &item.kind {
-        WallpaperKind::Live { .. } => {
+        WallpaperKind::Live { engine_type, .. } => {
             let script = PathBuf::from(&home).join("dotfiles/scripts/soberano-livewallpaper.sh");
+            // For WA-Video items, the path is the folder containing video.mp4
+            // soberano-livewallpaper.sh detects video.mp4 inside and launches mpvpaper
             let _ = Command::new(&script)
                 .arg(&item.path)
+                .env("WA_ENGINE_TYPE", engine_type.as_str())
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
@@ -598,6 +715,7 @@ fn apply_wallpaper(item: &WallpaperItem) {
         WallpaperKind::Static => {
             let script = PathBuf::from(&home).join("dotfiles/scripts/WallpaperSelect.sh");
             if script.exists() {
+                // WallpaperSelect.sh --apply runs matugen + awww internally
                 let _ = Command::new(&script)
                     .args(["--apply", item.path.to_string_lossy().as_ref()])
                     .stdin(Stdio::null())
@@ -1086,16 +1204,23 @@ fn build_ui(app: &Application) {
 
     let all_wallpapers = scan_wallpapers();
 
-    // Separate Curated Static Wallpapers from Steam Live/Video Wallpapers
+    // Separate: Static (curated), Live (Steam Engine), WA (Wallpaper Animator AI)
     let mut static_wallpapers = Vec::new();
     let mut live_wallpapers = Vec::new();
+    let mut wa_wallpapers = Vec::new();
 
     for w in all_wallpapers {
-        match w.kind {
-            WallpaperKind::Static => static_wallpapers.push(w),
-            WallpaperKind::Live { .. } => live_wallpapers.push(w),
+        if w.category == "Wallpaper Animator" {
+            wa_wallpapers.push(w);
+        } else {
+            match w.kind {
+                WallpaperKind::Static => static_wallpapers.push(w),
+                WallpaperKind::Live { .. } => live_wallpapers.push(w),
+            }
         }
     }
+
+    let has_wa_support = is_wallpaper_animator_installed() && !wa_wallpapers.is_empty();
 
     // Single check of current active wallpaper (Eliminates the 105 pgrep subprocesses bottleneck!)
     let has_live_support = is_live_engine_installed() && !live_wallpapers.is_empty();
@@ -1106,6 +1231,7 @@ fn build_ui(app: &Application) {
     let initial_item = if let Some(ref cur) = current_active_path {
         if is_live_active {
             live_wallpapers.iter().find(|w| &w.path == cur).cloned()
+                .or_else(|| wa_wallpapers.iter().find(|w| &w.path == cur).cloned())
         } else {
             static_wallpapers.iter().find(|w| &w.path == cur).cloned()
         }
@@ -1169,20 +1295,28 @@ fn build_ui(app: &Application) {
     let update_meta_labels = move |cat_widget: &Label, status_widget: &Label, item: &WallpaperItem| {
         match &item.kind {
             WallpaperKind::Live { engine_type, subtype } => {
-                match subtype {
-                    LiveSubtype::AudioReactive => {
-                        cat_widget.set_text("󰎈 CENA • ÁUDIO REATIVO");
-                    }
-                    LiveSubtype::Scene3D => {
-                        cat_widget.set_text(&format!("󰍽 CENA 3D & FÍSICA • {}", engine_type.to_uppercase()));
-                    }
-                    LiveSubtype::Video => {
-                        cat_widget.set_text("🎬 VÍDEO PRÉ-GRAVADO (MP4)");
+                if engine_type == "WA-Video" {
+                    cat_widget.set_text("✨ IA WALLPAPER ANIMATOR • VÍDEO ANIMADO");
+                } else {
+                    match subtype {
+                        LiveSubtype::AudioReactive => {
+                            cat_widget.set_text("󰎈 CENA • ÁUDIO REATIVO");
+                        }
+                        LiveSubtype::Scene3D => {
+                            cat_widget.set_text(&format!("󰍽 CENA 3D & FÍSICA • {}", engine_type.to_uppercase()));
+                        }
+                        LiveSubtype::Video => {
+                            cat_widget.set_text("🎬 VÍDEO PRÉ-GRAVADO (MP4)");
+                        }
                     }
                 }
             }
             WallpaperKind::Static => {
-                cat_widget.set_text(&format!("󰸉 {}", item.category));
+                if item.category == "Wallpaper Animator" {
+                    cat_widget.set_text("✨ IA WALLPAPER ANIMATOR • ESTÁTICO");
+                } else {
+                    cat_widget.set_text(&format!("󰸉 {}", item.category));
+                }
             }
         }
 
@@ -1220,21 +1354,29 @@ fn build_ui(app: &Application) {
 
     let update_apply_btn_label = |btn: &Button, item: &WallpaperItem| {
         match &item.kind {
-            WallpaperKind::Live { subtype, .. } => {
-                match subtype {
-                    LiveSubtype::AudioReactive => {
-                        btn.set_label("󰎈  Iniciar Cena Áudio Reativa");
-                    }
-                    LiveSubtype::Scene3D => {
-                        btn.set_label("󰍽  Iniciar Cena 3D Interativa");
-                    }
-                    LiveSubtype::Video => {
-                        btn.set_label("🎬  Reproduzir Vídeo (MP4)");
+            WallpaperKind::Live { engine_type, subtype } => {
+                if engine_type == "WA-Video" {
+                    btn.set_label("✨  Aplicar Vídeo IA (mpvpaper)");
+                } else {
+                    match subtype {
+                        LiveSubtype::AudioReactive => {
+                            btn.set_label("󰎈  Iniciar Cena Áudio Reativa");
+                        }
+                        LiveSubtype::Scene3D => {
+                            btn.set_label("󰍽  Iniciar Cena 3D Interativa");
+                        }
+                        LiveSubtype::Video => {
+                            btn.set_label("🎬  Reproduzir Vídeo (MP4)");
+                        }
                     }
                 }
             }
             WallpaperKind::Static => {
-                btn.set_label("󰸉  Aplicar Wallpaper");
+                if item.category == "Wallpaper Animator" {
+                    btn.set_label("✨  Aplicar Wallpaper IA");
+                } else {
+                    btn.set_label("󰸉  Aplicar Wallpaper");
+                }
             }
         }
     };
@@ -1280,6 +1422,16 @@ fn build_ui(app: &Application) {
         std::process::exit(0);
     });
 
+    let wa_studio_btn = Button::with_label("✨  Criar c/ IA (Wallpaper Animator)");
+    wa_studio_btn.add_css_class("hero-btn-random");
+    wa_studio_btn.set_visible(is_wallpaper_animator_installed());
+    let win_wa = window.clone();
+    wa_studio_btn.connect_clicked(move |_| {
+        launch_wallpaper_animator_studio();
+        win_wa.close();
+        std::process::exit(0);
+    });
+
     let hint_label = Label::new(Some("Atalhos:  [Enter] Aplicar  •  [Esc] Fechar  •  Duplo Clique Aplica"));
     hint_label.add_css_class("hero-hint");
     hint_label.set_halign(gtk4::Align::Center);
@@ -1287,6 +1439,9 @@ fn build_ui(app: &Application) {
     actions_box.append(&apply_btn);
     actions_box.append(&random_btn);
     actions_box.append(&stop_btn);
+    if is_wallpaper_animator_installed() {
+        actions_box.append(&wa_studio_btn);
+    }
     actions_box.append(&hint_label);
 
     hero_stage.append(&hero_picture);
@@ -1319,6 +1474,11 @@ fn build_ui(app: &Application) {
     let tab_settings_btn = Button::with_label("󰒓  Configurar Áudio & Motor");
     tab_settings_btn.add_css_class("tab-btn");
 
+    // Exclusive Wallpaper Animator tab (only shown when WA is installed and has items)
+    let tab_wa_btn = Button::with_label("✨  Wallpaper Animator (IA)");
+    tab_wa_btn.add_css_class("tab-btn");
+    tab_wa_btn.set_visible(has_wa_support);
+
     if is_live_active {
         tab_live_btn.add_css_class("active");
     } else {
@@ -1329,6 +1489,9 @@ fn build_ui(app: &Application) {
     if has_live_support {
         tabs_box.append(&tab_live_btn);
         tabs_box.append(&tab_settings_btn);
+    }
+    if has_wa_support {
+        tabs_box.append(&tab_wa_btn);
     }
 
     let search_entry = SearchEntry::new();
@@ -1372,9 +1535,11 @@ fn build_ui(app: &Application) {
     }
     let static_registry = Rc::new(RefCell::new(Vec::<CardMeta>::new()));
     let live_registry = Rc::new(RefCell::new(Vec::<CardMeta>::new()));
+    let wa_registry = Rc::new(RefCell::new(Vec::<CardMeta>::new()));
 
     let static_reg_for_sel = Rc::clone(&static_registry);
     let live_reg_for_sel = Rc::clone(&live_registry);
+    let wa_reg_for_sel = Rc::clone(&wa_registry);
 
     let select_card = Rc::new(move |item: WallpaperItem| {
         *sel_item_rc.borrow_mut() = item.clone();
@@ -1393,6 +1558,14 @@ fn build_ui(app: &Application) {
         }
 
         for meta in live_reg_for_sel.borrow().iter() {
+            if meta.item.path == item.path {
+                meta.container.add_css_class("selected");
+            } else {
+                meta.container.remove_css_class("selected");
+            }
+        }
+
+        for meta in wa_reg_for_sel.borrow().iter() {
             if meta.item.path == item.path {
                 meta.container.add_css_class("selected");
             } else {
@@ -1608,11 +1781,118 @@ fn build_ui(app: &Application) {
     // Search and Filtering across active section
     let active_tab_state = Rc::new(RefCell::new(if is_live_active { "live" } else { "static" }));
 
+    // -------------------------------------------------------------------------
+    // SECTION 3: Wallpaper Animator (IA) — Exclusive tab (only if WA installed)
+    // -------------------------------------------------------------------------
+    let wa_view = GtkBox::new(Orientation::Vertical, 12);
+    wa_view.set_vexpand(true);
+    wa_view.set_visible(false);
+
+    let wa_flowbox = FlowBox::new();
+    wa_flowbox.set_valign(gtk4::Align::Start);
+    wa_flowbox.set_max_children_per_line(3);
+    wa_flowbox.set_min_children_per_line(3);
+    wa_flowbox.set_selection_mode(gtk4::SelectionMode::None);
+    wa_flowbox.set_homogeneous(true);
+
+    // Filter chips for WA tab: Todos / Estáticos / Animados
+    let wa_chips_bar = GtkBox::new(Orientation::Horizontal, 8);
+    let wa_filter_chips = ["Todos", "🖼 Estáticos", "🎬 Animados"];
+    let wa_active_filter = Rc::new(RefCell::new("Todos".to_string()));
+    let wa_filter_buttons = Rc::new(RefCell::new(Vec::<Button>::new()));
+
+    if has_wa_support {
+        for item in &wa_wallpapers {
+            let card_item = GtkBox::new(Orientation::Vertical, 4);
+            card_item.add_css_class("vault-card");
+            card_item.set_size_request(THUMB_W + 12, THUMB_H + 34);
+
+            if item.path == selected_item.borrow().path {
+                card_item.add_css_class("selected");
+            }
+
+            let is_active_now = current_active_path.as_ref() == Some(&item.path);
+
+            let pic = Picture::for_filename(&item.thumbnail_path);
+            pic.set_content_fit(ContentFit::Cover);
+            pic.set_can_shrink(true);
+            pic.set_size_request(THUMB_W, THUMB_H);
+            pic.add_css_class("card-thumb-image");
+            card_item.append(&pic);
+
+            let label_row = GtkBox::new(Orientation::Horizontal, 6);
+            let name_label = Label::new(Some(&item.name));
+            name_label.add_css_class("card-caption");
+            name_label.set_ellipsize(gtk4::pango::EllipsizeMode::End);
+            name_label.set_hexpand(true);
+            name_label.set_halign(gtk4::Align::Start);
+            label_row.append(&name_label);
+
+            // Badge: animated (has video.mp4) vs static
+            let is_wa_animated = matches!(&item.kind, WallpaperKind::Live { engine_type, .. } if engine_type == "WA-Video");
+            if is_wa_animated {
+                let lbl = Label::new(Some("🎬 ANIMADO"));
+                lbl.add_css_class("card-badge-video");
+                label_row.append(&lbl);
+            } else {
+                let lbl = Label::new(Some("✨ IA"));
+                lbl.add_css_class("card-badge-scene");
+                label_row.append(&lbl);
+            }
+
+            if is_active_now {
+                let badge = Label::new(Some("✓ ATIVO"));
+                badge.add_css_class("card-badge-active");
+                label_row.append(&badge);
+            }
+            card_item.append(&label_row);
+
+            let click = GestureClick::new();
+            let item_click = item.clone();
+            let sel_fn = Rc::clone(&select_card);
+            let win_apply_quick = window.clone();
+            click.connect_released(move |_, n_press, _, _| {
+                sel_fn(item_click.clone());
+                if n_press >= 2 {
+                    apply_wallpaper(&item_click);
+                    win_apply_quick.close();
+                    std::thread::sleep(std::time::Duration::from_millis(60));
+                    std::process::exit(0);
+                }
+            });
+            card_item.add_controller(click);
+
+            let child = FlowBoxChild::new();
+            child.set_child(Some(&card_item));
+            wa_flowbox.append(&child);
+
+            wa_registry.borrow_mut().push(CardMeta {
+                child,
+                container: card_item,
+                name_lower: item.name.to_lowercase(),
+                category: item.category.clone(),
+                item: item.clone(),
+            });
+        }
+    }
+
+    let wa_scroll = ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Never)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .child(&wa_flowbox)
+        .vexpand(true)
+        .build();
+
+    wa_view.append(&wa_chips_bar);
+    wa_view.append(&wa_scroll);
+
     let static_reg_filter = Rc::clone(&static_registry);
     let live_reg_filter = Rc::clone(&live_registry);
+    let wa_reg_filter = Rc::clone(&wa_registry);
     let search_rc = search_entry.clone();
     let static_cat_rc = Rc::clone(&static_active_category);
     let live_cat_rc = Rc::clone(&live_active_category);
+    let wa_filter_rc = Rc::clone(&wa_active_filter);
     let tab_state_filter = Rc::clone(&active_tab_state);
 
     let recompute_filter = Rc::new(move || {
@@ -1638,8 +1918,42 @@ fn build_ui(app: &Application) {
                 };
                 meta.child.set_visible(matches_q && matches_c);
             }
+        } else if tab == "wa" {
+            let filter = wa_filter_rc.borrow().clone();
+            for meta in wa_reg_filter.borrow().iter() {
+                let matches_q = query.is_empty() || meta.name_lower.contains(&query);
+                let matches_f = match filter.as_str() {
+                    "🖼 Estáticos" => matches!(meta.item.kind, WallpaperKind::Static),
+                    "🎬 Animados" => matches!(meta.item.kind, WallpaperKind::Live { .. }),
+                    _ => true,
+                };
+                meta.child.set_visible(matches_q && matches_f);
+            }
         }
     });
+
+    // Wire WA filter chips
+    for chip_name in wa_filter_chips {
+        let btn = Button::with_label(chip_name);
+        btn.add_css_class("category-chip");
+        if chip_name == "Todos" {
+            btn.add_css_class("active");
+        }
+        let chip_val = chip_name.to_string();
+        let act_filter = Rc::clone(&wa_active_filter);
+        let btn_list = Rc::clone(&wa_filter_buttons);
+        let recomp = Rc::clone(&recompute_filter);
+        btn.connect_clicked(move |clicked_btn| {
+            *act_filter.borrow_mut() = chip_val.clone();
+            for b in btn_list.borrow().iter() {
+                b.remove_css_class("active");
+            }
+            clicked_btn.add_css_class("active");
+            recomp();
+        });
+        wa_filter_buttons.borrow_mut().push(btn.clone());
+        wa_chips_bar.append(&btn);
+    }
 
     let recomp_search = Rc::clone(&recompute_filter);
     search_entry.connect_search_changed(move |_| {
@@ -2076,22 +2390,27 @@ fn build_ui(app: &Application) {
     let stat_view_rc = static_view.clone();
     let live_view_rc = live_view.clone();
     let set_view_rc = settings_view.clone();
+    let wa_view_rc = wa_view.clone();
     let tab_stat_rc = tab_static_btn.clone();
     let tab_live_rc = tab_live_btn.clone();
     let tab_set_rc = tab_settings_btn.clone();
+    let tab_wa_rc = tab_wa_btn.clone();
     let search_rc_tab = search_entry.clone();
     let count_rc_tab = count_badge.clone();
     let tab_state_1 = Rc::clone(&active_tab_state);
     let static_len = static_wallpapers.len();
     let live_len = live_wallpapers.len();
+    let wa_len = wa_wallpapers.len();
 
     // Tab 1: Nossos Wallpapers
     let stat_view_c1 = stat_view_rc.clone();
     let live_view_c1 = live_view_rc.clone();
     let set_view_c1 = set_view_rc.clone();
+    let wa_view_c1 = wa_view_rc.clone();
     let t_stat_c1 = tab_stat_rc.clone();
     let t_live_c1 = tab_live_rc.clone();
     let t_set_c1 = tab_set_rc.clone();
+    let t_wa_c1 = tab_wa_rc.clone();
     let search_c1 = search_rc_tab.clone();
     let count_c1 = count_rc_tab.clone();
     let tab_state_c1 = Rc::clone(&tab_state_1);
@@ -2101,10 +2420,12 @@ fn build_ui(app: &Application) {
         t_stat_c1.add_css_class("active");
         t_live_c1.remove_css_class("active");
         t_set_c1.remove_css_class("active");
+        t_wa_c1.remove_css_class("active");
 
         stat_view_c1.set_visible(true);
         live_view_c1.set_visible(false);
         set_view_c1.set_visible(false);
+        wa_view_c1.set_visible(false);
 
         search_c1.set_visible(true);
         count_c1.set_visible(true);
@@ -2116,9 +2437,11 @@ fn build_ui(app: &Application) {
     let stat_view_c2 = stat_view_rc.clone();
     let live_view_c2 = live_view_rc.clone();
     let set_view_c2 = set_view_rc.clone();
+    let wa_view_c2 = wa_view_rc.clone();
     let t_stat_c2 = tab_stat_rc.clone();
     let t_live_c2 = tab_live_rc.clone();
     let t_set_c2 = tab_set_rc.clone();
+    let t_wa_c2 = tab_wa_rc.clone();
     let search_c2 = search_rc_tab.clone();
     let count_c2 = count_rc_tab.clone();
     let tab_state_c2 = Rc::clone(&tab_state_1);
@@ -2128,10 +2451,12 @@ fn build_ui(app: &Application) {
         t_live_c2.add_css_class("active");
         t_stat_c2.remove_css_class("active");
         t_set_c2.remove_css_class("active");
+        t_wa_c2.remove_css_class("active");
 
         stat_view_c2.set_visible(false);
         live_view_c2.set_visible(true);
         set_view_c2.set_visible(false);
+        wa_view_c2.set_visible(false);
 
         search_c2.set_visible(true);
         count_c2.set_visible(true);
@@ -2143,9 +2468,11 @@ fn build_ui(app: &Application) {
     let stat_view_c3 = stat_view_rc.clone();
     let live_view_c3 = live_view_rc.clone();
     let set_view_c3 = set_view_rc.clone();
+    let wa_view_c3 = wa_view_rc.clone();
     let t_stat_c3 = tab_stat_rc.clone();
     let t_live_c3 = tab_live_rc.clone();
     let t_set_c3 = tab_set_rc.clone();
+    let t_wa_c3 = tab_wa_rc.clone();
     let search_c3 = search_rc_tab.clone();
     let count_c3 = count_rc_tab.clone();
     let tab_state_c3 = Rc::clone(&tab_state_1);
@@ -2154,20 +2481,58 @@ fn build_ui(app: &Application) {
         t_set_c3.add_css_class("active");
         t_stat_c3.remove_css_class("active");
         t_live_c3.remove_css_class("active");
+        t_wa_c3.remove_css_class("active");
 
         stat_view_c3.set_visible(false);
         live_view_c3.set_visible(false);
         set_view_c3.set_visible(true);
+        wa_view_c3.set_visible(false);
 
         search_c3.set_visible(false);
         count_c3.set_visible(false);
     });
+
+    // Tab 4: Wallpaper Animator (IA) — exclusive
+    if has_wa_support {
+        let stat_view_c4 = stat_view_rc.clone();
+        let live_view_c4 = live_view_rc.clone();
+        let set_view_c4 = set_view_rc.clone();
+        let wa_view_c4 = wa_view_rc.clone();
+        let t_stat_c4 = tab_stat_rc.clone();
+        let t_live_c4 = tab_live_rc.clone();
+        let t_set_c4 = tab_set_rc.clone();
+        let t_wa_c4 = tab_wa_rc.clone();
+        let search_c4 = search_rc_tab.clone();
+        let count_c4 = count_rc_tab.clone();
+        let tab_state_c4 = Rc::clone(&tab_state_1);
+        let recomp_t4 = Rc::clone(&recompute_filter);
+        tab_wa_btn.connect_clicked(move |_| {
+            *tab_state_c4.borrow_mut() = "wa";
+            t_wa_c4.add_css_class("active");
+            t_stat_c4.remove_css_class("active");
+            t_live_c4.remove_css_class("active");
+            t_set_c4.remove_css_class("active");
+
+            stat_view_c4.set_visible(false);
+            live_view_c4.set_visible(false);
+            set_view_c4.set_visible(false);
+            wa_view_c4.set_visible(true);
+
+            search_c4.set_visible(true);
+            count_c4.set_visible(true);
+            count_c4.set_text(&format!("{} Criações IA", wa_len));
+            recomp_t4();
+        });
+    }
 
     vault_stage.append(&top_bar);
     vault_stage.append(&static_view);
     if has_live_support {
         vault_stage.append(&live_view);
         vault_stage.append(&settings_view);
+    }
+    if has_wa_support {
+        vault_stage.append(&wa_view);
     }
 
     studio_deck.append(&hero_stage);
