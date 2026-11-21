@@ -21,6 +21,8 @@ hl.config({
     },
     render = {
         direct_scanout = 0,
+        cm_auto_hdr = 0,
+        send_content_type = false,
     },
     xwayland = {
         force_zero_scaling = true,

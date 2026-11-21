@@ -182,10 +182,14 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), { loc
 ---- SOBERANO ENGINE & THEMING ----
 -----------------------------------
 
--- Screen Capture
-hl.bind(mainMod .. " + P",     hl.dsp.exec_cmd("hyprpicker -a -n"))
-hl.bind("Print",               hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
-hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd("grim - | wl-copy"))
+-- Screen Capture (Native Wayland + Swappy for 60% Keyboards)
+hl.bind(mainMod .. " + P",           hl.dsp.exec_cmd("hyprpicker -a -n"))
+hl.bind("Print",                     hl.dsp.exec_cmd(scriptsDir .. "/ScreenShot.sh --swappy"))
+hl.bind(mainMod .. " + Print",       hl.dsp.exec_cmd(scriptsDir .. "/ScreenShot.sh --full-swappy"))
+hl.bind(mainMod .. " + SHIFT + Print", hl.dsp.exec_cmd(scriptsDir .. "/ScreenShot.sh --copy"))
+
+-- 60% Keyboard friendly shortcuts (No Print key required)
+hl.bind(mainMod .. " + SHIFT + S",   hl.dsp.exec_cmd(scriptsDir .. "/ScreenShot.sh --swappy"))
 
 -- Wallpaper + Matugen Dynamic Material You
 hl.bind(mainMod .. " + W",           hl.dsp.exec_cmd(scriptsDir .. "/WallpaperSelect.sh"))
@@ -245,5 +249,5 @@ hl.bind(mainMod .. " + mouse_up",             hl.dsp.focus({ workspace = "m+1" }
 hl.bind(mainMod .. " + CONTROL + mouse_up",   hl.dsp.focus({ workspace = "m-1" }))
 hl.bind(mainMod .. " + CONTROL + mouse_down", hl.dsp.focus({ workspace = "m+1" }))
 
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special" }))
-hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special())
+hl.bind(mainMod .. " + CONTROL + S", hl.dsp.window.move({ workspace = "special" }))
+hl.bind(mainMod .. " + S",           hl.dsp.workspace.toggle_special())

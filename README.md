@@ -58,8 +58,8 @@ O Soberano Dotfiles abandonou deliberadamente soluções obsoletas baseadas em J
 
 ### 2. Utilitários Nativos Soberano (`tools/` em Rust + GTK4)
 - **`wallpaper-picker-rs` (Super + W)**: Seletor de papéis de parede ultrarrápido com renderização assíncrona de miniaturas na GPU e extração instantânea via Matugen.
-- **`display-picker-rs` (Super + M)**: Gerenciador gráfico de monitores, resoluções, taxas de atualização (Hz) e escala HiDPI. Utiliza [`gtk4::WindowHandle`](file:///home/viniciusphdu/dotfiles/tools/display-picker-rs/src/main.rs#L468) integrado à GPU do Hyprland, eliminando qualquer atraso de arrasto do cursor (movimentação 1:1 com latência zero).
-- **Compilação Otimizada no Cliente (`target-cpu=native`)**: Durante a instalação via [`tools/build.sh`](file:///home/viniciusphdu/dotfiles/tools/build.sh), as ferramentas são compiladas especificamente para a microarquitetura da CPU do usuário (Zen 4/5, Raptor Lake, Arrow Lake) tirando proveito de instruções vetoriais como **AVX-512, AVX2 e FMA**.
+- **`display-picker-rs` (Super + M)**: Gerenciador gráfico de monitores, resoluções, taxas de atualização (Hz) e escala HiDPI. Utiliza `gtk4::WindowHandle` integrado à GPU do Hyprland, eliminando qualquer atraso de arrasto do cursor (movimentação 1:1 com latência zero).
+- **Compilação Otimizada no Cliente (`target-cpu=native`)**: Durante a instalação via `install.sh`, as ferramentas são compiladas ou executadas especificamente para a microarquitetura da CPU do usuário (Zen 4/5, Raptor Lake, Arrow Lake) tirando proveito de instruções vetoriais como **AVX-512, AVX2 e FMA**.
 - **Organização Modular em Branches Isoladas**: O código das ferramentas é mantido de forma limpa em branches separadas no repositório (`tools/display-picker` e `tools/wallpaper-picker`), facilitando auditorias, atualizações cirúrgicas e manutenção modular sem poluir a branch principal.
 
 | Métrica | Tecnologias Obsoletas (Noctalia / AGS / Electron) | Arquitetura Soberano (Wayle + Rust Nativo) |

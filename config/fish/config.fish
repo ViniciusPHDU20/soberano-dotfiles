@@ -7,5 +7,9 @@ source /usr/share/cachyos-fish-config/cachyos-config.fish
 #end
 
 
-# Added by Antigravity CLI installer
-set -gx PATH "/home/viniciusphdu/.local/bin" $PATH
+# User local binaries & Cargo
+set -gx PATH "$HOME/.local/bin" "$HOME/.cargo/bin" $PATH
+
+# bun
+set --export BUN_INSTALL "$HOME/.bun"
+set --export PATH $BUN_INSTALL/bin $PATH

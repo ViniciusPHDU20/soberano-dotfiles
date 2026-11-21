@@ -2,16 +2,16 @@
 tearing-mode = false
 
 [bar]
-scale = 0.95
+scale = 0.88
 location = "top"
 exclusive = true
-inset-edge = 0.35
-inset-ends = 0.5
-padding = 0.3
-padding-ends = 0.5
-module-gap = 0.4
+inset-edge = 0.2
+inset-ends = 0.8
+padding = 0.22
+padding-ends = 0.45
+module-gap = 0.35
 bg = "bg-surface"
-background-opacity = 85
+background-opacity = 92
 border-location = "all"
 border-width = 1
 border-color = "border-subtle"
@@ -26,13 +26,13 @@ button-label-weight = "semibold"
 button-label-padding = 0.6
 button-rounding = "full"
 button-gap = 0.75
-button-border-location = "all"
-button-border-width = 1
+button-border-location = "none"
+button-border-width = 0
 button-group-padding = 0.15
 button-group-module-gap = 0.25
 button-group-background = "bg-elevated"
 button-group-opacity = 92
-button-group-rounding = "sm"
+button-group-rounding = "full"
 button-group-border-location = "none"
 dropdown-shadow = true
 dropdown-opacity = 96
@@ -44,18 +44,9 @@ button-group-border-width = 1
 [[bar.layout]]
 monitor = "*"
 show = true
-left = ["dashboard", "hyprland-workspaces", "window-title"]
-center = ["clock", "media", "cava"]
-right = [
-    { name = "hardware", modules = ["custom-cpu", "custom-ram", "custom-storage"] },
-    "weather",
-    "volume",
-    "microphone",
-    "network",
-    "custom-updates",
-    "systray",
-    "notifications"
-]
+left = []
+center = ["hyprland-workspaces", "window-title", "custom-updates", "systray", "clock"]
+right = []
 [styling]
 scale = 1.0
 rounding = "md"
@@ -89,8 +80,8 @@ cycling-mode = "shuffle"
 cycling-interval-mins = 30
 
 [[wallpaper.monitors]]
-name = "DP-2"
-wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Backyard.png"
+name = "*"
+wallpaper = "/home/viniciusphdu/dotfiles/wallpapers/Lady-Dark.dynamic.png"
 fit-mode = "fill"
 
 [osd]

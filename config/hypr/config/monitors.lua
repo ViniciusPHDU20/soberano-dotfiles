@@ -1,7 +1,10 @@
 -- ==============================================================================
--- Soberano Monitor Configuration (Auto-configured by Super + M)
+-- Soberano Monitor Configuration (Plug & Play Universal)
+-- Auto-detects native resolution & max refresh rate on any monitor / laptop screen
+-- Use SUPER + M (display-picker-rs) to switch to custom modes / low-latency presets
 -- ==============================================================================
 
+-- Primary high-refresh display profile (Acer / 165Hz / DP-2)
 hl.monitor({
     output    = "DP-2",
     mode      = "1920x1080@165.00",
@@ -11,10 +14,10 @@ hl.monitor({
     vrr       = 0,
 })
 
--- Universal Fallback for any secondary displays or laptop screens
+-- Universal Plug & Play Fallback: binds any display (DP, HDMI, eDP laptop, VM) to its native preferred mode
 hl.monitor({
     output   = "",
     mode     = "preferred",
     position = "auto",
-    scale    = "auto",
+    scale    = "1",
 })

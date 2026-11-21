@@ -549,6 +549,7 @@ SYSTEM_STACK=(
     wl-clipboard
     grim
     slurp
+    swappy
     hyprpicker
     brightnessctl
     libnotify
@@ -686,6 +687,8 @@ ln -sfn "$DOTFILES_DIR/scripts/soberano-cockpit-bar-rs" "$HOME/.local/bin/sobera
 ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/soberano-livewallpaper" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/livewallpaper" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-hardware-menu.py" "$HOME/.local/bin/soberano-hardware-menu" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/ScreenShot.sh" "$HOME/.local/bin/soberano-screenshot" 2>/dev/null || true
+ln -sfn "$DOTFILES_DIR/scripts/ScreenShot.sh" "$HOME/.local/bin/screenshot" 2>/dev/null || true
 cp -f "$DOTFILES_DIR"/config/systemd/user/* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
 
 CONFIGS=(
@@ -698,6 +701,7 @@ CONFIGS=(
     fastfetch
     fish
     quickshell
+    swappy
 )
 
 for dir in "${CONFIGS[@]}"; do
@@ -708,6 +712,26 @@ for dir in "${CONFIGS[@]}"; do
     rm -f "$target"
     ln -sfnT "${DOTFILES_DIR}/config/${dir}" "$target"
     printf "   ${C_CYAN}→${C_RESET} %s -> %s\n" "$target" "${DOTFILES_DIR}/config/${dir}"
+done
+
+# 10.1 Multi-User & Multi-Hardware Sanitization
+info "Sanitizando caminhos para o usuário atual ($USER)..."
+sed -i "s|/home/[^/]*/dotfiles|${DOTFILES_DIR}|g" "${DOTFILES_DIR}/config/wayle/config.toml" 2>/dev/null || true
+sed -i "s|/home/[^/]*/\.local/bin|${HOME}/.local/bin|g" "${DOTFILES_DIR}/config/fish/config.fish" 2>/dev/null || true
+
+# 10.2 Precompiled Binaries Architecture Compatibility Check
+info "Verificando compatibilidade dos binários compilados na CPU..."
+for bin_name in wallpaper-picker-rs display-picker-rs soberano-cockpit-bar-rs; do
+    bin_path="$DOTFILES_DIR/scripts/$bin_name"
+    if [ -x "$bin_path" ]; then
+        if ! "$bin_path" --help >/dev/null 2>&1; then
+            rc=$?
+            if [ $rc -eq 132 ] || [ $rc -ge 128 ]; then
+                warn "Binário $bin_name é incompatível com as instruções da CPU atual (SIGILL)."
+                warn "Recomenda-se compilar com 'cargo build --release' caso utilize uma CPU legada sem suporte a AVX2."
+            fi
+        fi
+    fi
 done
 
 # 11. Apply Chosen Wayle Bar Preset
