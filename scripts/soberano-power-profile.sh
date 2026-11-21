@@ -2,222 +2,238 @@
 # ==============================================================================
 # Soberano Hardware Power & Performance Profile Engine
 # Universal Dynamic Hardware Adaptation (AMD / Intel CPU • NVIDIA / AMD Radeon GPU)
+#
+# Profiles: eco | balanced | compute | game
+# Usage:    soberano-power-profile.sh [--menu|--eco|--balanced|--compute|--game|
+#                                      --toggle-eco|--status|--probe|--dry-run]
 # ==============================================================================
 set -euo pipefail
 
 SCRIPTS_DIR="${HOME}/dotfiles/scripts"
-STATE_FILE="/tmp/soberano_power_profile.state"
-GAME_STATE="/tmp/hypr_gamemode.state"
 
-# -----------------------------------------------------------------------------
-# Dynamic Hardware Probing
-# -----------------------------------------------------------------------------
-CPU_NAME=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs | sed -E 's/\(R\)|\(TM\)//g' | awk '{print $1,$2,$3}')
-[ -z "$CPU_NAME" ] && CPU_NAME="CPU"
-CPU_THREADS=$(nproc 2>/dev/null || echo 1)
-
-# Sysfs hardware frequency boundaries (in kHz)
-CPU_MIN_FREQ=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq 2>/dev/null || echo "600000")
-CPU_MAX_FREQ=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq 2>/dev/null || echo "5000000")
-
-CPU_MIN_GHZ=$(awk "BEGIN {printf \"%.2f\", $CPU_MIN_FREQ / 1000000}")
-CPU_MAX_GHZ=$(awk "BEGIN {printf \"%.2f\", $CPU_MAX_FREQ / 1000000}")
-
-# GPU Detection
-HAS_NVIDIA=false
-HAS_AMD_GPU=false
-NV_MIN_PL=""
-NV_MAX_PL=""
-
-if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
-    HAS_NVIDIA=true
-    NV_INFO=$(nvidia-smi -q -d POWER 2>/dev/null || true)
-    NV_MIN_PL=$(echo "$NV_INFO" | grep "Min Power Limit" | head -1 | awk '{print $5}' | cut -d. -f1 || echo "100")
-    NV_MAX_PL=$(echo "$NV_INFO" | grep "Max Power Limit" | head -1 | awk '{print $5}' | cut -d. -f1 || echo "200")
-    [ -z "$NV_MIN_PL" ] && NV_MIN_PL=100
-    [ -z "$NV_MAX_PL" ] && NV_MAX_PL=200
-fi
-
-for card_dpm in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
-    if [ -f "$card_dpm" ]; then
-        HAS_AMD_GPU=true
-        break
-    fi
+# Dry-run is resolved before the lib is sourced so every writer honours it.
+ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run|--dry) SOB_DRY_RUN=true ;;
+        *) ARGS+=("$arg") ;;
+    esac
 done
+export SOB_DRY_RUN
+set -- ${ARGS[@]+"${ARGS[@]}"}
+
+# shellcheck source=soberano-hw-lib.sh
+. "${SCRIPTS_DIR}/soberano-hw-lib.sh"
+
+STATE_FILE="$SOB_PROFILE_STATE"
+GAME_STATE="${SOB_RUNTIME}/hypr_gamemode.state"
+
+CPU_NAME=$(sob_cpu_name)
+CPU_THREADS=$(sob_cpu_threads)
+CPU_MIN_GHZ=$(sob_cpu_min_ghz)
+CPU_MAX_GHZ=$(sob_cpu_max_ghz)
 
 # -----------------------------------------------------------------------------
-# Profile Functions
+# State
 # -----------------------------------------------------------------------------
 get_current_profile() {
     if [ -f "$GAME_STATE" ]; then
         echo "game"
-    elif [ -f "$STATE_FILE" ]; then
-        cat "$STATE_FILE" 2>/dev/null || echo "balanced"
-    else
-        echo "balanced"
+        return
     fi
+    if [ -f "$STATE_FILE" ]; then
+        local p
+        p=$(cat "$STATE_FILE" 2>/dev/null || true)
+        case "$p" in
+            eco|balanced|compute|game) echo "$p"; return ;;
+        esac
+    fi
+    echo "balanced"
+}
+
+set_profile_state() {
+    [ "$SOB_DRY_RUN" = true ] && return 0
+    printf '%s' "$1" > "$STATE_FILE" 2>/dev/null || true
+}
+
+notify() { # urgency summary body
+    [ "$SOB_DRY_RUN" = true ] && return 0
+    notify-send -u "$1" -a "Soberano Power" "$2" "$3" 2>/dev/null || true
 }
 
 exit_game_mode_if_active() {
-    if [ -f "$GAME_STATE" ]; then
-        bash "${SCRIPTS_DIR}/GameMode.sh" >/dev/null 2>&1 || true
+    [ -f "$GAME_STATE" ] || return 0
+    if [ "$SOB_DRY_RUN" = true ]; then
+        printf '  [dry] GameMode.sh (desativar GameMode antes do perfil)\n' >&2
+        return 0
     fi
+    bash "${SCRIPTS_DIR}/GameMode.sh" >/dev/null 2>&1 || true
 }
 
+# -----------------------------------------------------------------------------
+# GPU helpers
+# -----------------------------------------------------------------------------
+apply_gpu_eco() {
+    if sob_nv_ok; then
+        local lo hi
+        lo=$(sob_nv_clk min); [ -z "$lo" ] && lo=210
+        hi=450; [ "$hi" -lt "$lo" ] && hi=$((lo + 100))
+        local pl; pl=$(sob_nv_pl min); [ -z "$pl" ] && pl=100
+        sob_root "nvidia-smi -lgc ${lo},${hi} >/dev/null 2>&1 || true
+nvidia-smi -pl ${pl} >/dev/null 2>&1 || true"
+        command -v nvidia-settings >/dev/null 2>&1 && nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
+    fi
+    sob_amd_gpu_ok && sob_root "$(sob_amd_gpu_snippet low)"
+    return 0
+}
+
+apply_gpu_balanced() {
+    if sob_nv_ok; then
+        local pl; pl=$(sob_nv_pl max); [ -z "$pl" ] && pl=200
+        sob_root "nvidia-smi -rgc >/dev/null 2>&1 || true
+nvidia-smi -pl ${pl} >/dev/null 2>&1 || true"
+        command -v nvidia-settings >/dev/null 2>&1 && nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
+    fi
+    sob_amd_gpu_ok && sob_root "$(sob_amd_gpu_snippet auto)"
+    return 0
+}
+
+apply_gpu_compute() {
+    if sob_nv_ok; then
+        local pl; pl=$(sob_nv_pl max); [ -z "$pl" ] && pl=200
+        sob_root "nvidia-smi -rgc >/dev/null 2>&1 || true
+nvidia-smi -pl ${pl} >/dev/null 2>&1 || true"
+        command -v nvidia-settings >/dev/null 2>&1 && nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1' >/dev/null 2>&1 || true
+    fi
+    sob_amd_gpu_ok && sob_root "$(sob_amd_gpu_snippet high)"
+    return 0
+}
+
+# -----------------------------------------------------------------------------
+# Profiles
+# -----------------------------------------------------------------------------
 apply_eco() {
     exit_game_mode_if_active
+    sob_snapshot_limits
 
-    # 1. CPU: Disable Boost, clamp to hardware min freq, power EPP
-    sudo sh -c 'echo 0 > /sys/devices/system/cpu/cpufreq/boost' 2>/dev/null || true
-    sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > "$g"; done' 2>/dev/null || true
-    sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo power > "$e"; done' 2>/dev/null || true
-    sudo sh -c "for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo $CPU_MIN_FREQ > \"\$f\"; done" 2>/dev/null || true
-    if command -v powerprofilesctl >/dev/null 2>&1; then
-        powerprofilesctl set power-saver >/dev/null 2>&1 || true
-    fi
+    local gov
+    gov=$(sob_pick_governor eco)
 
-    # 2. GPU Power Clamping
-    if [ "$HAS_NVIDIA" = true ]; then
-        sudo nvidia-smi -lgc 210,450 >/dev/null 2>&1 || true
-        sudo nvidia-smi -pl "$NV_MIN_PL" >/dev/null 2>&1 || true
-        if command -v nvidia-settings >/dev/null 2>&1; then
-            nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
-        fi
-    fi
+    sob_root "$(sob_set_boost off)
+$(sob_gov_snippet "$gov")
+$(sob_epp_snippet power)
+$(sob_floor_snippet)"
 
-    if [ "$HAS_AMD_GPU" = true ]; then
-        sudo sh -c 'for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do echo low > "$d"; done' 2>/dev/null || true
-    fi
+    sob_set_platform_profile power-saver
+    apply_gpu_eco
 
-    echo "eco" > "$STATE_FILE"
-    notify-send -u low -a "Soberano Power" "🌿 Perfil: ECO SILENCIOSO (${CPU_MIN_GHZ} GHz)" "${CPU_NAME} travado a ${CPU_MIN_GHZ} GHz • GPU Fria / Min TDP • Zero Ruído" 2>/dev/null || true
+    set_profile_state eco
+    notify low "🌿 Perfil: ECO SILENCIOSO (${CPU_MIN_GHZ} GHz)" \
+        "${CPU_NAME} travado a ${CPU_MIN_GHZ} GHz • GPU Fria / Min TDP • Zero Ruído"
 }
 
 apply_balanced() {
     exit_game_mode_if_active
 
-    # 1. CPU: Enable Boost, restore full dynamic frequency range
-    sudo sh -c 'echo 1 > /sys/devices/system/cpu/cpufreq/boost' 2>/dev/null || true
-    sudo sh -c "for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo $CPU_MAX_FREQ > \"\$f\"; done" 2>/dev/null || true
-    sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > "$g"; done' 2>/dev/null || true
-    sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo balance_performance > "$e"; done' 2>/dev/null || true
-    if command -v powerprofilesctl >/dev/null 2>&1; then
-        powerprofilesctl set balanced >/dev/null 2>&1 || true
-    fi
+    local gov
+    gov=$(sob_pick_governor balanced)
 
-    # 2. GPU: Dynamic auto clocks & maximum stock TDP
-    if [ "$HAS_NVIDIA" = true ]; then
-        sudo nvidia-smi -rgc >/dev/null 2>&1 || true
-        sudo nvidia-smi -pl "$NV_MAX_PL" >/dev/null 2>&1 || true
-        if command -v nvidia-settings >/dev/null 2>&1; then
-            nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
-        fi
-    fi
+    sob_root "$(sob_set_boost on)
+$(sob_restore_snippet)
+$(sob_gov_snippet "$gov")
+$(sob_epp_snippet balance_performance)"
 
-    if [ "$HAS_AMD_GPU" = true ]; then
-        sudo sh -c 'for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do echo auto > "$d"; done' 2>/dev/null || true
-    fi
+    sob_set_platform_profile balanced
+    apply_gpu_balanced
 
-    # 3. Kernel Virtual Memory Default
-    sudo sysctl -w vm.swappiness=60 >/dev/null 2>&1 || true
-    sudo sysctl -w vm.compaction_proactiveness=20 >/dev/null 2>&1 || true
-    sudo sysctl -w vm.stat_interval=1 >/dev/null 2>&1 || true
+    sob_root "sysctl -w vm.swappiness=60 >/dev/null 2>&1 || true
+sysctl -w vm.compaction_proactiveness=20 >/dev/null 2>&1 || true
+sysctl -w vm.stat_interval=1 >/dev/null 2>&1 || true"
 
-    echo "balanced" > "$STATE_FILE"
-    notify-send -u normal -a "Soberano Power" "⚖️ Perfil: BALANCEADO" "${CPU_NAME} Dinâmico (${CPU_MIN_GHZ}–${CPU_MAX_GHZ} GHz) • GPU Auto • Desktop Suave" 2>/dev/null || true
+    set_profile_state balanced
+    notify normal "⚖️ Perfil: BALANCEADO" \
+        "${CPU_NAME} Dinâmico (${CPU_MIN_GHZ}–${CPU_MAX_GHZ} GHz) • GPU Auto • Desktop Suave"
 }
 
 apply_compute() {
     exit_game_mode_if_active
 
-    # 1. CPU: Maximum boost on all threads, performance governor & EPP
-    sudo sh -c 'echo 1 > /sys/devices/system/cpu/cpufreq/boost' 2>/dev/null || true
-    sudo sh -c "for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo $CPU_MAX_FREQ > \"\$f\"; done" 2>/dev/null || true
-    sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$g"; done' 2>/dev/null || true
-    sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo performance > "$e"; done' 2>/dev/null || true
-    if command -v powerprofilesctl >/dev/null 2>&1; then
-        powerprofilesctl set performance >/dev/null 2>&1 || true
-    fi
+    local gov
+    gov=$(sob_pick_governor compute)
 
-    # 2. GPU: Unlocked clocks, max TDP, PowerMizer Max Performance
-    if [ "$HAS_NVIDIA" = true ]; then
-        sudo nvidia-smi -rgc >/dev/null 2>&1 || true
-        sudo nvidia-smi -pl "$NV_MAX_PL" >/dev/null 2>&1 || true
-        if command -v nvidia-settings >/dev/null 2>&1; then
-            nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1' >/dev/null 2>&1 || true
-        fi
-    fi
+    sob_root "$(sob_set_boost on)
+$(sob_ceiling_snippet)
+$(sob_gov_snippet "$gov")
+$(sob_epp_snippet performance)"
 
-    if [ "$HAS_AMD_GPU" = true ]; then
-        sudo sh -c 'for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do echo high > "$d"; done' 2>/dev/null || true
-    fi
+    sob_set_platform_profile performance
+    apply_gpu_compute
 
-    # 3. Kernel low swappiness for heavy compile / renders
-    sudo sysctl -w vm.swappiness=10 >/dev/null 2>&1 || true
+    sob_root "sysctl -w vm.swappiness=10 >/dev/null 2>&1 || true"
 
-    echo "compute" > "$STATE_FILE"
-    notify-send -u normal -a "Soberano Power" "⚡ Perfil: COMPUTAÇÃO BRUTA" "${CPU_THREADS} Threads em 100% Performance • GPU Desbloqueada • Desktop Ativo" 2>/dev/null || true
+    set_profile_state compute
+    notify normal "⚡ Perfil: COMPUTAÇÃO BRUTA" \
+        "${CPU_THREADS} Threads em 100% Performance • GPU Desbloqueada • Desktop Ativo"
 }
 
 apply_game() {
     if [ ! -f "$GAME_STATE" ]; then
-        bash "${SCRIPTS_DIR}/GameMode.sh"
+        if [ "$SOB_DRY_RUN" = true ]; then
+            printf '  [dry] GameMode.sh (ativar GameMode)\n' >&2
+        else
+            bash "${SCRIPTS_DIR}/GameMode.sh"
+        fi
     fi
-    echo "game" > "$STATE_FILE"
+    # Deliberately does not overwrite STATE_FILE: GameMode is a layer, and the
+    # profile underneath it must survive the round trip.
 }
 
+# -----------------------------------------------------------------------------
+# Menu
+# -----------------------------------------------------------------------------
 show_menu() {
+    local current
     current=$(get_current_profile)
 
-    options=(
+    local options=(
         "🌿  Eco Silencioso (${CPU_MIN_GHZ} GHz • GPU Fria / Min TDP • Zero Ruído)"
         "⚖️  Balanceado (Padrão Diário • Clocks Dinâmicos • Efeitos ON)"
         "⚡  Computação / Render (${CPU_THREADS} Threads no Máximo • Desktop ON)"
         "🎮  Modo Escovar Bit (Jogos Competitivos • Zero Overhead • Tearing ON)"
     )
 
-    menu_lines=()
+    local menu_lines=() opt
     for opt in "${options[@]}"; do
-        if [[ "$opt" == *"Eco"* ]] && [ "$current" = "eco" ]; then
-            menu_lines+=("👉 $opt")
-        elif [[ "$opt" == *"Balanceado"* ]] && [ "$current" = "balanced" ]; then
-            menu_lines+=("👉 $opt")
-        elif [[ "$opt" == *"Computação"* ]] && [ "$current" = "compute" ]; then
-            menu_lines+=("👉 $opt")
-        elif [[ "$opt" == *"Escovar Bit"* ]] && [ "$current" = "game" ]; then
+        if { [[ "$opt" == *"Eco"* ]] && [ "$current" = "eco" ]; } \
+        || { [[ "$opt" == *"Balanceado"* ]] && [ "$current" = "balanced" ]; } \
+        || { [[ "$opt" == *"Computação"* ]] && [ "$current" = "compute" ]; } \
+        || { [[ "$opt" == *"Escovar Bit"* ]] && [ "$current" = "game" ]; }; then
             menu_lines+=("👉 $opt")
         else
             menu_lines+=("   $opt")
         fi
     done
 
-    chosen=$(printf '%s\n' "${menu_lines[@]}" | fuzzel --dmenu -p "⚡ Perfil de Energia ❯ " -w 58 -l 6 || true)
+    local chosen
+    chosen=$(printf '%s\n' "${menu_lines[@]}" | fuzzel --dmenu -p "⚡ Perfil de Energia ❯ " -w 58 -l 6 2>/dev/null || true)
     [ -z "$chosen" ] && exit 0
 
-    if [[ "$chosen" == *"Eco"* ]]; then
-        apply_eco
-    elif [[ "$chosen" == *"Balanceado"* ]]; then
-        apply_balanced
-    elif [[ "$chosen" == *"Computação"* ]]; then
-        apply_compute
-    elif [[ "$chosen" == *"Escovar Bit"* ]]; then
-        apply_game
-    fi
+    case "$chosen" in
+        *Eco*)          apply_eco ;;
+        *Balanceado*)   apply_balanced ;;
+        *Computação*)   apply_compute ;;
+        *Escovar*)      apply_game ;;
+    esac
 }
 
+# -----------------------------------------------------------------------------
+# Entrypoint
+# -----------------------------------------------------------------------------
 case "${1:-menu}" in
-    --eco|eco)
-        apply_eco
-        ;;
-    --balanced|balanced)
-        apply_balanced
-        ;;
-    --compute|compute)
-        apply_compute
-        ;;
-    --game|game)
-        apply_game
-        ;;
+    --eco|eco)             apply_eco ;;
+    --balanced|balanced)   apply_balanced ;;
+    --compute|compute)     apply_compute ;;
+    --game|game)           apply_game ;;
     --toggle-eco)
         if [ "$(get_current_profile)" = "eco" ]; then
             apply_balanced
@@ -225,11 +241,20 @@ case "${1:-menu}" in
             apply_eco
         fi
         ;;
-    --menu|menu)
-        show_menu
-        ;;
     --status|status)
-        echo "$(get_current_profile)"
+        get_current_profile
+        ;;
+    --probe)
+        sob_probe
+        ;;
+    --menu|menu|"")
+        if [ "$SOB_DRY_RUN" = true ]; then
+            printf '== PLANO ECO ==\n' >&2; apply_eco
+            printf '\n== PLANO BALANCEADO ==\n' >&2; apply_balanced
+            printf '\n== PLANO COMPUTAÇÃO ==\n' >&2; apply_compute
+        else
+            show_menu
+        fi
         ;;
     *)
         show_menu

@@ -166,6 +166,36 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 
 ---
 
+## Perfis de Energia (CPU + GPU)
+
+O motor `scripts/soberano-power-profile.sh` resolve o perfil pelo hardware real, não por uma lista fixa de modelos.
+
+```bash
+soberano-power-profile.sh --menu          # fuzzel (Super + F2 / Super + Shift + P)
+soberano-power-profile.sh --eco           # piso de clock por núcleo + GPU fria
+soberano-power-profile.sh --balanced      # clocks dinâmicos + GPU auto
+soberano-power-profile.sh --compute       # teto por núcleo + GPU desbloqueada
+soberano-power-profile.sh --toggle-eco    # Super + Shift + E
+soberano-power-profile.sh --status
+soberano-power-profile.sh --probe         # dump do hardware (driver, EPP, PL da GPU)
+soberano-power-profile.sh --dry-run       # imprime cada escrita em sysfs, sem tocar em nada
+```
+
+**Política de governor por driver** — o nome `powersave` não significa a mesma coisa em todo lugar:
+
+| Driver | eco | balanced | compute |
+|---|---|---|---|
+| `amd-pstate-epp` / `intel_pstate` | `powersave` + EPP `power` | `powersave` + EPP `balance_performance` | `performance` + EPP `performance` |
+| `acpi-cpufreq` / `intel_cpufreq` | `powersave` (piso estático) | `schedutil` → `ondemand` → `conservative` | `performance` → `conservative` |
+
+Em `acpi-cpufreq` o governor `powersave` é *frequência mínima fixa* — usá-lo em "balanced" travaria a máquina no clock mais baixo. O motor escolhe `schedutil` nesses casos.
+
+**Tetos por núcleo** — cada núcleo recebe o seu próprio `cpuinfo_max_freq`, nunca o do `cpu0`. Em CPUs híbridas (Intel P+E), escrever o teto do P-core nos E-cores falha com `EINVAL` e deixaria os E-cores presos no clamp anterior até o reboot. O estado original é gravado em `$XDG_RUNTIME_DIR/soberano-power/cpu-limits/` e restaurado núcleo a núcleo.
+
+O GameMode usa a mesma camada (`scripts/soberano-hw-lib.sh`) e, ao desligar, devolve o perfil que estava ativo embaixo dele — eco continua eco.
+
+---
+
 ## Estrutura do Projeto
 
 ```text
@@ -186,6 +216,8 @@ soberano-dotfiles/
 ├── scripts/
 │   ├── soberano-update.sh        # Motor de sincronização contínua Git
 │   ├── soberano-livewallpaper.sh # Motor de Live Wallpapers (Steam Wallpaper Engine + Matugen)
+│   ├── soberano-hw-lib.sh        # Camada de hardware compartilhada (governor, EPP, tetos por núcleo, GPU)
+│   ├── soberano-power-profile.sh # Perfis de energia eco / balanced / compute / game
 │   ├── WallpaperSelect.sh        # Seletor de Wallpaper Estático + Matugen
 │   ├── MatugenSchemeSelect.sh    # Seletor de Esquemas de Cores
 │   ├── WayleBarPresetSelect.sh   # Seletor dos 10 Presets do Wayle

@@ -9,34 +9,48 @@
 set -euo pipefail
 
 SCRIPTS_DIR="${HOME}/dotfiles/scripts"
-STATE_FILE="/tmp/hypr_gamemode.state"
 
-CPU_NAME=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs | sed -E 's/\(R\)|\(TM\)//g' | awk '{print $1,$2,$3}')
-[ -z "$CPU_NAME" ] && CPU_NAME="CPU"
+# shellcheck source=soberano-hw-lib.sh
+. "${SCRIPTS_DIR}/soberano-hw-lib.sh"
+
+STATE_FILE="${SOB_RUNTIME}/hypr_gamemode.state"
+
+CPU_NAME=$(sob_cpu_name)
 
 if [ -f "$STATE_FILE" ]; then
     rm -f "$STATE_FILE"
 
-    # 1. Reset CPU Governor & EPP
-    sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > "$g"; done' 2>/dev/null || true
-    sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo balance_performance > "$e"; done' 2>/dev/null || true
-    if command -v powerprofilesctl >/dev/null 2>&1; then
-        powerprofilesctl set balanced >/dev/null 2>&1 || true
+    # 1. Return to whichever profile was live underneath GameMode.
+    #    eco -> per-core floor + eco governor. Anything else -> snapshot ceiling.
+    UNDER_PROFILE=$(cat "$SOB_PROFILE_STATE" 2>/dev/null || echo balanced)
+    if [ "$UNDER_PROFILE" = "eco" ]; then
+        GOV=$(sob_pick_governor eco)
+        CEIL=$(sob_floor_snippet)
+        EPP_VAL=power
+        PP_TARGET=power-saver
+    else
+        GOV=$(sob_pick_governor balanced)
+        CEIL=$(sob_restore_snippet)
+        EPP_VAL=balance_performance
+        PP_TARGET=balanced
     fi
+    sob_root "$(sob_set_boost on)
+${CEIL}
+$(sob_gov_snippet "$GOV")
+$(sob_epp_snippet "$EPP_VAL")"
+    sob_set_platform_profile "$PP_TARGET"
 
     # 2. Reset GPU Clocks & PowerMizer
-    if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
-        sudo nvidia-smi -rgc >/dev/null 2>&1 || true
+    if sob_nv_ok; then
+        PL=$(sob_nv_pl max); [ -z "$PL" ] && PL=200
+        sob_root "nvidia-smi -rgc >/dev/null 2>&1 || true
+nvidia-smi -pl ${PL} >/dev/null 2>&1 || true"
         if command -v nvidia-settings >/dev/null 2>&1; then
             nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
         fi
     fi
 
-    for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
-        if [ -f "$d" ]; then
-            echo auto | sudo tee "$d" >/dev/null 2>&1 || true
-        fi
-    done
+    sob_amd_gpu_ok && sob_root "$(sob_amd_gpu_snippet auto)"
 
     # 3. Reset Kernel Virtual Memory Tuning
     sudo sysctl -w vm.swappiness=60 >/dev/null 2>&1 || true
@@ -77,31 +91,29 @@ else
     sudo sysctl -w kernel.split_lock_mitigate=0 >/dev/null 2>&1 || true
 
     # 4. Maximize CPU Performance on all threads
-    sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$g"; done' 2>/dev/null || true
-    sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo performance > "$e"; done' 2>/dev/null || true
-    if command -v powerprofilesctl >/dev/null 2>&1; then
-        powerprofilesctl set performance >/dev/null 2>&1 || true
-    fi
+    GOV=$(sob_pick_governor compute)
+    sob_root "$(sob_set_boost on)
+$(sob_ceiling_snippet)
+$(sob_gov_snippet "$GOV")
+$(sob_epp_snippet performance)"
+    sob_set_platform_profile performance
 
     # 5. Lock GPU Clocks to Boost Clocks
-    if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+    if sob_nv_ok; then
         if command -v nvidia-settings >/dev/null 2>&1; then
             nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1' >/dev/null 2>&1 || true
         fi
-        NV_CLK_RAW=$(nvidia-smi --query-gpu=clocks.max.graphics --format=csv,noheader,nounits 2>/dev/null || true)
-        NV_MAX_CLK=$(echo "$NV_CLK_RAW" | head -1 | xargs || true)
+        NV_MAX_CLK=$(sob_nv_clk max)
+        NV_MIN_CLK=$(sob_nv_clk min)
+        [ -z "$NV_MIN_CLK" ] && NV_MIN_CLK=300
         if [ -n "$NV_MAX_CLK" ] && [ "$NV_MAX_CLK" -gt 500 ] 2>/dev/null; then
-            NV_MIN_LOCK=$((NV_MAX_CLK - 300))
-            [ "$NV_MIN_LOCK" -lt 300 ] && NV_MIN_LOCK=300
-            sudo nvidia-smi -lgc "$NV_MIN_LOCK,$NV_MAX_CLK" >/dev/null 2>&1 || true
+            NV_LOCK_LO=$((NV_MAX_CLK - 300))
+            [ "$NV_LOCK_LO" -lt "$NV_MIN_CLK" ] && NV_LOCK_LO=$NV_MIN_CLK
+            sob_root "nvidia-smi -lgc ${NV_LOCK_LO},${NV_MAX_CLK} >/dev/null 2>&1 || true"
         fi
     fi
 
-    for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
-        if [ -f "$d" ]; then
-            echo high | sudo tee "$d" >/dev/null 2>&1 || true
-        fi
-    done
+    sob_amd_gpu_ok && sob_root "$(sob_amd_gpu_snippet high)"
 
     # 6. Strip Hyprland to Absolute Bare-Metal (0 animations, 0 borders, 0 blur, VFR)
     hyprctl eval "hl.config({
