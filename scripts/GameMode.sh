@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Soberano GameMode Extreme (Modo Escovar Bit)
-# Ryzen 9 9950X (16C/32T) + NVIDIA GeForce RTX 3060 Ti
+# Universal Low-Latency Engine for AMD / Intel CPU • NVIDIA / AMD Radeon GPU
 # Zero-overhead: Barra OFF, Wallpaper OFF, Hyprland 0 animações/bordas,
 # Clocks de GPU cravados no teto, CPU Governor Performance, Sysctl Gaming
 # Bound to: Super + G | Super + Shift + G | Super + F1
@@ -11,21 +11,32 @@ set -euo pipefail
 SCRIPTS_DIR="${HOME}/dotfiles/scripts"
 STATE_FILE="/tmp/hypr_gamemode.state"
 
+CPU_NAME=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs | sed -E 's/\(R\)|\(TM\)//g' | awk '{print $1,$2,$3}')
+[ -z "$CPU_NAME" ] && CPU_NAME="CPU"
+
 if [ -f "$STATE_FILE" ]; then
     rm -f "$STATE_FILE"
 
-    # 1. Reset CPU Governor & EPP (Ryzen 9 9950X)
+    # 1. Reset CPU Governor & EPP
     sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo powersave > "$g"; done' 2>/dev/null || true
     sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo balance_performance > "$e"; done' 2>/dev/null || true
     if command -v powerprofilesctl >/dev/null 2>&1; then
         powerprofilesctl set balanced >/dev/null 2>&1 || true
     fi
 
-    # 2. Reset GPU Clocks & PowerMizer (RTX 3060 Ti)
-    sudo nvidia-smi -rgc >/dev/null 2>&1 || true
-    if command -v nvidia-settings >/dev/null 2>&1; then
-        nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
+    # 2. Reset GPU Clocks & PowerMizer
+    if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+        sudo nvidia-smi -rgc >/dev/null 2>&1 || true
+        if command -v nvidia-settings >/dev/null 2>&1; then
+            nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=0' >/dev/null 2>&1 || true
+        fi
     fi
+
+    for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
+        if [ -f "$d" ]; then
+            echo auto | sudo tee "$d" >/dev/null 2>&1 || true
+        fi
+    done
 
     # 3. Reset Kernel Virtual Memory Tuning
     sudo sysctl -w vm.swappiness=60 >/dev/null 2>&1 || true
@@ -43,7 +54,7 @@ if [ -f "$STATE_FILE" ]; then
         "${SCRIPTS_DIR}/WallpaperSelect.sh" --restore >/dev/null 2>&1 &
     fi
 
-    notify-send -u normal -a "GameMode" "🚀 GameMode: DESATIVADO" "CPU/GPU Automático • Wayle & Wallpaper Restaurados • Efeitos ON" 2>/dev/null || true
+    notify-send -u normal -a "GameMode" "🚀 GameMode: DESATIVADO" "${CPU_NAME} & GPU Dinâmicos • Wayle & Wallpaper Restaurados • Efeitos ON" 2>/dev/null || true
     exit 0
 else
     touch "$STATE_FILE"
@@ -65,18 +76,32 @@ else
     sudo sysctl -w vm.stat_interval=10 >/dev/null 2>&1 || true
     sudo sysctl -w kernel.split_lock_mitigate=0 >/dev/null 2>&1 || true
 
-    # 4. Maximize CPU Performance on all 32 threads (Ryzen 9 9950X)
+    # 4. Maximize CPU Performance on all threads
     sudo sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$g"; done' 2>/dev/null || true
     sudo sh -c 'for e in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do echo performance > "$e"; done' 2>/dev/null || true
     if command -v powerprofilesctl >/dev/null 2>&1; then
         powerprofilesctl set performance >/dev/null 2>&1 || true
     fi
 
-    # 5. Lock GPU Clocks to Boost Clocks (Prevents clock drops in menus/transitions)
-    if command -v nvidia-settings >/dev/null 2>&1; then
-        nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1' >/dev/null 2>&1 || true
+    # 5. Lock GPU Clocks to Boost Clocks
+    if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+        if command -v nvidia-settings >/dev/null 2>&1; then
+            nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1' >/dev/null 2>&1 || true
+        fi
+        NV_CLK_RAW=$(nvidia-smi --query-gpu=clocks.max.graphics --format=csv,noheader,nounits 2>/dev/null || true)
+        NV_MAX_CLK=$(echo "$NV_CLK_RAW" | head -1 | xargs || true)
+        if [ -n "$NV_MAX_CLK" ] && [ "$NV_MAX_CLK" -gt 500 ] 2>/dev/null; then
+            NV_MIN_LOCK=$((NV_MAX_CLK - 300))
+            [ "$NV_MIN_LOCK" -lt 300 ] && NV_MIN_LOCK=300
+            sudo nvidia-smi -lgc "$NV_MIN_LOCK,$NV_MAX_CLK" >/dev/null 2>&1 || true
+        fi
     fi
-    sudo nvidia-smi -lgc 1665,1950 >/dev/null 2>&1 || true
+
+    for d in /sys/class/drm/card*/device/power_dpm_force_performance_level; do
+        if [ -f "$d" ]; then
+            echo high | sudo tee "$d" >/dev/null 2>&1 || true
+        fi
+    done
 
     # 6. Strip Hyprland to Absolute Bare-Metal (0 animations, 0 borders, 0 blur, VFR)
     hyprctl eval "hl.config({
@@ -108,6 +133,6 @@ else
     # Force solid opacity across all surfaces
     hyprctl eval "hl.window_rule({ name = 'gamemode-opacity', match = { class = '.*' }, opacity = 1.0 })" >/dev/null 2>&1 || true
 
-    notify-send -u low -a "GameMode" "⚡ GameMode: ESCOVAR BIT ATIVADO" "Ryzen 9 Performance • RTX Clocks Travados • Wayle OFF • Tearing ON" 2>/dev/null || true
+    notify-send -u low -a "GameMode" "⚡ GameMode: ESCOVAR BIT ATIVADO" "${CPU_NAME} Performance • Clocks GPU Travados • Wayle OFF • Tearing ON" 2>/dev/null || true
     exit 0
 fi
