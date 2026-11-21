@@ -89,24 +89,32 @@ O Soberano Dotfiles abandonou deliberadamente soluções obsoletas baseadas em J
 
 ## Como Instalar
 
-### 1. Clonar o Repositório
+### 1. Pré-Requisitos
+O ecossistema foi desenvolvido nativamente para **Arch Linux**, **CachyOS** ou distribuições baseadas em Arch (EndeavourOS, Manjaro). Certifique-se de ter o `git` e a base de compilação instalados:
+
+```bash
+sudo pacman -S --needed git base-devel
+```
+
+### 2. Clonar o Repositório
 
 ```bash
 git clone https://github.com/ViniciusPHDU20/soberano-dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ```
 
-### 2. Modo de Simulação / Teste (Dry-Run Seguro)
-Para testar a interface TUI, visualizar a detecção de hardware da sua máquina e conferir o relatório sem alterar nenhum pacote ou arquivo:
+### 3. Modo de Simulação / Teste (Dry-Run Seguro)
+Permite visualizar a interface TUI do instalador, inspecionar o diagnóstico automático de hardware da sua máquina (CPU SIMD, modelo da GPU e chassi) sem alterar nenhum pacote ou arquivo do sistema:
 
 ```bash
 ./install.sh --test
 ```
 
-### 3. Instalação Definitiva
-Para aplicar a instalação completa, configurar os drivers de vídeo e iniciar o ambiente:
+### 4. Instalação Definitiva
+Executa a instalação completa com aceleração gráfica correta (NVIDIA, AMD Radeon, Intel ou VM), otimizações de compilação nativas (`target-cpu=native`), vínculo de dotfiles em `~/.config` e sanitização multi-usuário:
 
 ```bash
+chmod +x install.sh
 ./install.sh
 ```
 
@@ -128,10 +136,15 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 
 | Atalho | Ação |
 | :--- | :--- |
-| `Super + Q` | Abrir Terminal Kitty |
+| `Super + Enter` | Abrir Terminal Kitty |
+| `Super + Q` | Fechar Janela Focada |
+| `Super + Shift + Q` | Forçar Finalização do Processo Ativo (`KillActiveProcess`) |
 | `Super + Espaço` / `Super + D` | Lançador de Aplicativos (Fuzzel) |
-| `Super + W` | Galeria de Wallpapers GTK4 (Cinema Studio) |
-| `Super + Ctrl + W` | Seletor de Wallpapers Animados (Steam Wallpaper Engine + Matugen) |
+| `Super + Shift + S` / `Print` | **Captura de Região com Swappy** *(Otimizado para teclados 60% e edição com setas/blur)* |
+| `Super + Print` | Captura de Tela Inteira com Swappy |
+| `Super + Shift + Print` | Cópia Instantânea de Área para o Clipboard (Sem editor) |
+| `Super + W` | Galeria de Wallpapers GTK4 (Cinema Studio / Wallpaper Animator IA) |
+| `Super + Shift + W` | Seletor de Wallpapers Animados (Steam Wallpaper Engine + Matugen) |
 | `Super + Alt + W` | Wallpaper Aleatório com Transição + Matugen |
 | `Super + Shift + T` | Seletor de Temas Oficiais (Nordic, Cyberpunk, Catppuccin, Zen) |
 | `Super + Ctrl + B` | Seletor de Presets da Barra Wayle (10 layouts) |
@@ -139,12 +152,17 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 | `Super + Alt + S` | Alternar Shaders GLSL de Tela (Cyberpunk, CRT, etc.) |
 | `Super + Alt + A` | Seletor de Perfis de Animação do Hyprland |
 | `Super + V` | Histórico da Área de Transferência (`cliphist` + `fuzzel`) |
-| `Super + G` / `Super + F1` | GameMode Competitivo (Max Clock GPU + CPU Performance) |
-| `Super + A` | Visão Geral de Workspaces (`quickshell` overview) |
-| `Super + M` | Gerenciador de Displays, Resolução & Hz (Nativo em Rust) |
-| `Super + H` / `Super + K` | HUD Visual de Atalhos do Sistema (Soberano) |
-| `Super + C` | Fechar Janela Focada |
-| `Super + Shift + Q` | Menu de Encerramento / Logout |
+| `Super + G` / `Super + F1` | GameMode Competitivo (Clocks GPU Travados + CPU Performance + Zero Overhead) |
+| `Super + Shift + P` / `Super + F2` | Menu de Perfis de Energia (Eco Silencioso, Balanceado, Computação, Game) |
+| `Super + Shift + E` | Alternar Modo Eco Rápido (Menor Clock & TDP) |
+| `Super + M` | Gerenciador de Monitores, Resolução & Taxa Hz (Nativo em Rust) |
+| `Super + H` / `Super + K` / `Super + ?` | HUD Visual de Atalhos do Sistema (Soberano) |
+| `Super + S` | Alternar Scratchpad Especial (Workspace Oculto) |
+| `Super + Ctrl + S` | Mover Janela para o Scratchpad Especial |
+| `Super + C` | Abrir Calculadora |
+| `Super + E` | Abrir Gerenciador de Arquivos |
+| `Super + B` | Abrir Navegador Web |
+| `Super + L` | Bloquear Sessão |
 
 ---
 
