@@ -6,8 +6,12 @@
 # ==============================================================================
 set -euo pipefail
 
-WAYLE_CFG="${HOME}/dotfiles/config/wayle/config.toml"
-WAYLE_RUNTIME="${HOME}/dotfiles/config/wayle/runtime.toml"
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+WAYLE_CFG="${DOTFILES_DIR}/config/wayle/config.toml"
+WAYLE_RUNTIME="${DOTFILES_DIR}/config/wayle/runtime.toml"
 PRESET_STATE="${XDG_CACHE_HOME:-$HOME/.cache}/soberano_wayle_preset.txt"
 
 current_preset=$(cat "$PRESET_STATE" 2>/dev/null || echo "2")
@@ -59,7 +63,7 @@ echo "$id" > "$PRESET_STATE"
 # Clear any stale runtime overrides so config.toml changes are applied directly
 echo "" > "$WAYLE_RUNTIME"
 
-python3 - "$WAYLE_CFG" "$id" <<'PY'
+python3 - "$WAYLE_CFG" "$id" "$DOTFILES_DIR" <<'PY'
 import sys, re, os, subprocess
 
 cfg_path, preset_id = sys.argv[1], sys.argv[2]
@@ -917,7 +921,7 @@ with open(cfg_path, "w") as f:
     f.write(new_cfg + "\n")
 
 # Dynamic Hyprland Gaps & Rounding sync
-gaps_lua_path = os.path.expanduser("~/dotfiles/config/hypr/config/gaps_dynamic.lua")
+gaps_lua_path = os.path.join(sys.argv[3], "config/hypr/config/gaps_dynamic.lua")
 gaps_content = f"""-- Dynamic Hyprland Gaps (Auto-adapted to Wayle Preset {preset_id})
 DYNAMIC_GAPS_IN = {p_hypr['gaps_in']}
 DYNAMIC_GAPS_OUT = {p_hypr['gaps_out']}
@@ -941,11 +945,13 @@ systemctl --user stop soberano-cockpit-bar 2>/dev/null || true
 systemctl --user reset-failed soberano-cockpit-bar 2>/dev/null || true
 pkill -x soberano-cockpit-bar-rs 2>/dev/null || true
 
-if [[ "$id" == "18" ]]; then
+if [[ "$id" == "18" ]] && [ -n "${WAYLAND_DISPLAY:-}" ]; then
     systemd-run --user --unit=soberano-cockpit-bar "$HOME/.local/bin/soberano-cockpit-bar-rs" >/dev/null 2>&1 || true
 fi
 
-# Instant reload of Wayle service (takes ~150ms)
-systemctl --user restart wayle.service >/dev/null 2>&1 || true
+# Instant reload of Wayle service when active or inside an active Wayland session
+if systemctl --user is-active --quiet wayle.service 2>/dev/null || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    systemctl --user restart wayle.service >/dev/null 2>&1 || true
+fi
 
 notify-send -u low -a "Soberano" "󰕮 Wayle & Hyprland" "Layout ${clean} sincronizado" 2>/dev/null || true

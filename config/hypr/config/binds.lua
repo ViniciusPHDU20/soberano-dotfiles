@@ -205,7 +205,7 @@ hl.bind(mainMod .. " + ALT + A",     hl.dsp.exec_cmd(scriptsDir .. "/HyprAnimati
 hl.bind(mainMod .. " + M",           hl.dsp.exec_cmd(scriptsDir .. "/display-picker-rs"))
 hl.bind(mainMod .. " + SHIFT + M",   hl.dsp.exec_cmd(scriptsDir .. "/display-picker-rs"))
 
--- Game Mode (Ryzen 9 9950X + RTX 3060 Ti Low-Latency Mode)
+-- Game Mode (CPU Performance + GPU Clocks Low-Latency Mode)
 hl.bind(mainMod .. " + SHIFT + G",   hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))
 hl.bind(mainMod .. " + G",           hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))
 hl.bind(mainMod .. " + F1",          hl.dsp.exec_cmd(scriptsDir .. "/GameMode.sh"))

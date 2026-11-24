@@ -17,7 +17,8 @@ except Exception as e:
     pass
 
 PID_FILE = "/tmp/hypr_keybinds_hud.pid"
-HTML_PATH = os.path.expanduser("~/dotfiles/config/hypr/hud/index.html")
+DOTFILES_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+HTML_PATH = os.path.join(DOTFILES_DIR, "config", "hypr", "hud", "index.html")
 
 def check_singleton():
     if os.path.exists(PID_FILE):

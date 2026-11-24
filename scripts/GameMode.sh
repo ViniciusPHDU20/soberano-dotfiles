@@ -8,7 +8,7 @@
 # ==============================================================================
 set -euo pipefail
 
-SCRIPTS_DIR="${HOME}/dotfiles/scripts"
+SCRIPTS_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
 # shellcheck source=soberano-hw-lib.sh
 . "${SCRIPTS_DIR}/soberano-hw-lib.sh"

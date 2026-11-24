@@ -670,15 +670,16 @@ success "hardware.lua gerado com sucesso!"
 # 10. Native Tool Suite Compilation (Rust + GTK4 Layer-Shell)
 info "Compilando suíte nativa de ferramentas Rust otimizadas para o processador do cliente..."
 if [ -f "$DOTFILES_DIR/tools/build.sh" ]; then
-    bash "$DOTFILES_DIR/tools/build.sh" || warn "Compilação de ferramentas retornou aviso, utilizando binários existentes."
+    bash "$DOTFILES_DIR/tools/build.sh" --force || warn "Compilação de ferramentas retornou aviso, utilizando binários existentes."
 fi
 
 # 11. Symlinks & Permissions
 info "Vinculando diretórios em ${CONFIG_DIR}..."
 mkdir -p "$CONFIG_DIR" "$CONFIG_DIR/gtk-3.0" "$CONFIG_DIR/gtk-4.0" "$HOME/.local/bin" "$CONFIG_DIR/systemd/user"
-chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py "$DOTFILES_DIR"/scripts/*-rs 2>/dev/null || true
+chmod +x "$DOTFILES_DIR"/scripts/*.sh "$DOTFILES_DIR"/scripts/*.py "$DOTFILES_DIR"/scripts/*-rs "$DOTFILES_DIR/tools/build.sh" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/soberano-update.sh" "$HOME/.local/bin/soberano-update"
 ln -sfn "$DOTFILES_DIR/scripts/soberano-theme.sh" "$HOME/.local/bin/soberano-theme"
+ln -sfn "$DOTFILES_DIR/scripts/soberano-power-profile.sh" "$HOME/.local/bin/soberano-power-profile"
 ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/display-picker-rs" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/soberano-monitors" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/display-picker-rs" "$HOME/.local/bin/monitor-select" 2>/dev/null || true
@@ -689,7 +690,10 @@ ln -sfn "$DOTFILES_DIR/scripts/soberano-livewallpaper.sh" "$HOME/.local/bin/live
 ln -sfn "$DOTFILES_DIR/scripts/soberano-hardware-menu.py" "$HOME/.local/bin/soberano-hardware-menu" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/ScreenShot.sh" "$HOME/.local/bin/soberano-screenshot" 2>/dev/null || true
 ln -sfn "$DOTFILES_DIR/scripts/ScreenShot.sh" "$HOME/.local/bin/screenshot" 2>/dev/null || true
-cp -f "$DOTFILES_DIR"/config/systemd/user/* "$CONFIG_DIR/systemd/user/" 2>/dev/null || true
+for unit in "$DOTFILES_DIR"/config/systemd/user/*; do
+    [ -f "$unit" ] || continue
+    sed "s|%h/dotfiles|${DOTFILES_DIR}|g" "$unit" > "$CONFIG_DIR/systemd/user/$(basename "$unit")"
+done
 
 CONFIGS=(
     hypr
@@ -724,12 +728,11 @@ info "Verificando compatibilidade dos binários compilados na CPU..."
 for bin_name in wallpaper-picker-rs display-picker-rs soberano-cockpit-bar-rs; do
     bin_path="$DOTFILES_DIR/scripts/$bin_name"
     if [ -x "$bin_path" ]; then
-        if ! "$bin_path" --help >/dev/null 2>&1; then
-            rc=$?
-            if [ $rc -eq 132 ] || [ $rc -ge 128 ]; then
-                warn "Binário $bin_name é incompatível com as instruções da CPU atual (SIGILL)."
-                warn "Recomenda-se compilar com 'cargo build --release' caso utilize uma CPU legada sem suporte a AVX2."
-            fi
+        rc=0
+        WAYLAND_DISPLAY="" DISPLAY="" timeout 1 "$bin_path" --help >/dev/null 2>&1 || rc=$?
+        if [ $rc -eq 132 ] || [ $rc -eq 139 ] || [ $rc -eq 127 ]; then
+            warn "Binário $bin_name é incompatível com as instruções da CPU atual (exit $rc)."
+            warn "Recomenda-se compilar com 'cargo build --release' caso utilize uma CPU legada sem suporte a AVX2."
         fi
     fi
 done

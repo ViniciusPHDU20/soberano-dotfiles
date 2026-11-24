@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 config/hypr/.current_shader
+config/hypr/config/user_*.lua
 *.bak.*
+*.lock
 target/
 **/target/

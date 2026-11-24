@@ -9,7 +9,7 @@
 # ==============================================================================
 set -euo pipefail
 
-SCRIPTS_DIR="${HOME}/dotfiles/scripts"
+SCRIPTS_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
 # Dry-run is resolved before the lib is sourced so every writer honours it.
 ARGS=()

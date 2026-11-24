@@ -60,7 +60,7 @@ O Soberano Dotfiles abandonou deliberadamente soluções obsoletas baseadas em J
 - **`wallpaper-picker-rs` (Super + W)**: Seletor de papéis de parede ultrarrápido com renderização assíncrona de miniaturas na GPU e extração instantânea via Matugen.
 - **`display-picker-rs` (Super + M)**: Gerenciador gráfico de monitores, resoluções, taxas de atualização (Hz) e escala HiDPI. Utiliza `gtk4::WindowHandle` integrado à GPU do Hyprland, eliminando qualquer atraso de arrasto do cursor (movimentação 1:1 com latência zero).
 - **Compilação Otimizada no Cliente (`target-cpu=native`)**: Durante a instalação via `install.sh`, as ferramentas são compiladas ou executadas especificamente para a microarquitetura da CPU do usuário (Zen 4/5, Raptor Lake, Arrow Lake) tirando proveito de instruções vetoriais como **AVX-512, AVX2 e FMA**.
-- **Organização Modular em Branches Isoladas**: O código das ferramentas é mantido de forma limpa em branches separadas no repositório (`tools/display-picker` e `tools/wallpaper-picker`), facilitando auditorias, atualizações cirúrgicas e manutenção modular sem poluir a branch principal.
+- **Organização Modular da Suíte Nativa**: Todo o código-fonte das ferramentas em Rust (`display-picker-rs`, `wallpaper-picker-rs` e `soberano-cockpit-bar-rs`) é mantido unificado em `tools/`, facilitando auditorias, builds incrementais e atualizações cirúrgicas.
 
 | Métrica | Tecnologias Obsoletas (Noctalia / AGS / Electron) | Arquitetura Soberano (Wayle + Rust Nativo) |
 | :--- | :--- | :--- |
@@ -163,6 +163,18 @@ O instalador configura opcionalmente o **Soberano Auto-Updater**, mantendo a má
 | `Super + E` | Abrir Gerenciador de Arquivos |
 | `Super + B` | Abrir Navegador Web |
 | `Super + L` | Bloquear Sessão |
+
+### Como Personalizar os Atalhos
+
+- **`config/hypr/config/binds.lua`**: arquivo principal das teclas de atalho (`hl.bind(...)`) e da tecla modificadora `mainMod` (`"SUPER"`). Basta editar e salvar (ou rodar `hyprctl reload` caso o reload automático não dispare):
+  ```lua
+  hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+  hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd(scriptsDir .. "/ScreenShot.sh --swappy"))
+  ```
+- **Overrides à prova de atualização (`config/hypr/config/user_binds.lua`, `user_variables.lua`, `user_rules.lua`)**: arquivos opcionais ignorados pelo Git e carregados pelo `hyprland.lua` após os padrões. Ideal para clientes personalizarem atalhos ou apps sem risco de conflito no `soberano-update`.
+- **`config/hypr/config/variables.lua`**: define os programas padrão abertos pelos atalhos (`TERMINAL`, `FILE_MANAGER`, `BROWSER`, `EDITOR`, `CALCULATOR`, `LAUNCHER`) e `NUM_WPM`.
+- **`config/hypr/config/inputs.lua`**: layout do teclado (`kb_layout`), perfil de mouse (`accel_profile`) e gestos de touchpad (`hl.gesture`).
+- **`config/hypr/hud/index.html`**: o HUD visual (`Super + H` / `Super + K`) usa cards HTML estáticos; ao alterar combinações em `binds.lua`, atualize também esse arquivo (e a tabela acima) para manter o guia sincronizado.
 
 ---
 
